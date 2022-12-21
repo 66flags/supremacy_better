@@ -22,18 +22,19 @@ void Hooks::BuildTransformations( int a2, int a3, int a4, int a5, int a6, int a7
 	*reinterpret_cast< int* >( uintptr_t( player ) + 0x291C ) = bone_jiggle;
 }
 
-void __fastcall Hooks::CalcView ( void *ecx, void *edx, vec3_t &eye_origin, ang_t &eye_angles, float &z_near, float &z_far, float &fov ) {
-	const auto player = reinterpret_cast< Player * >( ecx );
+void Hooks::CalcView ( vec3_t &eye_origin, ang_t &eye_angles, float &z_near, float &z_far, float &fov ) {
+	Player *player = ( Player * ) this;
 
-	if ( player != g_cl.m_local )
-		return g_hooks.m_CalcView ( ecx, edx, eye_origin, eye_angles, z_near, z_far, fov );
-
+	if ( !player )
+		return g_hooks.m_CalcView ( this, eye_origin, eye_angles, z_near, z_far, fov );
+	
 	const auto old_use_new_animation_state = *( bool * ) ( std::uintptr_t ( player ) + 0x39E1 );
 
 	// prevent calls to ModifyEyePosition
 	*( bool * ) ( std::uintptr_t ( player ) + 0x39E1 ) = false; // 0x39E1
 
-	g_hooks.m_CalcView ( ecx, edx, eye_origin, eye_angles, z_near, z_far, fov );
+	// call og.
+	g_hooks.m_CalcView ( this, eye_origin, eye_angles, z_near, z_far, fov );
 
 	*( bool * ) ( std::uintptr_t ( player ) + 0x39E1 ) = old_use_new_animation_state;
 }
@@ -61,8 +62,6 @@ Weapon *Hooks::GetActiveWeapon( ) {
 }
 
 void CustomEntityListener::OnEntityCreated( Entity *ent ) {
-	const auto CalculateView_idx = pattern::find ( g_csgo.m_client_dll, XOR ( "FF 90 ? ? ? ? 8B 0D ? ? ? ? 8B 01 8B 80 ? ? ? ? FF D0 84 C0" ) ).as < std::size_t > ( ) / 4;
-
     if( ent ) {
         // player created.
         if( ent->IsPlayer( ) ) {
@@ -88,9 +87,8 @@ void CustomEntityListener::OnEntityCreated( Entity *ent ) {
 		        	g_hooks.m_UpdateClientSideAnimation = vmt->add< Hooks::UpdateClientSideAnimation_t >( Player::UPDATECLIENTSIDEANIMATION, util::force_cast( &Hooks::UpdateClientSideAnimation ) );
                     g_hooks.m_GetActiveWeapon           = vmt->add< Hooks::GetActiveWeapon_t >( Player::GETACTIVEWEAPON, util::force_cast( &Hooks::GetActiveWeapon ) );
                     g_hooks.m_BuildTransformations      = vmt->add< Hooks::BuildTransformations_t >( Player::BUILDTRANSFORMATIONS, util::force_cast( &Hooks::BuildTransformations ) );
+					g_hooks.m_CalcView					= vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
                 }
-				
-				//g_hooks.m_CalcView = vmt->add< Hooks::CalcView_t > ( CalculateView_idx, util::force_cast ( &Hooks::CalcView ) );
             }
         }
 

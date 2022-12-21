@@ -54,7 +54,7 @@ public:
 	using TempEntities_t               = bool( __thiscall* )( void*, void * );
 	using EmitSound_t                  = void( __thiscall* )( void*, IRecipientFilter&, int, int, const char*, unsigned int, const char*, float, float, int, int, int, const vec3_t*, const vec3_t*, void*, bool, float, int );
 	// using PreDataUpdate_t            = void( __thiscall* )( void*, DataUpdateType_t );
-	using CalcView_t = void ( __fastcall * ) ( void *, void *, vec3_t &, ang_t &, float &, float &, float & );
+	using CalcView_t				   = void ( __thiscall * ) ( void*, vec3_t &, ang_t &, float &, float &, float & );
 
 public:
 	bool                     TempEntities( void *msg );
@@ -86,7 +86,7 @@ public:
 	bool                     NetShowFragmentsGetBool( );
 	void                     DoExtraBoneProcessing( int a2, int a3, int a4, int a5, int a6, int a7 );
 	void                     BuildTransformations( int a2, int a3, int a4, int a5, int a6, int a7 );
-	void __fastcall CalcView ( void *ecx, void *edx, vec3_t &eye_origin, ang_t &eye_angles, float &z_near, float &z_far, float &fov );
+	void					 CalcView ( vec3_t &eye_origin, ang_t &eye_angles, float &z_near, float &z_far, float &fov );
 	bool                     IsConnected( );
 	bool                     IsHLTV( );
 	void                     EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char* pSoundEntry, unsigned int nSoundEntryHash, const char* pSample, float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, const vec3_t* pOrigin, const vec3_t* pDirection, void* pUtlVecOrigins, bool bUpdatePositions, float soundtime, int speakerentity );

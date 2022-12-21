@@ -337,6 +337,9 @@ void Client::OnTick( CUserCmd* cmd ) {
 	if( !m_processing )
 		return;
 
+	if ( cmd->m_buttons & IN_ATTACK )
+		*g_cl.m_packet = true;
+
 	// save the original state of players.
 	BackupPlayers( false );
 

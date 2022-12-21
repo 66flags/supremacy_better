@@ -142,6 +142,7 @@ bool LagCompensation::StartPrediction( AimPlayer* data ) {
 	int delta_ticks = game::TIME_TO_TICKS( record->m_old_sim_time - record->m_sim_time );
 
 	for ( int i = 0; i <= delta_ticks; i++ ) {
+		// extrapolate velocity.
 		data->m_player->m_vecVelocity ( ).x = math::Lerp ( record->m_velocity.x, current->m_velocity.x, static_cast< float >( i + 1 ) / static_cast< float >( delta_ticks ) );
 		data->m_player->m_vecVelocity ( ).y = math::Lerp ( record->m_velocity.y, current->m_velocity.y, static_cast< float >( i + 1 ) / static_cast< float >( delta_ticks ) );
 		data->m_player->m_vecVelocity ( ).z = math::Lerp ( record->m_velocity.z, current->m_velocity.z, static_cast< float >( i + 1 ) / static_cast< float >( delta_ticks ) );

@@ -53,8 +53,8 @@ bool Bones::BuildBones( Player* target, int mask, BoneArray* out, LagRecord* rec
 	C_AnimationLayer backup_layers[ 13 ];
 
 	// prevent the game from calling ShouldSkipAnimationFrame.
-	auto bSkipAnimationFrame = *reinterpret_cast< int* >( uintptr_t( target ) + 0x260 );
-	*reinterpret_cast< int* >( uintptr_t( target ) + 0x260 ) = NULL;
+	//auto bSkipAnimationFrame = *reinterpret_cast< int* >( uintptr_t( target ) + 0x260 );
+	//*reinterpret_cast< int* >( uintptr_t( target ) + 0x260 ) = NULL;
 
 	// backup original.
 	backup_origin  = target->GetAbsOrigin( );
@@ -81,7 +81,7 @@ bool Bones::BuildBones( Player* target, int mask, BoneArray* out, LagRecord* rec
 	m_running = false;
 
 	// allow the game to call ShouldSkipAnimationFrame.
-	*reinterpret_cast< int* >( uintptr_t( target ) + 0x260 ) = bSkipAnimationFrame;
+	//*reinterpret_cast< int* >( uintptr_t( target ) + 0x260 ) = bSkipAnimationFrame;
 
 	return true;
 }

@@ -118,8 +118,8 @@ bool CSGO::init( ) {
 	cl_foot_contact_shadows->SetValue ( 0 );
 	cl_csm_shadows->SetValue ( 0 );
 
-	cl_extrapolate->m_callbacks.RemoveAll( );
-	cl_extrapolate->SetValue ( 0 );
+//	cl_extrapolate->m_callbacks.RemoveAll( );
+	//cl_extrapolate->SetValue ( 0 );
 
 	// classes by sig.
 	m_move_helper        = pattern::find( m_client_dll, XOR( "8B 0D ? ? ? ? 8B 46 08 68" ) ).add( 2 ).get< IMoveHelper* >( 2 );

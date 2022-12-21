@@ -3,7 +3,7 @@
 Listener g_listener{};;
 
 void events::round_start( IGameEvent* evt ) { 
-	g_csgo.cl_extrapolate->SetValue ( 0 );
+	//g_csgo.cl_extrapolate->SetValue ( 0 );
 	// new round has started. no longer round end.
 	g_cl.m_round_end = false;
 
