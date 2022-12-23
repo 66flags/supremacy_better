@@ -68,6 +68,7 @@ using ulong_t = unsigned long;
 #include "netvars.h"
 #include "entoffsets.h"
 #include "entity.h"
+#include "rebuilt.h"
 #include "client.h"
 #include "gamerules.h"
 #include "hooks.h"

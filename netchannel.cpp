@@ -4,11 +4,6 @@
 #define NET_FRAMES_MASK ( NET_FRAMES_BACKUP - 1 )
 
 int Hooks::SendDatagram( void* data ) {
-	int ret = g_hooks.m_net_channel.GetOldMethod< SendDatagram_t > ( INetChannel::SENDDATAGRAM )( this, data );
-	
-	if ( !g_cl.m_local || !g_cl.m_local->alive ( ) )
-		return ret;
-
 	int backup2 = g_csgo.m_net->m_in_seq;
 
 	if( g_aimbot.m_fake_latency ) {
@@ -19,6 +14,8 @@ int Hooks::SendDatagram( void* data ) {
 
 		g_csgo.m_net->m_in_seq += 2 * NET_FRAMES_MASK - static_cast< uint32_t >( NET_FRAMES_MASK * correct );
 	}
+
+	int ret = g_hooks.m_net_channel.GetOldMethod< SendDatagram_t >( INetChannel::SENDDATAGRAM )( this, data );
 
 	g_csgo.m_net->m_in_seq       = backup2;
 

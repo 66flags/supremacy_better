@@ -49,6 +49,11 @@ float math::ApproachAngle( float target, float value, float speed ) {
     return value;
 }
 
+void math::SinCos ( float radians, float *sine, float *cosine ) {
+	*sine = std::sin ( radians );
+	*cosine = std::cos ( radians );
+}
+
 void math::VectorAngles( const vec3_t& forward, ang_t& angles, vec3_t *up ) {
     vec3_t  left;
     float   len, up_z, pitch, yaw, roll;

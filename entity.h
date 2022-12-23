@@ -643,6 +643,39 @@ public:
 		return get< bool >(g_entoffsets.m_bIsScoped);
 	}
 
+	__forceinline float SequenceDuration ( int sequence ) {
+		static auto addr = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 56 8B F1 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 83 C4 04 5E 5D C2 04 00 52 68 ? ? ? ? 6A 02" ) ).as < float ( __thiscall * )( void *, int ) > ( );
+
+		float retval;
+		addr ( this, sequence );
+		__asm movss retval, xmm0;
+
+		return retval;
+	}
+
+	__forceinline float GetSequenceCycleRate ( int sequence ) {
+		float t = SequenceDuration ( sequence );
+
+		if ( t > 0.0f )
+			return 1.0f / t;
+		else
+			return 1.0f / 0.1f;
+	}
+
+	__forceinline void UpdateAnimState ( CCSGOPlayerAnimState* state, const ang_t &ang ) {
+		static auto oUpdate = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 F3 0F 11 54 24" ) ).as < void ( __vectorcall * )( void *, void *, float, float, float, void * ) > ( );
+
+		if ( !oUpdate )
+			return;
+
+		oUpdate ( state, NULL, 0.0f, ang.y, ang.x, false );
+	}
+
+	__forceinline int LookupSequence ( const char *label ) {
+		static auto oLookupSequence = pattern::find ( g_csgo.m_client_dll, XOR ( "E8 ? ? ? ? 8B D0 89 54 24 18 83 FA FF 75 11" ) ).rel32 ( 0x1 ).as< int ( __thiscall * )( void *, const char * ) > ( );
+		return oLookupSequence ( this, label );
+	}
+
 	__forceinline bool &m_bDucking() {
 		return get< bool >(g_entoffsets.m_bDucking);
 	}
@@ -773,7 +806,10 @@ public:
 		CALCVIEW = 270,
 		GETEYEPOS = 163,
 		GETFOV = 321,
-		UPDATECOLLISIONBOUNDS = 329 // 56 57 8B F9 8B 0D ? ? ? ? F6 87 ? ? ? ? ?
+		UPDATECOLLISIONBOUNDS = 329, // 56 57 8B F9 8B 0D ? ? ? ? F6 87 ? ? ? ? ?
+		NOTIFYONLAYERCHANGEWEIGHT = 242,
+		GETEYEANGLES = 164,
+		NOTIFYONLAYERCHANGECYCLE = 243,
 	};
 
 public:

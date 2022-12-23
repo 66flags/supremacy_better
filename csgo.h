@@ -40,6 +40,7 @@ public:
 	PE::Module m_tier0_dll;
 	PE::Module m_serverbrowser_dll;
 	PE::Module m_surface_dll;
+	PE::Module m_datacache_dll;
 
 public:
 	// interface ptrs.
@@ -80,6 +81,7 @@ public:
 	CRender *m_render;
 	IMemAlloc *m_mem_alloc;
 	IClientShadowMgr *m_shadow_mgr;
+	CModelCache *m_model_cache;
 	// IClientEntityListener** m_entity_listeners;
 	CHud *m_hud;
 	C_CSGameRules *m_gamerules;

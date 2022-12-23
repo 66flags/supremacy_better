@@ -32,12 +32,12 @@ bool Hooks::InPrediction( ) {
 	return g_hooks.m_prediction.GetOldMethod< InPrediction_t >( CPrediction::INPREDICTION )( this );
 }
 
+int old_num = 0;
+
 void Hooks::RunCommand( Entity* ent, CUserCmd* cmd, IMoveHelper* movehelper ) {
 	// airstuck jitter / overpred fix.
 	if( cmd->m_tick >= std::numeric_limits< int >::max( ) )
 		return;
-
-	static int old_num = 0;
 
 	if ( !g_csgo.m_cl->m_choked_commands ) {
 		auto nci = g_csgo.m_engine->GetNetChannelInfo ( );
@@ -47,17 +47,20 @@ void Hooks::RunCommand( Entity* ent, CUserCmd* cmd, IMoveHelper* movehelper ) {
 
 			if ( g_inputpred.stored.m_velocity_modifier < 1.0f )
 				g_inputpred.stored.m_velocity_modifier = std::clamp < float > ( g_inputpred.stored.m_velocity_modifier + ( game::TICKS_TO_TIME ( 1 ) + latency ) * ( 1.0f / 2.5f ), 0.0f, 1.0f );
-
-			old_num = g_cl.m_cmd->m_command_number;
 		}
 
 		if ( !( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) )
 			g_cl.m_local->m_flVelocityModifier ( ) = g_inputpred.stored.m_velocity_modifier;
 	}
 
-
 	g_hooks.m_prediction.GetOldMethod< RunCommand_t >( CPrediction::RUNCOMMAND )( this, ent, cmd, movehelper );
-
+	
 	// store non compressed netvars.
 	g_netdata.store( );
+
+
+	//if ( g_cl.m_cmd->m_command_number > old_num ) {
+
+	//	old_num = g_cl.m_cmd->m_command_number;
+	//}
 }

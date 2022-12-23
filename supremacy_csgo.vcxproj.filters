@@ -339,6 +339,12 @@
     <ClInclude Include="hde\table64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rebuilt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modelcache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="bonesetup.cpp">
@@ -513,6 +519,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="hde\hde64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rebuilt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -258,6 +258,7 @@
     <ClInclude Include="memalloc.h" />
     <ClInclude Include="menu.h" />
     <ClInclude Include="minhook.h" />
+    <ClInclude Include="modelcache.h" />
     <ClInclude Include="modules.h" />
     <ClInclude Include="movement.h" />
     <ClInclude Include="multidropdown.h" />
@@ -271,6 +272,7 @@
     <ClInclude Include="penetration.h" />
     <ClInclude Include="pred.h" />
     <ClInclude Include="prediction.h" />
+    <ClInclude Include="rebuilt.h" />
     <ClInclude Include="render.h" />
     <ClInclude Include="resolver.h" />
     <ClInclude Include="sdk.h" />
@@ -320,6 +322,7 @@
     <ClCompile Include="keybind.cpp" />
     <ClCompile Include="matchframework.cpp" />
     <ClCompile Include="materialsystem.cpp" />
+    <ClCompile Include="rebuilt.cpp" />
     <ClCompile Include="shadowmgr.cpp" />
     <ClCompile Include="csgo.cpp" />
     <ClCompile Include="cvar.cpp" />

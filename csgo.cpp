@@ -26,15 +26,16 @@ bool CSGO::init( ) {
 #endif
 
 	// grab some modules.
-	m_kernel32_dll = PE::GetModule( HASH( "kernel32.dll" ) );
-	m_user32_dll   = PE::GetModule( HASH( "user32.dll" ) );
-	m_shell32_dll  = PE::GetModule( HASH( "shell32.dll" ) );
-	m_shlwapi_dll  = PE::GetModule( HASH( "shlwapi.dll" ) );
-	m_client_dll   = PE::GetModule( HASH( "client.dll" ) );
-	m_engine_dll   = PE::GetModule( HASH( "engine.dll" ) );
-	m_vstdlib_dll  = PE::GetModule( HASH( "vstdlib.dll" ) );
-	m_tier0_dll    = PE::GetModule( HASH( "tier0.dll" ) );
-	m_surface_dll  = PE::GetModule ( HASH ( "vguimatsurface.dll" ) );
+	m_kernel32_dll  = PE::GetModule( HASH( "kernel32.dll" ) );
+	m_user32_dll    = PE::GetModule( HASH( "user32.dll" ) );
+	m_shell32_dll   = PE::GetModule( HASH( "shell32.dll" ) );
+	m_shlwapi_dll   = PE::GetModule( HASH( "shlwapi.dll" ) );
+	m_client_dll    = PE::GetModule( HASH( "client.dll" ) );
+	m_engine_dll    = PE::GetModule( HASH( "engine.dll" ) );
+	m_datacache_dll = PE::GetModule ( HASH ( "datacache.dll" ) );
+	m_vstdlib_dll   = PE::GetModule( HASH( "vstdlib.dll" ) );
+	m_tier0_dll     = PE::GetModule( HASH( "tier0.dll" ) );
+	m_surface_dll   = PE::GetModule ( HASH ( "vguimatsurface.dll" ) );
 	
 	// import winapi functions.
 	g_winapi.WideCharToMultiByte = PE::GetExport( m_kernel32_dll, HASH( "WideCharToMultiByte" ) ).as< WinAPI::WideCharToMultiByte_t >( );
@@ -130,6 +131,7 @@ bool CSGO::init( ) {
 	m_view_render        = pattern::find( m_client_dll, XOR( "8B 0D ? ? ? ? 8B 01 FF 50 4C 8B 06" ) ).add( 2 ).get< CViewRender* >( 2 );
 	// m_entity_listeners   = pattern::find( m_client_dll, XOR( "B9 ? ? ? ? E8 ? ? ? ? 5E 5D C2 04" ) ).add( 0x1 ).get< IClientEntityListener** >( 2 );
 	m_hud                = pattern::find( m_client_dll, XOR( "B9 ? ? ? ? 0F 94 C0 0F B6 C0 50 68" ) ).add( 0x1 ).get( ).as< CHud* >( );
+	m_model_cache		 = pattern::find( m_client_dll, XOR ( "8B 35 ? ? ? ? 0F 28 C8 F3 0F 59 4D ? 8B CE F3 0F 59 45 ? 8B 06 F3 0F 11" ) ).add ( 0x2 ).to ( ).to ( ).as< CModelCache * > ( );
 	m_gamerules          = pattern::find( m_client_dll, XOR( "8B 0D ? ? ? ? E8 ? ? ? ? 84 C0 75 6B" ) ).add( 0x2 ).get< C_CSGameRules* >( );
 	m_beams              = pattern::find( m_client_dll, XOR( "8D 04 24 50 A1 ? ? ? ? B9" ) ).add( 0x5 ).get< IViewRenderBeams* >( );
 	m_mem_alloc          = PE::GetExport( m_tier0_dll, HASH( "g_pMemAlloc" ) ).get< IMemAlloc* >( );

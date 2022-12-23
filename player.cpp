@@ -1,8 +1,13 @@
 #include "includes.h"
 
 void Hooks::DoExtraBoneProcessing( int a2, int a3, int a4, int a5, int a6, int a7 ) {
-	// call og.
+	auto state = ( CCSGOPlayerAnimState * ) a2;
+
+	const auto backup_on_ground = state->m_ground;
+
+	state->m_ground = false;
 	g_hooks.m_DoExtraBoneProcessing( this, a2, a3, a4, a5, a6, a7 );
+	state->m_ground = backup_on_ground;
 }
 
 void Hooks::BuildTransformations( int a2, int a3, int a4, int a5, int a6, int a7 ) {
@@ -40,11 +45,32 @@ void Hooks::CalcView ( vec3_t &eye_origin, ang_t &eye_angles, float &z_near, flo
 }
 
 void Hooks::UpdateClientSideAnimation( ) {
-	if( g_cl.m_processing )
-		g_cl.SetAngles( );
-	else {
-		g_hooks.m_UpdateClientSideAnimation( this );
-	}
+	if ( !this || g_cl.m_animate )
+		return g_hooks.m_UpdateClientSideAnimation ( this );
+
+	memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
+	g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
+	g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
+}
+
+void Hooks::NotifyOnLayerChangeWeight ( const C_AnimationLayer *layer, const float new_weight ) {
+	return;
+}
+
+void Hooks::NotifyOnLayerChangeCycle ( const C_AnimationLayer *layer, const float new_cycle ) {
+	return;
+}
+
+ang_t &Hooks::GetEyeAngles ( ) {
+	Stack stack;
+
+	static Address ret1 = pattern::find ( g_csgo.m_client_dll, XOR ( "8B CE F3 0F 10 00 8B 06 F3 0F 11 45 ? FF 90 ? ? ? ? F3 0F 10 55 ?" ) );
+	static Address ret2 = pattern::find ( g_csgo.m_client_dll, XOR ( "F3 0F 10 55 ? 51 8B 8E ? ? ? ?" ) );
+
+	if ( stack.ReturnAddress ( ) == ret1 || stack.ReturnAddress ( ) == ret2 )
+		return g_cl.m_radar;
+	
+	return g_hooks.m_GetEyeAngles ( this );
 }
 
 Weapon *Hooks::GetActiveWeapon( ) {
@@ -88,6 +114,9 @@ void CustomEntityListener::OnEntityCreated( Entity *ent ) {
                     g_hooks.m_GetActiveWeapon           = vmt->add< Hooks::GetActiveWeapon_t >( Player::GETACTIVEWEAPON, util::force_cast( &Hooks::GetActiveWeapon ) );
                     g_hooks.m_BuildTransformations      = vmt->add< Hooks::BuildTransformations_t >( Player::BUILDTRANSFORMATIONS, util::force_cast( &Hooks::BuildTransformations ) );
 					g_hooks.m_CalcView					= vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
+					g_hooks.m_NotifyOnLayerChangeCycle  = vmt->add< Hooks::NotifyOnLayerChangeCycle_t > ( Player::NOTIFYONLAYERCHANGECYCLE, util::force_cast ( &Hooks::NotifyOnLayerChangeCycle ) );
+					g_hooks.m_NotifyOnLayerChangeWeight = vmt->add< Hooks::NotifyOnLayerChangeWeight_t > ( Player::NOTIFYONLAYERCHANGEWEIGHT, util::force_cast ( &Hooks::NotifyOnLayerChangeWeight ) );
+					g_hooks.m_GetEyeAngles				= vmt->add< Hooks::GetEyeAngles_t > ( Player::GETEYEANGLES, util::force_cast ( &Hooks::GetEyeAngles ) );
                 }
             }
         }

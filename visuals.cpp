@@ -1474,10 +1474,14 @@ void Visuals::DebugAimbotPoints( Player* player ) {
 
 	// get bone matrix.
 	BoneArray matrix[ 128 ];
-	if( !g_bones.setup( player, matrix, g_csgo.m_globals->m_curtime, front ) )
-		return;
+
+	bool setup = g_bones.BuildBonesOnetap ( player, matrix, g_csgo.m_globals->m_curtime );
+	
+	if ( setup )
+		memcpy ( front->m_bones, matrix, sizeof ( BoneArray ) * 128 );
 
 	data->SetupHitboxes( front, false );
+	
 	if( data->m_hitboxes.empty( ) )
 		return;
 

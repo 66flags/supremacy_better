@@ -29,6 +29,7 @@ struct CBaseTrace;
 #include "utlvector.h"
 #include "clientclass.h"
 #include "datamap.h"
+#include "modelcache.h"
 #include "entlist.h"
 #include "clientdll.h"
 #include "clientmode.h"

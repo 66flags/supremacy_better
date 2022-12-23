@@ -35,6 +35,7 @@ namespace math {
     }
 
     float ApproachAngle( float target, float value, float speed );
+    void SinCos ( float radians, float *sine, float *cosine );
     void  VectorAngles( const vec3_t& forward, ang_t& angles, vec3_t* up = nullptr );
     void  AngleVectors( const ang_t& angles, vec3_t* forward, vec3_t* right = nullptr, vec3_t* up = nullptr );
     float GetFOV( const ang_t &view_angles, const vec3_t &start, const vec3_t &end );

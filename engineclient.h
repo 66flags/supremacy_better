@@ -39,7 +39,6 @@ public:
 		return util::get_method< float( __thiscall* )( decltype( this ), int ) >( this, GETLATENCY )( this, flow );
 	}
 
-
 	__forceinline int SendDatagram ( void *datagram ) {
 		return util::get_method< int ( __thiscall * )( decltype( this ), void* ) > ( this, SENDDATAGRAM )( this, datagram );
 	}

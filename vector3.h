@@ -244,6 +244,16 @@ public:
 
 		return vec;
 	}
+
+	__forceinline void normalize_place ( ) {
+		auto res = *this;
+		auto radius = std::sqrtf ( x * x + y * y + z * z );
+		auto iradius = 1.0f / ( radius + FLT_EPSILON );
+
+		res.x *= iradius;
+		res.y *= iradius;
+		res.z *= iradius;
+	}
 };
 
 __forceinline vec3_t operator*( float f, const vec3_t& v ) {

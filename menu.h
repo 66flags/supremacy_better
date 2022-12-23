@@ -6,6 +6,8 @@ public:
 	Checkbox	  enable;
 	Checkbox	  silent;
 	Dropdown	  selection;
+	Checkbox	  correct_override;
+	Keybind		  correct_override_key;
 	Checkbox	  fov;
 	Slider		  fov_amount;
 	MultiDropdown hitbox;
@@ -133,6 +135,9 @@ public:
 
 		baim_key.setup( XOR( "body aim on key" ), XOR( "body aim on key" ) );
 		RegisterElement( &baim_key, 1 );
+
+		correct_override_key.setup ( XOR ( "override correction key" ), XOR ( "override correction key" ) );
+		RegisterElement ( &correct_override_key, 1 );
 	}
 };
 

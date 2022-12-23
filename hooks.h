@@ -55,6 +55,9 @@ public:
 	using EmitSound_t                  = void( __thiscall* )( void*, IRecipientFilter&, int, int, const char*, unsigned int, const char*, float, float, int, int, int, const vec3_t*, const vec3_t*, void*, bool, float, int );
 	// using PreDataUpdate_t            = void( __thiscall* )( void*, DataUpdateType_t );
 	using CalcView_t				   = void ( __thiscall * ) ( void*, vec3_t &, ang_t &, float &, float &, float & );
+	using NotifyOnLayerChangeCycle_t = void ( __thiscall * ) ( void *, const C_AnimationLayer *, const float );
+	using NotifyOnLayerChangeWeight_t = void ( __thiscall * ) ( void *, const C_AnimationLayer *, const float );
+	using GetEyeAngles_t = ang_t & ( __thiscall * ) ( void * );
 
 public:
 	bool                     TempEntities( void *msg );
@@ -67,7 +70,10 @@ public:
 	void                     LevelInitPreEntity( const char* map );
 	void                     FrameStageNotify( Stage_t stage );
 	void                     UpdateClientSideAnimation( );
-    Weapon*                  GetActiveWeapon( );
+	void NotifyOnLayerChangeWeight ( const C_AnimationLayer *layer, const float new_weight );
+	void NotifyOnLayerChangeCycle ( const C_AnimationLayer *layer, const float new_cycle );
+	ang_t &GetEyeAngles ( );
+	Weapon*                  GetActiveWeapon( );
 	bool                     InPrediction( );
 	bool                     ShouldDrawParticles( );
 	bool                     ShouldDrawFog( );
@@ -136,6 +142,9 @@ public:
     GetActiveWeapon_t           m_GetActiveWeapon;
 	CalcView_t					m_CalcView;
 	BuildTransformations_t      m_BuildTransformations;
+	NotifyOnLayerChangeCycle_t  m_NotifyOnLayerChangeCycle;
+	NotifyOnLayerChangeWeight_t m_NotifyOnLayerChangeWeight;
+	GetEyeAngles_t m_GetEyeAngles;
 
 	// netvar proxies.
 	RecvVarProxy_t m_Pitch_original;
