@@ -350,7 +350,16 @@ void Visuals::StatusIndicators( ) {
 		float change = std::abs( math::NormalizedAngle( g_cl.m_body - g_cl.m_angle.y ) );
 
 		Indicator_t ind{ };
-		ind.color = change > 35.f ? 0xff15c27b : 0xff0000ff;
+		
+		// green - 137,195,49
+		// red - 186,1,1
+		ind.color = Color (
+			math::Lerp ( 137, 186, ( change / 180.f ) ),
+			math::Lerp ( 195, 1, ( change / 180.f ) ),
+			math::Lerp ( 49, 1, ( change / 180.f ) ),
+			255
+		);
+			
 		ind.text = XOR( "LBY" );
 		ind.lby = true;
 		ind.change = change;

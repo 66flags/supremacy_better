@@ -238,11 +238,7 @@ void Client::UpdateLocalAnimations ( ) {
 }
 
 void Client::UpdateInformation ( ) {
-	// call original, bypass hook.
-	g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
 
-	if ( g_cl.m_lag > 0 )
-		return;
 
 	CCSGOPlayerAnimState *state = g_cl.m_local->m_PlayerAnimState ( );
 	if ( !state )
@@ -265,9 +261,6 @@ void Client::UpdateInformation ( ) {
 	// CCSGOPlayerAnimState::Update, bypass already animated checks.
 	//if ( state->m_frame == g_csgo.m_globals->m_frame )
 	//	state->m_frame -= 1;
-	
-	// get last networked poses.
-	g_cl.m_local->GetPoseParameters ( g_cl.m_poses );
 
 	// store updated abs yaw.
 	g_cl.m_abs_yaw = state->m_goal_feet_yaw;
@@ -276,12 +269,15 @@ void Client::UpdateInformation ( ) {
 	//if ( state->m_frame == g_csgo.m_globals->m_frame )
 	//	state->m_frame -= 1;
 
+	// write angles to model.
+	g_csgo.m_prediction->SetLocalViewAngles ( m_angle );
+
 	// call original, bypass hook.
-	//g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
+	g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
 
-	// get last networked poses.
-	g_cl.m_local->GetPoseParameters ( g_cl.m_poses );
-
+	if ( g_cl.m_lag > 0 )
+		return;
+	
 	// store updated abs yaw.
 	g_cl.m_abs_yaw = state->m_goal_feet_yaw;
 
@@ -304,9 +300,6 @@ void Client::UpdateInformation ( ) {
 		m_body = m_angle.y;
 		m_body_pred = m_anim_time + 1.1f;
 	}
-
-	// write angles to model.
-	g_csgo.m_prediction->SetLocalViewAngles ( m_angle );
 
 	// set lby to predicted value.
 	g_cl.m_local->m_flLowerBodyYawTarget ( ) = m_body;
