@@ -354,9 +354,9 @@ void Visuals::StatusIndicators( ) {
 		// green - 137,195,49
 		// red - 186,1,1
 		ind.color = Color (
-			math::Lerp ( 137, 186, ( change / 180.f ) ),
-			math::Lerp ( 195, 1, ( change / 180.f ) ),
-			math::Lerp ( 49, 1, ( change / 180.f ) ),
+			math::Lerp ( 186, 137, ( change / 180.f ) ),
+			math::Lerp ( 1, 195, ( change / 180.f ) ),
+			math::Lerp ( 1, 49, ( change / 180.f ) ),
 			255
 		);
 			
