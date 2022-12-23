@@ -73,6 +73,23 @@ ang_t &Hooks::GetEyeAngles ( ) {
 	return g_hooks.m_GetEyeAngles ( this );
 }
 
+void Hooks::AccumulateLayers ( void *setup, vec3_t &pos, void *q, float time ) {
+	auto player = ( Player * ) this;
+
+	static auto iks_off = pattern::find ( g_csgo.m_client_dll, XOR ( "8D 47 FC 8B 8F" ) ).add ( 5 ).to ( ).add ( 4 ).as< uint32_t > ( );
+	static auto accumulate_pose = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? 83 BF ? ? ? ? ? 0F 84 ? ? ? ? 8D" ) ).rel32 ( 0x1 ).as<void ( __thiscall * )( void *, vec3_t &, void *, int, float, float, float, void * )> ( );
+
+	if ( !player || !player->IsPlayer ( ) || player->m_iHealth ( ) <= 0 || !player->m_AnimOverlay ( ) || !*reinterpret_cast< void ** >( reinterpret_cast< uintptr_t >( player ) + iks_off ) )
+		return g_hooks.m_AccumulateLayers( this, setup, pos, q, time );
+
+	for ( auto animLayerIndex = 0; animLayerIndex < 13; animLayerIndex++ ) {
+		auto &layer = player->m_AnimOverlay ( ) [ animLayerIndex ];
+
+		if ( layer.m_weight > 0.0f && layer.m_order >= 0 && layer.m_order < 13 )
+			accumulate_pose ( *reinterpret_cast< void ** >( setup ), pos, q, layer.m_sequence, layer.m_cycle, layer.m_weight, time, *reinterpret_cast< void ** >( reinterpret_cast< uintptr_t >( player ) + iks_off ) );
+	}
+}
+
 Weapon *Hooks::GetActiveWeapon( ) {
     Stack stack;
 
@@ -117,6 +134,7 @@ void CustomEntityListener::OnEntityCreated( Entity *ent ) {
 					g_hooks.m_NotifyOnLayerChangeCycle  = vmt->add< Hooks::NotifyOnLayerChangeCycle_t > ( Player::NOTIFYONLAYERCHANGECYCLE, util::force_cast ( &Hooks::NotifyOnLayerChangeCycle ) );
 					g_hooks.m_NotifyOnLayerChangeWeight = vmt->add< Hooks::NotifyOnLayerChangeWeight_t > ( Player::NOTIFYONLAYERCHANGEWEIGHT, util::force_cast ( &Hooks::NotifyOnLayerChangeWeight ) );
 					g_hooks.m_GetEyeAngles				= vmt->add< Hooks::GetEyeAngles_t > ( Player::GETEYEANGLES, util::force_cast ( &Hooks::GetEyeAngles ) );
+					//g_hooks.m_AccumulateLayers			= vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
                 }
             }
         }

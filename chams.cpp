@@ -268,7 +268,7 @@ void Chams::RenderPlayer( Player* player ) {
 	// we always draw the local player manually in drawmodel.
 	if( player->m_bIsLocalPlayer( ) ) {
 		if( g_menu.main.players.chams_local_scope.get( ) && player->m_bIsScoped( ) )
-			SetAlpha( 0.5f );
+			SetAlpha( g_menu.main.players.chams_local_scope_opacity.get ( ) / 100.f );
 
 		else if( g_menu.main.players.chams_local.get( ) ) {
 			// override blend.

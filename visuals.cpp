@@ -58,7 +58,7 @@ void Visuals::ModulateWorld( ) {
 		}
 
 		for( const auto& p : props )
-			p->AlphaModulate( 0.85f );
+			p->AlphaModulate( g_menu.main.visuals.transparent_props_opacity.get ( ) / 100.f );
 	}
 
 	// disable transparent props.
@@ -87,8 +87,17 @@ void Visuals::ThirdpersonThink( ) {
 	// check if we have a local player and he is alive.
 	bool alive = g_cl.m_local && g_cl.m_local->alive( );
 
+	static float transition_amt = 0.0f;
+
+	if ( g_menu.main.visuals.thirdperson_transition.get ( ) ) {
+		if ( !m_thirdperson )
+			transition_amt += std::clamp < float > ( ( ( 255 / 0.8f ) * g_csgo.m_globals->m_frametime ) / 255.f, 0.5f, 1.f );
+		else
+			transition_amt -= std::clamp < float > ( ( ( 255 / 0.8f ) * g_csgo.m_globals->m_frametime ) / 255.f, 0.5f, 1.f );
+	}
+
 	// camera should be in thirdperson.
-	if( m_thirdperson ) {
+	if( g_menu.main.visuals.thirdperson_transition.get ( ) ? ( m_thirdperson || transition_amt > 0.5f ) : m_thirdperson ) {
 
 		// if alive and not in thirdperson already switch to thirdperson.
 		if( alive && !g_csgo.m_input->CAM_IsThirdPerson( ) )
@@ -123,7 +132,7 @@ void Visuals::ThirdpersonThink( ) {
 		math::AngleVectors( offset, &forward );
 
 		// cam_idealdist convar.
-		offset.z = 150.f;
+		offset.z = g_menu.main.visuals.thirdperson_transition.get ( ) ? g_menu.main.visuals.thirdperson_distance.get ( ) * ( std::sqrtf ( 1.f - std::powf ( transition_amt - 1.f, 2.f ) ) ) : g_menu.main.visuals.thirdperson_distance.get ( );
 
 		// start pos.
 		origin = g_cl.m_shoot_pos;
@@ -213,6 +222,8 @@ void Visuals::NoSmoke( ) {
 	}
 }
 
+float oof_opacity = 255.f;
+
 void Visuals::think( ) {
 	// don't run anything if our local player isn't valid.
 	if( !g_cl.m_local )
@@ -242,6 +253,16 @@ void Visuals::think( ) {
 		render::rect_filled( x, 0, size, h, colors::black );
 	}
 
+	static bool bswitch = false;
+
+	if ( !bswitch )
+		oof_opacity -= ( 255 / 0.7f ) * g_csgo.m_globals->m_frametime;
+	else
+		oof_opacity += ( 255 / 0.7f ) * g_csgo.m_globals->m_frametime;
+
+	if ( oof_opacity > 255.f || oof_opacity < 0.f )
+		bswitch = !bswitch;
+
 	// draw esp on ents.
 	for( int i{ 1 }; i <= g_csgo.m_entlist->GetHighestEntityIndex( ); ++i ) {
 		Entity* ent = g_csgo.m_entlist->GetClientEntity( i );
@@ -264,7 +285,7 @@ void Visuals::Spectators( ) {
 	if( !g_menu.main.visuals.spectators.get( ) )
 		return;
 
-	std::vector< std::string > spectators{ XOR( "spectators" ) };
+	std::vector< std::string > spectators{ };
 	int h = render::menu_shade.m_size.m_height;
 
 	for( int i{ 1 }; i <= g_csgo.m_globals->m_max_clients; ++i ) {
@@ -296,7 +317,7 @@ void Visuals::Spectators( ) {
 	for( size_t i{ }; i < spectators.size( ); ++i ) {
 		const std::string& name = spectators[ i ];
 
-		render::menu_shade.string( g_cl.m_width - 20, ( g_cl.m_height / 2 ) - ( total_size / 2 ) + ( i * ( h - 1 ) ),
+		render::esp.string( g_cl.m_width - 10, 5 + ( i * ( h + 3 ) ),
 			{ 255, 255, 255, 179 }, name, render::ALIGN_RIGHT );
 	}
 }
@@ -309,7 +330,7 @@ void Visuals::StatusIndicators( ) {
 	// compute hud size.
 	// int size = ( int )std::round( ( g_cl.m_height / 17.5f ) * g_csgo.hud_scaling->GetFloat( ) );
 
-	struct Indicator_t { Color color; std::string text; };
+	struct Indicator_t { Color color; std::string text; bool lby; float change; };
 	std::vector< Indicator_t > indicators{ };
 
 	// LC
@@ -331,7 +352,10 @@ void Visuals::StatusIndicators( ) {
 		Indicator_t ind{ };
 		ind.color = change > 35.f ? 0xff15c27b : 0xff0000ff;
 		ind.text = XOR( "LBY" );
+		ind.lby = true;
+		ind.change = change;
 		indicators.push_back( ind );
+		//g_cl.print ( "LBY: %f", change );
 	}
 
 	// PING
@@ -350,7 +374,28 @@ void Visuals::StatusIndicators( ) {
 	for( size_t i{ }; i < indicators.size( ); ++i ) {
 		auto& indicator = indicators[ i ];
 
-		render::indicator.string( 20, g_cl.m_height - 80 - ( 30 * i ), indicator.color, indicator.text );
+		if ( indicator.lby ) {
+			render::FontSize_t text_dim = render::indicator.size ( XOR ( "LBY" ) );
+			
+			Rect change_rect = { 20, g_cl.m_height - 80 - ( 30 * i ), text_dim.m_width * ( indicator.change / 180.f ), text_dim.m_height };
+
+			render::indicator.string ( 20, g_cl.m_height - 80 - ( 30 * i ), { 0, 0, 0, 190 }, indicator.text );
+			
+			g_csgo.m_surface->ScissorState ( ) = true;
+			g_csgo.m_surface->SetClipRect ( change_rect.x, change_rect.y, change_rect.x + change_rect.w, change_rect.y + change_rect.h );
+
+			// render indicator.
+			render::indicator.string ( 20, g_cl.m_height - 80 - ( 30 * i ), indicator.color, indicator.text );
+			
+			g_csgo.m_surface->ScissorState ( ) = false;
+			g_csgo.m_surface->DisableClipping ( true );
+			
+			// draw test rectangle
+			//render::rect_filled ( change_rect.x, change_rect.y, change_rect.w, change_rect.h, { 255, 255, 255, 255 } );
+
+		}
+		else
+			render::indicator.string( 20, g_cl.m_height - 80 - ( 30 * i ), indicator.color, indicator.text );
 	}
 }
 
@@ -673,7 +718,7 @@ void Visuals::OffScreen( Player* player, int alpha ) {
 
 		// render!
 		color = g_menu.main.players.offscreen_color.get( ); // damage_data.m_color;
-		color.a( ) = ( alpha == 255 ) ? alpha : alpha / 2;
+		color.a( ) = ( alpha == 255 ) ? oof_opacity : alpha / 2;
 
 		g_csgo.m_surface->DrawSetColor( color );
 		g_csgo.m_surface->DrawTexturedPolygon( 3, verts );

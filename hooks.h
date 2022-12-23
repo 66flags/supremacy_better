@@ -58,6 +58,7 @@ public:
 	using NotifyOnLayerChangeCycle_t = void ( __thiscall * ) ( void *, const C_AnimationLayer *, const float );
 	using NotifyOnLayerChangeWeight_t = void ( __thiscall * ) ( void *, const C_AnimationLayer *, const float );
 	using GetEyeAngles_t = ang_t & ( __thiscall * ) ( void * );
+	using AccumulateLayers_t = void ( __thiscall * ) ( void *, void *setup, vec3_t &pos, void *q, float time );
 
 public:
 	bool                     TempEntities( void *msg );
@@ -73,6 +74,7 @@ public:
 	void NotifyOnLayerChangeWeight ( const C_AnimationLayer *layer, const float new_weight );
 	void NotifyOnLayerChangeCycle ( const C_AnimationLayer *layer, const float new_cycle );
 	ang_t &GetEyeAngles ( );
+	void AccumulateLayers ( void *setup, vec3_t &pos, void *q, float time );
 	Weapon*                  GetActiveWeapon( );
 	bool                     InPrediction( );
 	bool                     ShouldDrawParticles( );
@@ -145,6 +147,7 @@ public:
 	NotifyOnLayerChangeCycle_t  m_NotifyOnLayerChangeCycle;
 	NotifyOnLayerChangeWeight_t m_NotifyOnLayerChangeWeight;
 	GetEyeAngles_t m_GetEyeAngles;
+	AccumulateLayers_t m_AccumulateLayers;
 
 	// netvar proxies.
 	RecvVarProxy_t m_Pitch_original;

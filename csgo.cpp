@@ -36,6 +36,7 @@ bool CSGO::init( ) {
 	m_vstdlib_dll   = PE::GetModule( HASH( "vstdlib.dll" ) );
 	m_tier0_dll     = PE::GetModule( HASH( "tier0.dll" ) );
 	m_surface_dll   = PE::GetModule ( HASH ( "vguimatsurface.dll" ) );
+	m_server_dll	= PE::GetModule ( HASH ( "server.dll" ) );
 	
 	// import winapi functions.
 	g_winapi.WideCharToMultiByte = PE::GetExport( m_kernel32_dll, HASH( "WideCharToMultiByte" ) ).as< WinAPI::WideCharToMultiByte_t >( );

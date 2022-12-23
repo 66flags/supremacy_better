@@ -35,6 +35,7 @@ public:
 	PE::Module m_shell32_dll;
 	PE::Module m_shlwapi_dll;
 	PE::Module m_client_dll;
+	PE::Module m_server_dll;
 	PE::Module m_engine_dll;
 	PE::Module m_vstdlib_dll;
 	PE::Module m_tier0_dll;

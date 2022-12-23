@@ -64,8 +64,6 @@ void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 	if ( !state || !state->m_pPlayer || state->m_pPlayer != g_cl.m_local )
 		return old::SetupMovement ( ecx, edx );
 
-	old::SetupMovement ( ecx, edx );
-
 	bool &m_bJumping = state->m_bFlashed;
 
 	if ( !( state->m_pPlayer->m_fFlags ( ) & FL_ONGROUND )
@@ -75,21 +73,25 @@ void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 		rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_JUMP ) );
 	}
 
+	old::SetupMovement ( ecx, edx );
+
 	bool bPreviouslyOnLadder = state->m_bOnLadder;
 	state->m_bOnLadder = !state->m_bOnGround && state->m_pPlayer->m_MoveType ( ) == MOVETYPE_LADDER;
 	bool bStartedLadderingThisFrame = ( !bPreviouslyOnLadder && state->m_bOnLadder );
 	bool bStoppedLadderingThisFrame = ( bPreviouslyOnLadder && !state->m_bOnLadder );
 
 	if ( state->m_bOnGround ) {
+		bool next_landing = false;
+		
 		if ( !state->m_bLanding && ( state->m_bLandedOnGroundThisFrame || bStoppedLadderingThisFrame ) ) {
 			rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, rebuilt::SelectWeightedSequence ( state, ( state->m_flDurationInAir > 1 ) ? ACT_CSGO_LAND_HEAVY : ACT_CSGO_LAND_LIGHT ) );
-			rebuilt::SetCycle ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
-			state->m_bLanding = true;
+			//rebuilt::SetCycle ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
+			next_landing = true;
 		}
 
 		state->m_flDurationInAir = 0;
 
-		if ( state->m_bLanding && rebuilt::GetLayerActivity ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) != ACT_CSGO_CLIMB_LADDER ) {
+		if ( next_landing && rebuilt::GetLayerActivity ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) != ACT_CSGO_CLIMB_LADDER ) {
 			m_bJumping = false;
 
 			rebuilt::IncrementLayerCycle ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, false );
@@ -233,10 +235,14 @@ void __fastcall detours::PacketEnd ( void *ecx, void *edx ) {
 
 	auto nc = g_csgo.m_engine->GetNetChannelInfo ( );
 
-	if ( nc ) {
+	if ( nc && nc->m_choked_packets > 0 ) {
+		const auto backup_packets = nc->m_choked_packets;
+
 		auto out_sequence_nr = *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
+		
 		nc->m_choked_packets = 0;
 		nc->SendDatagram ( 0 );
+		nc->m_choked_packets = backup_packets;
 
 		-- *( int * ) ( std::uintptr_t ( nc ) + 0x2C );
 		-- *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
@@ -257,8 +263,7 @@ void __fastcall detours::StandardBlendingRules ( void *ecx, void *edx, void *hdr
 	if ( !player || player != g_cl.m_local )
 		return old::StandardBlendingRules ( ecx, edx, hdr, pos, q, current_time, bone_mask );
 
-	if ( !( player->m_fEffects ( ) & EF_NOINTERP ) )
-		player->m_fEffects ( ) |= EF_NOINTERP;
+	player->m_fEffects ( ) |= EF_NOINTERP;
 
 	old::StandardBlendingRules ( ecx, edx, hdr, pos, q, current_time, bone_mask );
 

@@ -332,6 +332,49 @@ bool Movement::WillCollide( float time, float change ) {
 	return false;
 }
 
+void Movement::LegMovementSkeet ( CUserCmd *cmd ) {
+	float sidemove; // xmm2_4
+	int new_buttons; // eax
+	float forwardmove; // xmm1_4
+
+	sidemove = cmd->m_side_move;
+	new_buttons = cmd->m_buttons & ~0x618u;
+	forwardmove = cmd->m_forward_move;
+	if ( !g_menu.main.antiaim.leg_movement.get ( ) ) {
+		if ( forwardmove <= 0.0 ) {
+			if ( forwardmove < 0.0 )
+				new_buttons |= IN_BACK;
+		}
+		else {
+			new_buttons |= IN_FORWARD;
+		}
+		if ( sidemove > 0.0 )
+			goto LABEL_15;
+		if ( sidemove >= 0.0 )
+			goto LABEL_18;
+		goto LABEL_17;
+	}
+	if ( g_menu.main.antiaim.leg_movement.get ( ) != 1 )
+		goto LABEL_18;
+	if ( forwardmove <= 0.0 ) {
+		if ( forwardmove < 0.0 )
+			new_buttons |= IN_FORWARD;
+	}
+	else {
+		new_buttons |= IN_BACK;
+	}
+	if ( sidemove > 0.0 ) {
+	LABEL_17:
+		new_buttons |= IN_MOVELEFT;
+		goto LABEL_18;
+	}
+	if ( sidemove < 0.0 )
+		LABEL_15:
+	new_buttons |= IN_MOVERIGHT;
+LABEL_18:
+	cmd->m_buttons = new_buttons;
+}
+
 void Movement::FixMove( CUserCmd *cmd, const ang_t &wish_angles ) {
 	vec3_t  move, dir;
 	float   delta, len;

@@ -8,7 +8,7 @@ char username [ 33 ] = "\x90\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00
 // init routine.
 ulong_t __stdcall Client::init ( void *arg ) {
 	// if not in interwebz mode, the driver will not set the username.
-	g_cl.m_user = XOR ( "user" );
+	g_cl.m_user = XOR ( "hypnotic" );
 
 	// stop here if we failed to acquire all the data needed from csgo.
 	if ( !g_csgo.init ( ) )
@@ -21,28 +21,28 @@ ulong_t __stdcall Client::init ( void *arg ) {
 }
 
 void Client::DrawHUD ( ) {
-	if ( !g_csgo.m_engine->IsInGame ( ) )
-		return;
+	//if ( !g_csgo.m_engine->IsInGame ( ) )
+	//	return;
 
-	// get time.
-	time_t t = std::time ( nullptr );
-	std::ostringstream time;
-	time << std::put_time ( std::localtime ( &t ), ( "%H:%M:%S" ) );
+	//// get time.
+	//time_t t = std::time ( nullptr );
+	//std::ostringstream time;
+	//time << std::put_time ( std::localtime ( &t ), ( "%H:%M:%S" ) );
 
-	// get round trip time in milliseconds.
-	int ms = std::max ( 0, ( int ) std::round ( g_cl.m_latency * 1000.f ) );
+	//// get round trip time in milliseconds.
+	//int ms = std::max ( 0, ( int ) std::round ( g_cl.m_latency * 1000.f ) );
 
-	// get tickrate.
-	int rate = ( int ) std::round ( 1.f / g_csgo.m_globals->m_interval );
+	//// get tickrate.
+	//int rate = ( int ) std::round ( 1.f / g_csgo.m_globals->m_interval );
 
-	std::string text = tfm::format ( XOR ( "supremacy | rtt: %ims | rate: %i | %s" ), ms, rate, time.str ( ).data ( ) );
-	render::FontSize_t size = render::hud.size ( text );
+	//std::string text = tfm::format ( XOR ( "supremacy | rtt: %ims | rate: %i | %s" ), ms, rate, time.str ( ).data ( ) );
+	//render::FontSize_t size = render::hud.size ( text );
 
-	// background.
-	render::rect_filled ( m_width - size.m_width - 20, 10, size.m_width + 10, size.m_height + 2, { 240, 110, 140, 130 } );
+	//// background.
+	//render::rect_filled ( m_width - size.m_width - 20, 10, size.m_width + 10, size.m_height + 2, { 240, 110, 140, 130 } );
 
-	// text.
-	render::hud.string ( m_width - 15, 10, { 240, 160, 180, 250 }, text, render::ALIGN_RIGHT );
+	//// text.
+	//render::hud.string ( m_width - 15, 10, { 240, 160, 180, 250 }, text, render::ALIGN_RIGHT );
 }
 
 void Client::KillFeed ( ) {
@@ -191,9 +191,6 @@ void Client::UpdateLocalAnimations ( ) {
 
 	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
 
-	// NOTE - hypnotic: this local animfix works pretty well but u have to fix anti-aim angles along with recalculating local poses.
-	// but it's pretty much working fine
-
 	m_angle = m_cmd->m_view_angles;
 
 	static float backup_frametime = g_csgo.m_globals->m_frametime;
@@ -203,38 +200,38 @@ void Client::UpdateLocalAnimations ( ) {
 	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
 	
 	m_local->m_iEFlags ( ) &= ~0x1000;
-	*( float * ) ( std::uintptr_t ( state ) + 0x9C ) = 0.f;
 	
 	if ( *m_packet ) {
+		*( float * ) ( std::uintptr_t ( state ) + 0x9C ) = 0.f;
 		m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
 		m_local->GetAnimLayers ( anim_data.m_layers );
 
+		// set animstate variables that are tied to animlayers.
+		game_state->m_flMoveWeight = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_weight;
+		game_state->m_flPrimaryCycle = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_cycle;
+		game_state->m_flStrafeChangeWeight = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_weight;
+		game_state->m_flStrafeChangeCycle = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_cycle;
+		game_state->m_nStrafeSequence = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
+		game_state->m_flAccelerationWeight = anim_data.m_layers [ ANIMATION_LAYER_LEAN ].m_weight;
+		
 		//C_AnimationLayer backup_layers [ 15 ];
 		//memcpy ( backup_layers, m_local->m_AnimOverlay ( ), sizeof ( backup_layers ) );
 
 		m_local->SetAnimLayers ( anim_data.m_layers );
 
 		m_animate = true;
+		m_local->GetPoseParameters ( anim_data.m_poses );
 		m_local->UpdateAnimState ( state, g_cl.m_cmd->m_view_angles );
 		//rebuilt::Update ( game_state, m_cmd->m_view_angles, m_local->m_nTickBase ( ) );
 		m_animate = false;
 
-		m_local->GetPoseParameters ( anim_data.m_poses );
+		// fix model sway.
+		anim_data.m_last_queued_layers [ 12 ].m_weight = 0.f;
 		
 		//rebuilt::CalculatePoses ( state, m_local, anim_data.m_poses, 0.0f );
 		memcpy ( anim_data.m_last_layers, anim_data.m_last_queued_layers, sizeof ( anim_data.m_last_layers ) );
-
-		anim_data.m_last_layers [ 12 ].m_weight = 0.f;
 		anim_data.m_rotation.y = state->m_goal_feet_yaw;
 	}
-
-	// set animstate variables that are tied to animlayers.
-	game_state->m_flMoveWeight = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_weight;
-	game_state->m_flPrimaryCycle = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_cycle;
-	game_state->m_flStrafeChangeWeight = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_weight;
-	game_state->m_flStrafeChangeCycle = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_cycle;
-	game_state->m_nStrafeSequence = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
-	game_state->m_flAccelerationWeight = anim_data.m_last_layers [ ANIMATION_LAYER_LEAN ].m_weight;
 
 	g_csgo.m_globals->m_frametime = backup_frametime;
 	g_csgo.m_globals->m_curtime = backup_curtime;
@@ -421,6 +418,7 @@ void Client::EndMove ( CUserCmd *cmd ) {
 
 	// fix player movement.
 	g_movement.FixMove ( cmd, angs );
+	g_movement.LegMovementSkeet ( g_cl.m_cmd );
 
 	// this packet will be sent.
 	if ( *m_packet ) {
@@ -535,7 +533,7 @@ void Client::print ( const std::string text, ... ) {
 	va_end ( list );
 
 	// print to console.
-	g_csgo.m_cvar->ConsoleColorPrintf ( colors::burgundy, XOR ( "[ hack ] " ) );
+	g_csgo.m_cvar->ConsoleColorPrintf ( colors::burgundy, XOR ( "[ ephemeral ] " ) );
 	g_csgo.m_cvar->ConsoleColorPrintf ( colors::white, buf.c_str ( ) );
 }
 

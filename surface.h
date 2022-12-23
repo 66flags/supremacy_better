@@ -115,11 +115,26 @@ public:
 		ONSCREENSIZECHANGED = 116,
 		DRAWFILLEDRECTFADE  = 123,
 		DRAWCOLOREDCIRCLE	= 162,
+		GETCLIPRECT = 147,
+		SETCLIPRECT = 147,
+		DISABLECLIPPING = 159
 	};
 public:
 
 	__forceinline void DrawSetColor( Color col ) {
 		return util::get_method< void( __thiscall* )( decltype( this ), Color ) >( this, DRAWSETCOLOR )( this, col );
+	}
+
+	void __forceinline GetClipRect ( int &x0, int &y0, int &x1, int &y1 ) {
+		return util::get_method< void ( __thiscall * )( decltype( this ), int &, int &, int &, int & ) > ( this, GETCLIPRECT )( this, x0, y0, x1, y1 );
+	}
+
+	void __forceinline SetClipRect ( int x0, int y0, int x1, int y1 ) {
+		return util::get_method< void ( __thiscall * )( decltype( this ), int, int, int, int ) > ( this, SETCLIPRECT )( this, x0, y0, x1, y1 );
+	}
+
+	__forceinline void DisableClipping ( bool disable ) {
+		return util::get_method< void ( __thiscall * )( decltype( this ), bool ) > ( this, DISABLECLIPPING )( this, disable );
 	}
 
 	__forceinline void DrawFilledRect( int x0, int y0, int x1, int y1 ) {
@@ -212,6 +227,10 @@ public:
 
 	__forceinline void DrawColoredCircle( int x, int y, float radius, int r, int g, int b, int a ) {
 		return util::get_method< void( __thiscall* )( decltype( this ), int, int, float, int, int, int, int ) >( this, DRAWCOLOREDCIRCLE )( this, x, y, radius, r, g, b, a );
+	}
+
+	__forceinline bool &ScissorState ( ) {
+		return *( bool * ) ( std::uintptr_t ( this ) + 0x280 );
 	}
 };
 

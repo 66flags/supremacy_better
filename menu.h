@@ -191,6 +191,7 @@ public:
 
 	Checkbox      lag_enable;
 	MultiDropdown lag_active;
+	Dropdown	  leg_movement;
 	Dropdown      lag_mode;
 	Slider        lag_limit;
 	Checkbox      lag_land;
@@ -377,6 +378,9 @@ public:
 		RegisterElement( &body_fake_air );
 
 		// col2.
+		leg_movement.setup ( "leg movement", XOR ( "leg_movement" ), { XOR ( "off" ), XOR ( "slide" ), XOR ( "never slide" ) } );
+		RegisterElement ( &leg_movement, 1 );
+		
 		fake_yaw.setup( XOR( "fake yaw" ), XOR( "fake_yaw" ), { XOR( "off" ), XOR( "default" ), XOR( "relative" ), XOR( "jitter" ), XOR( "rotate" ), XOR( "random" ), XOR( "local view" ) } );
 		RegisterElement( &fake_yaw, 1 );
 
@@ -450,7 +454,7 @@ public:
 	Colorpicker   chams_local_col;
 	Slider        chams_local_blend;
 	Checkbox      chams_local_scope;
-
+	Slider        chams_local_scope_opacity;
 public:
 	void init( ) {
 		SetTitle( XOR( "players" ) );
@@ -572,6 +576,9 @@ public:
 
 		chams_local_scope.setup( XOR( "blend when scoped" ), XOR( "chams_local_scope" ) );
 		RegisterElement( &chams_local_scope, 1 );
+
+		chams_local_scope_opacity.setup ( XOR ( "scope opacity" ), XOR ( "chams_local_scope_opacity" ), 0.f, 100.f, false, 0, 100.f, 1.f, XOR ( L"%" ) );
+		RegisterElement ( &chams_local_scope_opacity, 1 );
 	}
 };
 
@@ -588,6 +595,7 @@ public:
 	Checkbox      disableteam;
 	Dropdown	  world;
 	Checkbox      transparent_props;
+	Slider        transparent_props_opacity;
 	Checkbox      enemy_radar;
 
 	// col2.
@@ -614,7 +622,8 @@ public:
 	Colorpicker   impact_beams_hurt_color;
 	Slider        impact_beams_time;
 	Keybind       thirdperson;
-
+	Slider        thirdperson_distance;
+	Checkbox      thirdperson_transition;
 public:
 	void init( ) {
 		SetTitle( XOR( "visuals" ) );
@@ -653,6 +662,9 @@ public:
 		transparent_props.setup( XOR( "transparent props" ), XOR( "transparent_props" ) );
 		transparent_props.SetCallback( Visuals::ModulateWorld );
 		RegisterElement( &transparent_props );
+
+		transparent_props_opacity.setup ( XOR ( "transparent props opacity" ), XOR ( "transparent_props_opacity" ), 0.f, 100.f, false, 0, 100.f, 1.f, XOR ( L"%" ) );
+		RegisterElement ( &transparent_props_opacity );
 
 		enemy_radar.setup( XOR( "force enemies on radar" ), XOR( "enemy_radar" ) );
 		RegisterElement( &enemy_radar );
@@ -727,6 +739,12 @@ public:
 		thirdperson.setup( XOR( "thirdperson" ), XOR( "thirdperson" ) );
 		thirdperson.SetToggleCallback( callbacks::ToggleThirdPerson );
 		RegisterElement( &thirdperson, 1 );
+
+		thirdperson_distance.setup ( "thirdperson distance", XOR ( "thirdperson_dist" ), 50.f, 160.f, true, 0, 150.f, 1.f, XOR ( L"°" ) );
+		RegisterElement ( &thirdperson_distance, 1 );
+
+		//thirdperson_transition.setup ( XOR ( "thirdperson transition" ), XOR ( "thirdperson_transition" ) );
+		//RegisterElement ( &thirdperson_transition, 1 );
 	}
 };
 
@@ -2116,7 +2134,7 @@ public:
 public:
 	void init( ) {
 		SetPosition( 50, 50 );
-		SetSize( 630, 500 );
+		SetSize( 630, 600 );
 
 		// aim.
 		RegisterTab( &aimbot );
