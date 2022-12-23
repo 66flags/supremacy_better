@@ -47,10 +47,14 @@ void Hooks::CalcView ( vec3_t &eye_origin, ang_t &eye_angles, float &z_near, flo
 void Hooks::UpdateClientSideAnimation( ) {
 	if ( !this || g_cl.m_animate )
 		return g_hooks.m_UpdateClientSideAnimation ( this );
+	
+	auto player = ( Player * ) this;
 
-	memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
-	g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
-	g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
+	//player->m_angRotation ( ) = g_cl.m_rotation;
+	//player->m_angNetworkAngles ( ) = g_cl.m_rotation;
+	memcpy ( player->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
+	player->SetPoseParameters ( g_cl.anim_data.m_poses );
+	player->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
 }
 
 void Hooks::NotifyOnLayerChangeWeight ( const C_AnimationLayer *layer, const float new_weight ) {
@@ -68,7 +72,7 @@ ang_t &Hooks::GetEyeAngles ( ) {
 	static Address ret2 = pattern::find ( g_csgo.m_client_dll, XOR ( "F3 0F 10 55 ? 51 8B 8E ? ? ? ?" ) );
 
 	if ( stack.ReturnAddress ( ) == ret1 || stack.ReturnAddress ( ) == ret2 )
-		return g_cl.m_radar;
+		return g_cl.m_angle;
 	
 	return g_hooks.m_GetEyeAngles ( this );
 }
@@ -133,7 +137,7 @@ void CustomEntityListener::OnEntityCreated( Entity *ent ) {
 					g_hooks.m_CalcView					= vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
 					g_hooks.m_NotifyOnLayerChangeCycle  = vmt->add< Hooks::NotifyOnLayerChangeCycle_t > ( Player::NOTIFYONLAYERCHANGECYCLE, util::force_cast ( &Hooks::NotifyOnLayerChangeCycle ) );
 					g_hooks.m_NotifyOnLayerChangeWeight = vmt->add< Hooks::NotifyOnLayerChangeWeight_t > ( Player::NOTIFYONLAYERCHANGEWEIGHT, util::force_cast ( &Hooks::NotifyOnLayerChangeWeight ) );
-					g_hooks.m_GetEyeAngles				= vmt->add< Hooks::GetEyeAngles_t > ( Player::GETEYEANGLES, util::force_cast ( &Hooks::GetEyeAngles ) );
+					//g_hooks.m_GetEyeAngles				= vmt->add< Hooks::GetEyeAngles_t > ( Player::GETEYEANGLES, util::force_cast ( &Hooks::GetEyeAngles ) );
 					//g_hooks.m_AccumulateLayers			= vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
                 }
             }

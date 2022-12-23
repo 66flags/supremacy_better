@@ -191,7 +191,7 @@ void Client::UpdateLocalAnimations ( ) {
 
 	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
 
-	m_angle = m_cmd->m_view_angles;
+	//m_angle = m_cmd->m_view_angles;
 
 	static float backup_frametime = g_csgo.m_globals->m_frametime;
 	static float backup_curtime = g_csgo.m_globals->m_curtime;
@@ -201,29 +201,21 @@ void Client::UpdateLocalAnimations ( ) {
 	
 	m_local->m_iEFlags ( ) &= ~0x1000;
 	
+	m_animate = true;
+	m_local->UpdateAnimState ( state, g_cl.m_angle );
+	//rebuilt::Update ( game_state, m_cmd->m_view_angles, m_local->m_nTickBase ( ) );
+	m_animate = false;
+
 	if ( *m_packet ) {
 		*( float * ) ( std::uintptr_t ( state ) + 0x9C ) = 0.f;
 		m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
 		m_local->GetAnimLayers ( anim_data.m_layers );
-
-		// set animstate variables that are tied to animlayers.
-		game_state->m_flMoveWeight = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_weight;
-		game_state->m_flPrimaryCycle = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_cycle;
-		game_state->m_flStrafeChangeWeight = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_weight;
-		game_state->m_flStrafeChangeCycle = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_cycle;
-		game_state->m_nStrafeSequence = anim_data.m_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
-		game_state->m_flAccelerationWeight = anim_data.m_layers [ ANIMATION_LAYER_LEAN ].m_weight;
 		
 		//C_AnimationLayer backup_layers [ 15 ];
 		//memcpy ( backup_layers, m_local->m_AnimOverlay ( ), sizeof ( backup_layers ) );
-
+		m_local->GetPoseParameters ( anim_data.m_poses );
 		m_local->SetAnimLayers ( anim_data.m_layers );
 
-		m_animate = true;
-		m_local->GetPoseParameters ( anim_data.m_poses );
-		m_local->UpdateAnimState ( state, g_cl.m_cmd->m_view_angles );
-		//rebuilt::Update ( game_state, m_cmd->m_view_angles, m_local->m_nTickBase ( ) );
-		m_animate = false;
 
 		// fix model sway.
 		anim_data.m_last_queued_layers [ 12 ].m_weight = 0.f;
@@ -233,12 +225,23 @@ void Client::UpdateLocalAnimations ( ) {
 		anim_data.m_rotation.y = state->m_goal_feet_yaw;
 	}
 
+	// set animstate variables that are tied to animlayers.
+	game_state->m_flMoveWeight = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_weight;
+	game_state->m_flPrimaryCycle = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_cycle;
+	game_state->m_flStrafeChangeWeight = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_weight;
+	game_state->m_flStrafeChangeCycle = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_cycle;
+	game_state->m_nStrafeSequence = anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
+	game_state->m_flAccelerationWeight = anim_data.m_last_layers [ ANIMATION_LAYER_LEAN ].m_weight;
+
 	g_csgo.m_globals->m_frametime = backup_frametime;
 	g_csgo.m_globals->m_curtime = backup_curtime;
 }
 
 void Client::UpdateInformation ( ) {
-	if ( !m_processing || !m_local || !m_local->alive ( ) )
+	// call original, bypass hook.
+	g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
+
+	if ( g_cl.m_lag > 0 )
 		return;
 
 	CCSGOPlayerAnimState *state = g_cl.m_local->m_PlayerAnimState ( );
@@ -259,18 +262,22 @@ void Client::UpdateInformation ( ) {
 	math::clamp ( m_angle.x, -90.f, 90.f );
 	m_angle.normalize ( );
 
-	// write angles to model.
-	//g_csgo.m_prediction->SetLocalViewAngles ( m_angle );
+	// CCSGOPlayerAnimState::Update, bypass already animated checks.
+	//if ( state->m_frame == g_csgo.m_globals->m_frame )
+	//	state->m_frame -= 1;
+	
+	// get last networked poses.
+	g_cl.m_local->GetPoseParameters ( g_cl.m_poses );
 
-	// set lby to predicted value.
-	g_cl.m_local->m_flLowerBodyYawTarget ( ) = m_body;
+	// store updated abs yaw.
+	g_cl.m_abs_yaw = state->m_goal_feet_yaw;
 
 	// CCSGOPlayerAnimState::Update, bypass already animated checks.
 	//if ( state->m_frame == g_csgo.m_globals->m_frame )
 	//	state->m_frame -= 1;
 
 	// call original, bypass hook.
-	g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
+	//g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
 
 	// get last networked poses.
 	g_cl.m_local->GetPoseParameters ( g_cl.m_poses );
@@ -297,6 +304,12 @@ void Client::UpdateInformation ( ) {
 		m_body = m_angle.y;
 		m_body_pred = m_anim_time + 1.1f;
 	}
+
+	// write angles to model.
+	g_csgo.m_prediction->SetLocalViewAngles ( m_angle );
+
+	// set lby to predicted value.
+	g_cl.m_local->m_flLowerBodyYawTarget ( ) = m_body;
 
 	// save updated data.
 	m_rotation = g_cl.m_local->m_angAbsRotation ( );
@@ -405,8 +418,13 @@ void Client::EndMove ( CUserCmd *cmd ) {
 	// update client-side animations.
 	//g_aimbot.UpdateLocal ( );
 	//if ( g_cl.m_packet )
+	
 	UpdateInformation ( );
 	UpdateLocalAnimations ( );
+
+	//if ( g_csgo.m_input->CAM_IsThirdPerson ( ) )
+	//	g_csgo.m_prediction->SetLocalViewAngles ( g_cl.m_angle );
+	
 	// if matchmaking mode, anti untrust clamp.
 	if ( g_menu.main.config.mode.get ( ) == 0 )
 		m_cmd->m_view_angles.SanitizeAngle ( );
