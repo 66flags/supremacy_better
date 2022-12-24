@@ -653,7 +653,7 @@ void Aimbot::find ( ) {
 
 	m_stop = !( g_cl.m_buttons & IN_JUMP );
 
-	if ( m_stop && best.damage )
+	if ( m_stop && ( best.damage && best.player ) )
 		Slow ( g_cl.m_cmd );
 	
 	if ( best.player && best.record ) {
