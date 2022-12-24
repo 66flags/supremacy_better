@@ -185,9 +185,9 @@ void __vectorcall detours::UpdateAnimationState ( void *ecx, void *a1, float a2,
 	if ( state->m_frame == g_csgo.m_globals->m_frame )
 		state->m_frame -= 1;
 
-	auto angle = g_cl.m_angle;
+	//auto angle = g_cl.m_angle;
 
-	return old::UpdateAnimationState ( ecx, a1, 0.f, angle.y, angle.x, a5 );
+	return old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
 }
 
 void __fastcall detours::DoProceduralFootPlant ( void *ecx, void *edx, int a1, int a2, int a3, int a4 ) {

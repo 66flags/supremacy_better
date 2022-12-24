@@ -16,6 +16,7 @@ ulong_t __stdcall Client::init ( void *arg ) {
 
 	// welcome the user.
 	g_notify.add ( tfm::format ( XOR ( "welcome %s\n" ), g_cl.m_user ) );
+	g_cl.UnlockHiddenConvars ( );
 
 	return 1;
 }
@@ -180,6 +181,19 @@ void Client::BackupPlayers ( bool restore ) {
 	}
 }
 
+void Client::UnlockHiddenConvars ( ) {
+	ConVar *list;
+
+	list = g_csgo.m_cvar->GetCommands ( );
+	if ( !list )
+		return;
+
+	// iterate all convars.
+	for ( auto it = list; it != nullptr; it = it->m_next ) {
+		it->m_flags &= ~( FCVAR_DEVELOPMENTONLY | FCVAR_HIDDEN );
+	}
+}
+
 void Client::UpdateLocalAnimations ( ) {
 	if ( !m_processing || !m_local || !m_local->alive ( ) )
 		return;
@@ -213,8 +227,8 @@ void Client::UpdateLocalAnimations ( ) {
 	game_state->m_flAccelerationWeight = backup_anim_layers [ ANIMATION_LAYER_LEAN ].m_weight;
 
 	m_animate = true;
-	//game::UpdateAnimationState ( state, g_cl.m_angle );
-	g_cl.m_local->UpdateClientSideAnimation ( );
+	game::UpdateAnimationState ( state, g_cl.m_angle );
+	//g_cl.m_local->UpdateClientSideAnimation ( );
 	m_animate = false;
 
 	//rebuilt::Update ( game_state, m_cmd->m_view_angles, m_local->m_nTickBase ( ) );
@@ -226,13 +240,15 @@ void Client::UpdateLocalAnimations ( ) {
 	backup_anim_layers [ 12 ].m_weight = 0.f;
 	*( float * ) ( std::uintptr_t ( state ) + 0x9C ) = 0.f;
 
+	if ( !reinterpret_cast < CCSGOGamePlayerAnimState* > ( state )->m_bOnGround )
+		m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
+
 	if ( !*m_packet ) {
 		memcpy ( g_cl.m_local->m_AnimOverlay ( ), backup_anim_layers, sizeof ( backup_anim_layers ) );
 		return;
 	}
 
 	if ( *m_packet ) {
-		m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
 		m_local->GetPoseParameters ( anim_data.m_poses );
 
 		memcpy ( anim_data.m_last_layers, anim_data.m_last_queued_layers, sizeof ( anim_data.m_last_layers ) );

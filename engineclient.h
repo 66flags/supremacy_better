@@ -184,6 +184,7 @@ public:
 		ISHLTV                   = 93,
 		//SETOCCLUSIONPARAMETERS = 96,
 		EXECUTECLIENTCMD         = 108,
+		CLIENTCMDUNRESTRICTED	 = 114
 	};
 
 public:
@@ -243,4 +244,8 @@ public:
 	//	float arr[] = { min, max };
 	//	return util::get_method< void( __thiscall* )( decltype( this ), float* ) >( this, SETOCCLUSIONPARAMETERS )( this, arr );
 	//}
+
+	void ClientCmdUnrestricted ( const char *cmd ) {
+		util::get_method< void ( __thiscall * )( void *, const char *, bool ) > ( this, CLIENTCMDUNRESTRICTED )( this, cmd, false );
+	}
 };

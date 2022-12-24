@@ -29,6 +29,7 @@ public:
 	void StartMove ( CUserCmd *cmd );
 	void EndMove ( CUserCmd *cmd );
 	void BackupPlayers ( bool restore );
+	void UnlockHiddenConvars ( );
 	void CalculatePoses ( CCSGOPlayerAnimState *state, Player *player, float *poses, float feet_yaw );
 	void UpdateLocalAnimations ( );
 	void DoMove ( );

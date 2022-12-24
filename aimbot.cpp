@@ -193,7 +193,7 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 			record->m_has_vel = g_aimbot.FixVelocity ( m_player, previous, m_player->m_vecVelocity ( ), backup.m_layers, m_player->m_vecOrigin ( ) );
 	}
 		
-	record->m_anim_velocity = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_vecVelocity;
+	record->m_anim_velocity = m_player->m_vecVelocity ( );
 
 	if ( record->m_lag > 1 && !bot ) {
 		float speed = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_vecVelocity.length ( );
@@ -202,7 +202,7 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 			record->m_fake_walk = true;
 
 		if ( record->m_fake_walk )
-			record->m_anim_velocity = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_vecVelocity = { 0.f, 0.f, 0.f };
+			record->m_anim_velocity = m_player->m_vecVelocity ( ) = { 0.f, 0.f, 0.f };
 
 		if ( m_records.size ( ) >= 2 ) {
 			LagRecord *previous = m_records [ 1 ].get ( );
@@ -225,11 +225,11 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 				float time = record->m_sim_time - previous->m_sim_time;
 
 				//float change = ( duck / time ) * g_csgo.m_globals->m_interval;
-
-				m_player->m_flDuckAmount ( ) = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_flAnimDuckAmount;
+				float duckSpeed = std::max ( 1.5f, m_player->m_flDuckSpeed ( ) );
+				m_player->m_flDuckAmount ( ) = valve_math::Approach ( 1.0f, m_player->m_flDuckAmount ( ), game::TICKS_TO_TIME ( 1 ) * duckSpeed );
 
 				if ( !record->m_fake_walk ) {
-					vec3_t velo = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_vecVelocity - previous->m_velocity;
+					vec3_t velo = record->m_velocity - previous->m_velocity;
 
 					vec3_t accel = ( velo / time ) * g_csgo.m_globals->m_interval;
 
@@ -245,7 +245,8 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 		g_resolver.ResolveAngles ( m_player, record );
 
 	m_player->m_vecOrigin ( ) = record->m_origin;
-	m_player->m_vecVelocity ( ) = m_player->m_vecAbsVelocity ( ) = record->m_anim_velocity;
+	//m_player->m_vecVelocity ( ) = 
+	m_player->m_vecAbsVelocity ( ) = record->m_anim_velocity;
 	m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
 
 	m_player->m_iEFlags ( ) &= ~0x1000;
@@ -650,6 +651,11 @@ void Aimbot::find ( ) {
 		}
 	}
 
+	m_stop = !( g_cl.m_buttons & IN_JUMP );
+
+	if ( m_stop && best.damage )
+		Slow ( g_cl.m_cmd );
+	
 	if ( best.player && best.record ) {
 		math::VectorAngles ( best.pos - g_cl.m_shoot_pos, m_angle );
 
@@ -657,13 +663,7 @@ void Aimbot::find ( ) {
 		m_aim = best.pos;
 		m_damage = best.damage;
 		m_record = best.record;
-
 		m_record->cache ( );
-
-		m_stop = !( g_cl.m_buttons & IN_JUMP );
-
-		if ( m_stop && best.damage )
-			Slow ( g_cl.m_cmd );
 
 		bool on = g_menu.main.aimbot.hitchance.get ( ) && g_menu.main.config.mode.get ( ) == 0;
 		bool hit = on && CheckHitchance ( m_target, m_angle );

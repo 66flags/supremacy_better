@@ -123,6 +123,9 @@ bool CSGO::init( ) {
 //	cl_extrapolate->m_callbacks.RemoveAll( );
 	//cl_extrapolate->SetValue ( 0 );
 
+
+	g_csgo.m_engine->ClientCmdUnrestricted ( XOR ( "rate 786432" ) );
+
 	// classes by sig.
 	m_move_helper        = pattern::find( m_client_dll, XOR( "8B 0D ? ? ? ? 8B 46 08 68" ) ).add( 2 ).get< IMoveHelper* >( 2 );
     m_cl                 = **reinterpret_cast< CClientState *** > ( ( *reinterpret_cast< uintptr_t ** > ( m_engine ) )[ 12 ] + 0x10 );

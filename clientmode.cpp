@@ -48,11 +48,23 @@ bool Hooks::CreateMove( float time, CUserCmd* cmd ) {
 	// random_seed isn't generated in ClientMode::CreateMove yet, we must set generate it ourselves.
 	cmd->m_random_seed = g_csgo.MD5_PseudoRandom( cmd->m_command_number ) & 0x7fffffff;
 
+	const auto ebp = *reinterpret_cast< std::uintptr_t * >( reinterpret_cast< std::uintptr_t >( _AddressOfReturnAddress ( ) ) - sizeof ( std::uintptr_t * ) );
+
+#ifdef _DEBUG
+
+	g_cl.m_packet = reinterpret_cast< bool * >( ebp - 0x1c );
+
+	g_cl.m_final_packet = reinterpret_cast< bool * >( ebp - 0x1b );
+
+#else // DEBUG
+
 	// get bSendPacket off the stack.
-	g_cl.m_packet = stack.next( ).local( 0x1c ).as< bool* >( );
+	g_cl.m_packet = stack.next ( ).local ( 0x1c ).as< bool * > ( );
 
 	// get bFinalTick off the stack.
-	g_cl.m_final_packet = stack.next( ).local( 0x1b ).as< bool* >( );
+	g_cl.m_final_packet = stack.next ( ).local ( 0x1b ).as< bool * > ( );
+
+#endif
 
 	// invoke move function.
 	g_cl.OnTick( cmd );
