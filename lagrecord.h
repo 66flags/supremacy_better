@@ -50,6 +50,7 @@ public:
 	int     m_tick;
 	int     m_lag;
 	bool    m_dormant;
+	bool	m_has_vel;
 
 	// netvars.
 	float  m_sim_time;

@@ -30,25 +30,16 @@ void Hooks::BuildTransformations( int a2, int a3, int a4, int a5, int a6, int a7
 void Hooks::UpdateClientSideAnimation ( ) {
 	auto player = ( Player * ) this;
 
-	if ( !player )
+	if ( !player || !player->alive ( ) )
 		return g_hooks.m_UpdateClientSideAnimation ( this );
 
 	if ( player == g_cl.m_local ) {
 		auto state = ( CCSGOGamePlayerAnimState * ) g_cl.m_local->m_PlayerAnimState ( );
 		
-		if ( g_cl.m_animate ) {
+		if ( g_cl.m_animate || g_cl.m_lag < 0 ) {
 			g_hooks.m_UpdateClientSideAnimation ( this );
 		}
 		else {
-			//state->m_pPlayer = nullptr;
-			//g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local ); // force viewmodel to update
-			//state->m_pPlayer = g_cl.m_local;
-
-			// fix bone matrix origin.
-			//for ( int i = 0; i < g_cl.m_local->m_iBoneCount ( ); i++ )
-			//	g_cl.m_real_bones [ i ].SetOrigin ( g_cl.m_local->GetAbsOrigin ( ) - g_cl.m_real_matrix_origin [ i ].GetOrigin ( ) );
-
-			//memcpy ( g_cl.m_local->m_pBoneCache ( ), g_cl.m_real_bones, sizeof ( BoneArray ) * g_cl.m_local->m_iBoneCount ( ) );
 			memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
 			
 			g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
@@ -186,7 +177,7 @@ void CustomEntityListener::OnEntityCreated( Entity *ent ) {
                     g_hooks.m_BuildTransformations      = vmt->add< Hooks::BuildTransformations_t >( Player::BUILDTRANSFORMATIONS, util::force_cast( &Hooks::BuildTransformations ) );
 					g_hooks.m_CalcView					= vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
 					g_hooks.m_GetEyeAngles				= vmt->add< Hooks::GetEyeAngles_t > ( Player::GETEYEANGLES, util::force_cast ( &Hooks::GetEyeAngles ) );
-					//g_hooks.m_AccumulateLayers			= vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
+					g_hooks.m_AccumulateLayers			= vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
                 }
             }
         }

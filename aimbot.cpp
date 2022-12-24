@@ -2,6 +2,122 @@
 
 Aimbot g_aimbot { };;
 
+bool Aimbot::FixVelocity ( Player *ent, LagRecord* previous, vec3_t &vel, C_AnimationLayer* animlayers, const vec3_t &origin ) {
+	const auto idx = ent->index ( );
+
+	vel.zero ( );
+
+	if ( !!( ent->m_fFlags ( ) & FL_ONGROUND ) && !animlayers [ 6 ].m_weight ) {
+		vel.zero ( );
+		return true;
+	}
+
+	auto time_difference = std::max < float > ( game::TICKS_TO_TIME ( 1 ), ent->m_flSimulationTime ( ) - previous->m_sim_time );
+	auto origin_delta = origin - previous->m_origin;
+
+	if ( origin_delta.is_zero ( ) ) {
+		vel.zero ( );
+		return true;
+	}
+
+	if ( game::TIME_TO_TICKS ( ent->m_flSimulationTime ( ) - previous->m_sim_time ) <= 1 ) {
+		vel = origin_delta / time_difference;
+		return true;
+	}
+
+	auto fixed = false;
+
+	/* skeet */
+	if ( !!( ent->m_fFlags ( ) & FL_ONGROUND ) ) {
+		vel.z = 0.0f;
+		vel = origin_delta / time_difference;
+
+		auto max_speed = 260.0f;
+		const auto weapon = g_cl.m_local->GetActiveWeapon ( );
+
+		if ( weapon && weapon->GetWpnData ( ) )
+			max_speed = g_cl.m_local->m_bIsScoped ( ) ? weapon->GetWpnData ( )->m_max_player_speed_alt : weapon->GetWpnData ( )->m_max_player_speed;
+
+		if ( animlayers [ 6 ].m_weight <= 0.0f ) {
+			vel.zero ( );
+			fixed = true;
+		}
+		else {
+			if ( animlayers [ 6 ].m_playback_rate > 0.0f ) {
+				auto origin_delta_vel_norm = vel.normalized ( );
+				origin_delta_vel_norm.z = 0.0f;
+
+				auto origin_delta_vel_len = vel.length_2d ( );
+
+				const auto flMoveWeightWithAirSmooth = animlayers [ 6 ].m_weight / std::max ( 1.0f - animlayers [ 5 ].m_weight, 0.55f );
+				const auto flTargetMoveWeight_to_speed2d = math::Lerp ( max_speed * 0.52f, max_speed * 0.34f, ent->m_flDuckAmount ( ) ) * flMoveWeightWithAirSmooth;
+
+				const auto speed_as_portion_of_run_top_speed = 0.35f * ( 1.0f - animlayers [ 11 ].m_weight );
+
+				if ( animlayers [ 11 ].m_weight > 0.0f && animlayers [ 11 ].m_weight < 1.0f ) {
+					vel = origin_delta_vel_norm * ( max_speed * ( speed_as_portion_of_run_top_speed + 0.55f ) );
+					fixed = true;
+				}
+				else if ( flMoveWeightWithAirSmooth < 0.95f || flTargetMoveWeight_to_speed2d > origin_delta_vel_len ) {
+					vel = origin_delta_vel_norm * flTargetMoveWeight_to_speed2d;
+					fixed = flMoveWeightWithAirSmooth < 0.95f;
+				}
+				else {
+					auto flTargetMoveWeight_adjusted_speed2d = std::min ( max_speed, util::get_method < float ( __thiscall * )( Player * ) > ( ent, 269 ) ( ent ) );
+
+					if ( !!( ent->m_fFlags ( ) & FL_DUCKING ) )
+						flTargetMoveWeight_adjusted_speed2d *= 0.34f;
+					else if ( *reinterpret_cast< bool * >( reinterpret_cast< uintptr_t >( ent ) + 0x9975 ) )
+						flTargetMoveWeight_adjusted_speed2d *= 0.52f;
+
+					if ( origin_delta_vel_len > flTargetMoveWeight_adjusted_speed2d ) {
+						vel = origin_delta_vel_norm * flTargetMoveWeight_adjusted_speed2d;
+						fixed = true;
+					}
+				}
+			}
+		}
+	}
+	else {
+		if ( animlayers [ 4 ].m_weight > 0.0f
+			&& animlayers [ 4 ].m_playback_rate > 0.0f
+			&& rebuilt::GetLayerActivity ( ( CCSGOGamePlayerAnimState* )ent->m_PlayerAnimState ( ), ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ) == 985 /* act_csgo_jump */ ) {
+			vel.z = ( ( animlayers [ 4 ].m_cycle / animlayers [ 4 ].m_playback_rate ) / game::TICKS_TO_TIME ( 1 ) + 0.5f ) * game::TICKS_TO_TIME ( 1 );
+			vel.z = g_csgo.sv_jump_impulse->GetFloat ( ) - vel.z * g_csgo.sv_gravity->GetFloat ( );
+		}
+
+		vel.x = origin_delta.x / time_difference;
+		vel.y = origin_delta.y / time_difference;
+
+		fixed = true;
+	}
+
+	///* predict vel dir */
+	//if ( records.size ( ) >= 2 && records [ 0 ].m_simtime - records [ 1 ].m_simtime > cs::ticks2time ( 1 ) && vel.length_2d ( ) > 0.0f ) {
+	//	const auto last_avg_vel = ( records [ 0 ].m_origin - records [ 1 ].m_origin ) / ( records [ 0 ].m_simtime - records [ 1 ].m_simtime );
+	//
+	//	if ( last_avg_vel.length_2d ( ) > 0.0f ) {
+	//		float deg_1 = cs::rad2deg ( atan2 ( origin_delta.y, origin_delta.x ) );
+	//		float deg_2 = cs::rad2deg ( atan2 ( last_avg_vel.y, last_avg_vel.x ) );
+	//
+	//		float deg_delta = cs::normalize ( deg_1 - deg_2 );
+	//		float deg_lerp = cs::normalize ( deg_1 + deg_delta * 0.5f );
+	//		float rad_dir = cs::deg2rad ( deg_lerp );
+	//
+	//		float sin_dir, cos_dir;
+	//		cs::sin_cos ( rad_dir, &sin_dir, &cos_dir );
+	//
+	//		float vel_len = vel.length_2d ( );
+	//
+	//		vel.x = cos_dir * vel_len;
+	//		vel.y = sin_dir * vel_len;
+	//	}
+	//}
+
+	return fixed;
+}
+
+
 void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	CCSGOPlayerAnimState *state = m_player->m_PlayerAnimState ( );
 	if ( !state )
@@ -63,23 +179,30 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	record->m_fake_walk = false;
 	record->m_mode = Resolver::Modes::RESOLVE_NONE;
 
-	if ( record->m_lag > 0 && record->m_lag < 16 && m_records.size ( ) >= 2 ) {
+	//if ( record->m_lag > 0 && record->m_lag < 16 && m_records.size ( ) >= 2 ) {
+	//	LagRecord *previous = m_records [ 1 ].get ( );
+
+	//	if ( previous && !previous->dormant ( ) )
+	//		record->m_velocity = ( record->m_origin - previous->m_origin ) * ( 1.f / game::TICKS_TO_TIME ( record->m_lag ) );
+	//}
+	
+	if ( m_records.size ( ) >= 2 ) {
 		LagRecord *previous = m_records [ 1 ].get ( );
-
+		
 		if ( previous && !previous->dormant ( ) )
-			record->m_velocity = ( record->m_origin - previous->m_origin ) * ( 1.f / game::TICKS_TO_TIME ( record->m_lag ) );
+			record->m_has_vel = g_aimbot.FixVelocity ( m_player, previous, m_player->m_vecVelocity ( ), backup.m_layers, m_player->m_vecOrigin ( ) );
 	}
-
-	record->m_anim_velocity = record->m_velocity;
+		
+	record->m_anim_velocity = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_vecVelocity;
 
 	if ( record->m_lag > 1 && !bot ) {
-		float speed = record->m_velocity.length ( );
+		float speed = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_vecVelocity.length ( );
 
 		if ( record->m_flags & FL_ONGROUND && record->m_layers [ 6 ].m_weight == 0.f && speed > 0.1f && speed < 100.f )
 			record->m_fake_walk = true;
 
 		if ( record->m_fake_walk )
-			record->m_anim_velocity = record->m_velocity = { 0.f, 0.f, 0.f };
+			record->m_anim_velocity = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_vecVelocity = { 0.f, 0.f, 0.f };
 
 		if ( m_records.size ( ) >= 2 ) {
 			LagRecord *previous = m_records [ 1 ].get ( );
@@ -98,15 +221,15 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 				if ( record->m_flags & FL_ONGROUND && !( previous->m_flags & FL_ONGROUND ) )
 					m_player->m_fFlags ( ) &= ~FL_ONGROUND;
 
-				float duck = record->m_duck - previous->m_duck;
+				//float duck = record->m_duck - previous->m_duck;
 				float time = record->m_sim_time - previous->m_sim_time;
 
-				float change = ( duck / time ) * g_csgo.m_globals->m_interval;
+				//float change = ( duck / time ) * g_csgo.m_globals->m_interval;
 
-				m_player->m_flDuckAmount ( ) = previous->m_duck + change;
+				m_player->m_flDuckAmount ( ) = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_flAnimDuckAmount;
 
 				if ( !record->m_fake_walk ) {
-					vec3_t velo = record->m_velocity - previous->m_velocity;
+					vec3_t velo = reinterpret_cast < CCSGOGamePlayerAnimState * > ( m_player->m_PlayerAnimState ( ) )->m_vecVelocity - previous->m_velocity;
 
 					vec3_t accel = ( velo / time ) * g_csgo.m_globals->m_interval;
 
@@ -157,7 +280,7 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 }
 
 void AimPlayer::OnNetUpdate ( Player *player ) {
-	bool reset = ( !g_menu.main.aimbot.enable.get ( ) || player->m_lifeState ( ) == LIFE_DEAD || !player->enemy ( g_cl.m_local ) );
+	bool reset = ( !g_menu.main.aimbot.enable.get ( ) || !player->enemy ( g_cl.m_local ) || player->m_lifeState ( ) == LIFE_DEAD );
 	bool disable = ( !reset && !g_cl.m_processing );
 
 	if ( reset ) {
@@ -201,7 +324,9 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 		m_records.emplace_front ( std::make_shared< LagRecord > ( player ) );
 
 		LagRecord *current = m_records.front ( ).get ( );
+		//LagRecord *previous = m_records [ 1 ].get ( );
 
+		//current->m_has_vel = g_aimbot.FixVelocity ( player, previous, player->m_vecVelocity ( ), current->m_layers, player->m_vecOrigin ( ) );
 		current->m_dormant = false;
 
 		UpdateAnimations ( current );

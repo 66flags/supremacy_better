@@ -213,7 +213,8 @@ void Client::UpdateLocalAnimations ( ) {
 	game_state->m_flAccelerationWeight = backup_anim_layers [ ANIMATION_LAYER_LEAN ].m_weight;
 
 	m_animate = true;
-	m_local->UpdateAnimState ( state, g_cl.m_angle );
+	//game::UpdateAnimationState ( state, g_cl.m_angle );
+	g_cl.m_local->UpdateClientSideAnimation ( );
 	m_animate = false;
 
 	//rebuilt::Update ( game_state, m_cmd->m_view_angles, m_local->m_nTickBase ( ) );
@@ -238,7 +239,7 @@ void Client::UpdateLocalAnimations ( ) {
 		anim_data.m_rotation.y = state->m_goal_feet_yaw;
 
 		// setup real bones.
-		g_bones.BuildBonesOnetap ( m_local, g_cl.m_real_matrix_origin, g_csgo.m_globals->m_curtime );
+		//g_bones.BuildBonesOnetap ( m_local, g_cl.m_real_matrix_origin, g_csgo.m_globals->m_curtime );
 		//g_cl.m_real_origin = m_local->GetAbsOrigin ( );
 	}
 

@@ -254,6 +254,16 @@ public:
 		res.y *= iradius;
 		res.z *= iradius;
 	}
+
+	__forceinline void zero ( ) {
+		this->x = 0.f;
+		this->y = 0.f;
+		this->z = 0.f;
+	}
+
+	__forceinline bool is_zero ( ) const {
+		return ( x == 0.f && y == 0.f && z == 0.f );
+	}
 };
 
 __forceinline vec3_t operator*( float f, const vec3_t& v ) {

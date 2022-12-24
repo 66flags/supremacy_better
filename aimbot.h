@@ -179,6 +179,7 @@ public:
 	bool SelectTarget( LagRecord* record, const vec3_t& aim, float damage );
 	void apply( );
 	void NoSpread( );
+	bool FixVelocity ( Player *ent, LagRecord *previous, vec3_t &vel, C_AnimationLayer *animlayers, const vec3_t &origin );
 
 	// knifebot.
 	void knife( );
