@@ -20,6 +20,7 @@ namespace penetration {
 	};
 
     float scale( Player* player, float damage, float armor_ratio, int hitgroup );
+	float scale_dmg_hypnotic ( Player *player, float damage, float armor_ratio, int hitgroup, bool is_zeus );
     bool  TraceToExit( const vec3_t& start, const vec3_t& dir, vec3_t& out, CGameTrace* enter_trace, CGameTrace* exit_trace );
 	void  ClipTraceToPlayer( const vec3_t& start, const vec3_t& end, uint32_t mask, CGameTrace* tr, Player* player, float min );
     bool  run( PenetrationInput_t* in, PenetrationOutput_t* out );

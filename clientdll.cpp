@@ -67,8 +67,8 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 
 	if ( stage == FRAME_RENDER_START ) {
 		// apply local player animated angles.
-		if ( g_csgo.m_input->CAM_IsThirdPerson ( ) )
-			g_csgo.m_prediction->SetLocalViewAngles ( g_cl.m_angle );
+		//if ( g_csgo.m_input->CAM_IsThirdPerson ( ) )
+		//	g_csgo.m_prediction->SetLocalViewAngles ( g_cl.m_radar );
 
 		//if ( g_cl.m_local && g_cl.m_local->alive ( ) ) {
 		//	g_cl.m_local->m_angRotation ( ) = g_cl.m_rotation;

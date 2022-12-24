@@ -266,6 +266,10 @@ public:
 	__forceinline float &m_flC4Blow() {
 		return get< float >(g_entoffsets.m_flC4Blow);
 	}
+	
+	__forceinline void SetSequence ( int sequence ) {
+		util::get_method < void ( __thiscall * )( void *, int ) > ( this, 213 )( this, sequence );
+	}
 
 	__forceinline bool &m_bBombTicking() {
 		return get< bool >(g_entoffsets.m_bBombTicking);
@@ -534,6 +538,14 @@ public:
 		return get< int >(g_entoffsets.m_fFlags);
 	}
 
+	__forceinline float &m_flFallVelocity ( ) {
+		return get < float > ( 0x3004 );
+	}
+
+	__forceinline int &GetThinkTick ( ) {
+		return get < int > ( 0xF8 );
+	}
+
 	__forceinline int &m_MoveType() {
 		return get< int >(g_entoffsets.m_MoveType);
 	}
@@ -676,6 +688,21 @@ public:
 		return oLookupSequence ( this, label );
 	}
 
+	__forceinline void PreThink ( ) {
+		util::get_method < void ( __thiscall * )( void * ) > ( this, 307 ) ( this );
+	}
+
+	__forceinline bool PhysicsRunThink ( int think_method ) {
+		// 55 8B EC 83 EC 10 53 56 57 8B F9 8B 87 ? ? ? ? C1 E8 16 A8
+		static auto oPhysicsRunThink = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 10 53 56 57 8B F9 8B 87 ? ? ? ? C1 E8 16 A8" ) ).as < bool ( __thiscall * )( void *, int ) > ( );
+		return oPhysicsRunThink ( this, think_method );
+	}
+	
+
+	__forceinline void SelectItem ( const char *pstr, int subtype ) {
+		util::get_method < void ( __thiscall * )( void *, const char *, int ) > ( this, 319 ) ( this, pstr, subtype );
+	}
+
 	__forceinline bool &m_bDucking() {
 		return get< bool >(g_entoffsets.m_bDucking);
 	}
@@ -722,6 +749,31 @@ public:
 
 	__forceinline vec3_t &m_vecViewOffset() {
 		return get< vec3_t >(g_entoffsets.m_vecViewOffset);
+	}
+
+	//OFFSET ( int, button_pressed, 0x3200 );
+	//OFFSET ( int, button_last, 0x3208 );
+	//OFFSET ( int, button_released, 0x3204 );
+	//OFFSET ( int, button_disabled, 0x3340 );
+
+	__forceinline int &m_nButtons ( ) {
+		return get< int > ( 0x31E8 );
+	}
+
+	__forceinline int &m_afButtonPressed ( ) {
+		return get< int > ( 0x31E0 );
+	}
+
+	__forceinline int &m_afButtonLast ( ) {
+		return get< int > ( 0x31DC );
+	}
+
+	__forceinline int &m_afButtonReleased ( ) {
+		return get< int > ( 0x31E4 );
+	}
+
+	__forceinline int &m_afButtonForced ( ) {
+		return get< int > ( 0x3310 );
 	}
 
 	__forceinline CUserCmd &m_PlayerCommand() {
@@ -908,6 +960,14 @@ public:
 		}
 
 		return pos;
+	}
+
+	__forceinline BoneArray *m_pBoneCache ( ) {
+		return get < BoneArray * > ( 0x28FC + 0x4 );
+	}
+	
+	__forceinline int& m_iBoneCount ( ) {
+		return get < int > ( 0x2908 + 0x4 );
 	}
 
 	__forceinline void UpdateClientSideAnimation() {

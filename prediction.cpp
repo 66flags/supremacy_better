@@ -55,6 +55,9 @@ void Hooks::RunCommand( Entity* ent, CUserCmd* cmd, IMoveHelper* movehelper ) {
 
 	g_hooks.m_prediction.GetOldMethod< RunCommand_t >( CPrediction::RUNCOMMAND )( this, ent, cmd, movehelper );
 	
+	if ( ent )
+		*( int** )( std::uintptr_t ( ent ) + 0x3238 ) = 0;
+
 	// store non compressed netvars.
 	g_netdata.store( );
 

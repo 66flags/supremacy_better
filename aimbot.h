@@ -173,6 +173,7 @@ public:
 	void StripAttack( );
 	void UpdateLocal ( );
 	void think( );
+	void Slow ( CUserCmd *ucmd );
 	void find( );
 	bool CheckHitchance( Player* player, const ang_t& angle );
 	bool SelectTarget( LagRecord* record, const vec3_t& aim, float damage );

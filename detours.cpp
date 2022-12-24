@@ -15,7 +15,10 @@ bool detours::init ( ) {
 	const auto _do_procedural_footplant = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F0 83 EC 78 56 8B F1 57 8B 56 60 85" ) ).as < void * > ( );
 	const auto _setup_bones = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B 0D" ) ).as < void * > ( );
 	const auto _setup_movement = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 81 EC ? ? ? ? 56 57 8B 3D ? ? ? ? 8B" ) ).as < void * > ( );
-
+	const auto _update_client_side_animation = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 51 56 8B F1 80 BE ? ? ? ? ? 74" ) ).as < void * > ( );
+	const auto _svcmsg_voicedata = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 E4 F8 A1 ? ? ? ? 81 EC ? ? ? ? 53 56 8B F1 B9 ? ? ? ? 57 FF 50 34 8B 7D 08 85 C0 74 13 8B 47 08 40 50 68 ? ? ? ? FF 15 ? ? ? ? 83 C4 08 8B 47 08 89 44 24 1C 8D 48 01 8B 86 ? ? ? ? 40 89 4C 24 0C 3B C8 75 49" ) ).as < void * > ( );
+	const auto _process_movement = util::get_method < void * > ( g_csgo.m_game_movement, CGameMovement::PROCESSMOVEMENT );
+	
 	// create detours.
 	MH_CreateHook ( _paint, detours::Paint, ( void ** ) &old::Paint );
 	MH_CreateHook ( _packet_end, detours::PacketEnd, ( void ** ) &old::PacketEnd );
@@ -28,17 +31,13 @@ bool detours::init ( ) {
 	MH_CreateHook ( _do_procedural_footplant, detours::DoProceduralFootPlant, ( void ** ) &old::DoProceduralFootPlant );
 	//MH_CreateHook ( _setup_bones, detours::SetupBones, ( void ** ) &old::SetupBones );
 	MH_CreateHook ( _setup_movement, detours::SetupMovement, ( void ** ) &old::SetupMovement );
-	//MH_CreateHook ( _notify_on_layer_change_cycle, detours::NotifyOnLayerChangeCycle, ( void ** ) &old::NotifyOnLayerChangeCycle );
-	//MH_CreateHook ( _notify_on_layer_change_weight, detours::NotifyOnLayerChangeWeight, ( void ** ) &old::NotifyOnLayerChangeWeight );
+	//MH_CreateHook ( _svcmsg_voicedata, detours::SVCMsg_VoiceData, ( void ** ) &old::SVCMsg_VoiceData );
+	MH_CreateHook ( _process_movement, detours::ProcessMovement, ( void ** ) &old::ProcessMovement );
 
 	// enable all hooks.
 	MH_EnableHook ( MH_ALL_HOOKS );
 
 	return true;
-}
-
-void __fastcall detours::DoProceduralFootPlant ( void *ecx, void *edx, int a1, int a2, int a3, int a4 ) {
-	return;
 }
 
 int __fastcall detours::BaseInterpolatePart1 ( void *ecx, void *edx, float &curtime, vec3_t &old_origin, ang_t &old_angs, int &no_more_changes ) {
@@ -56,6 +55,17 @@ int __fastcall detours::BaseInterpolatePart1 ( void *ecx, void *edx, float &curt
 	}
 
 	return old::BaseInterpolatePart1 ( ecx, edx, curtime, old_origin, old_angs, no_more_changes );
+}
+
+void __fastcall detours::ProcessMovement ( void* ecx, void* edx, Entity *player, CMoveData *data ) {
+	data->m_bGameCodeMovedPlayer = false;
+	old::ProcessMovement ( ecx, edx, player, data );
+}
+
+bool __fastcall detours::SVCMsg_VoiceData ( void *ecx, void *edx, void *a2 ) {
+	auto og = old::SVCMsg_VoiceData ( ecx, edx, a2 );
+
+	return og;
 }
 
 void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
@@ -82,7 +92,7 @@ void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 
 	if ( state->m_bOnGround ) {
 		bool next_landing = false;
-		
+
 		if ( !state->m_bLanding && ( state->m_bLandedOnGroundThisFrame || bStoppedLadderingThisFrame ) ) {
 			rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, rebuilt::SelectWeightedSequence ( state, ( state->m_flDurationInAir > 1 ) ? ACT_CSGO_LAND_HEAVY : ACT_CSGO_LAND_LIGHT ) );
 			//rebuilt::SetCycle ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
@@ -178,6 +188,10 @@ void __vectorcall detours::UpdateAnimationState ( void *ecx, void *a1, float a2,
 	return old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
 }
 
+void __fastcall detours::DoProceduralFootPlant ( void *ecx, void *edx, int a1, int a2, int a3, int a4 ) {
+	return;
+}
+
 bool __fastcall detours::SetupBones ( void *ecx, void *edx, BoneArray *out, int max, int mask, float curtime ) {
 	static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
 
@@ -187,15 +201,15 @@ bool __fastcall detours::SetupBones ( void *ecx, void *edx, BoneArray *out, int 
 		return old::SetupBones ( ecx, edx, out, max, mask, curtime );
 
 	if ( player && player->alive ( ) && player == g_cl.m_local && player->IsPlayer ( ) ) {
-		SetupBones_AttachmentHelper ( player, *( void ** ) ( std::uintptr_t ( player ) + 0x2938 ) ); // fix attachments on local
+		//SetupBones_AttachmentHelper ( player, *( void ** ) ( std::uintptr_t ( player ) + 0x2938 ) ); // fix attachments on local
 
-		//if ( out ) {
-		//	if ( max >= player->m_BoneCache ( ).m_CachedBoneCount )
-		//		memcpy ( out, player->m_BoneCache ( ).m_pCachedBones, sizeof ( matrix3x4_t ) * player->m_BoneCache ( ).m_CachedBoneCount );
-		//	else
-		//		return false;
-		//}
-		//
+		if ( out ) {
+			if ( max >= player->m_iBoneCount ( ) )
+				memcpy ( out, player->m_pBoneCache ( ), sizeof ( BoneArray ) * player->m_iBoneCount ( ) );
+			else
+				return false;
+		}
+		
 		return true;
 	}
 
@@ -239,7 +253,7 @@ void __fastcall detours::PacketEnd ( void *ecx, void *edx ) {
 		const auto backup_packets = nc->m_choked_packets;
 
 		auto out_sequence_nr = *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
-		
+
 		nc->m_choked_packets = 0;
 		nc->SendDatagram ( 0 );
 		nc->m_choked_packets = backup_packets;

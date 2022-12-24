@@ -153,6 +153,7 @@ public:
 	enum indices : size_t {
 		PACKETEND = 6,
 		TEMPENTITIES = 36,
+		SVCMSG_VOICEDATA = 24
 	};
 };
 

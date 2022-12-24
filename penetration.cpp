@@ -79,6 +79,93 @@ float penetration::scale( Player* player, float damage, float armor_ratio, int h
 	return std::floor( damage );
 }
 
+float penetration::scale_dmg_hypnotic ( Player *player, float damage, float armor_ratio, int hitgroup, bool is_zeus ) {
+	auto weapon = player->GetActiveWeapon ( );
+
+	if ( !weapon )
+		return 0.f;
+
+	static ConVar *mp_damage_scale_ct_body = g_csgo.m_cvar->FindVar ( HASH ( "mp_damage_scale_ct_body" ) );
+	static ConVar *mp_damage_scale_t_body = g_csgo.m_cvar->FindVar ( HASH ( "mp_damage_scale_t_body" ) );
+	static ConVar *mp_damage_scale_ct_head = g_csgo.m_cvar->FindVar ( HASH ( "mp_damage_scale_ct_head" ) );
+	static ConVar *mp_damage_scale_t_head = g_csgo.m_cvar->FindVar ( HASH ( "mp_damage_scale_t_head" ) );
+
+	float scale_body_damage = ( player->m_iTeamNum ( ) == 3 ) ? mp_damage_scale_ct_body->GetFloat ( ) : mp_damage_scale_t_body->GetFloat ( );
+	float head_damage_scale = ( player->m_iTeamNum ( ) == 3 ) ? mp_damage_scale_ct_head->GetFloat ( ) : mp_damage_scale_t_head->GetFloat ( );
+
+	static auto is_armored = [ ] ( Player *player, int hitgroup ) -> bool {
+		if ( player->m_ArmorValue ( ) <= 0 )
+			return false;
+
+		switch ( hitgroup ) {
+		case HITGROUP_GENERIC:
+		case HITGROUP_CHEST:
+		case HITGROUP_STOMACH:
+		case HITGROUP_LEFTARM:
+		case HITGROUP_RIGHTARM:
+			return true;
+			break;
+		case HITGROUP_HEAD:
+			if ( player->m_bHasHelmet ( ) )
+				return true;
+			break;
+		default:
+			break;
+		}
+
+		return false;
+	};
+
+	const int armor = player->m_ArmorValue ( );
+
+	if ( player->m_bHasHeavyArmor ( ) )
+		head_damage_scale *= 0.5f;
+
+	if ( !is_zeus )
+		switch ( hitgroup ) {
+		case HITGROUP_HEAD:
+			damage *= 4.0f * head_damage_scale;
+			break;
+		case HITGROUP_CHEST:
+			damage *= 1.0f * scale_body_damage;
+			break;
+		case HITGROUP_STOMACH:
+			damage *= 1.25f * scale_body_damage;
+			break;
+		case HITGROUP_LEFTARM:
+		case HITGROUP_RIGHTARM:
+			damage *= 1.0f * scale_body_damage;
+			break;
+		case HITGROUP_LEFTLEG:
+		case HITGROUP_RIGHTLEG:
+			damage *= 0.75f * scale_body_damage;
+			break;
+		default:
+			break;
+		}
+
+	if ( is_armored ( player, hitgroup ) ) {
+		float armor_bonus = 0.5f, armor_ratio = 0.5f, heavy_armor_bonus = 1.0f;
+		bool has_heavy = player->m_bHasHeavyArmor ( );
+
+		if ( has_heavy ) {
+			armor_ratio *= 0.5f;
+			armor_bonus = 0.33f;
+			heavy_armor_bonus = 0.33f;
+		}
+
+		float damage_to_health = damage * armor_ratio;
+		float damage_to_armor = ( damage - damage_to_health ) * ( armor_bonus * heavy_armor_bonus );
+
+		if ( damage_to_armor > static_cast< float > ( armor ) )
+			damage_to_health = damage - static_cast< float > ( armor ) / armor_bonus;
+
+		damage = damage_to_health;
+	}
+
+	return damage;
+}
+
 bool penetration::TraceToExit( const vec3_t &start, const vec3_t& dir, vec3_t& out, CGameTrace* enter_trace, CGameTrace* exit_trace ) {
     static CTraceFilterSimple_game filter{};
 
@@ -277,7 +364,7 @@ bool penetration::run( PenetrationInput_t* in, PenetrationOutput_t* out ) {
 				int group = ( weapon->m_iItemDefinitionIndex( ) == ZEUS ) ? HITGROUP_GENERIC : trace.m_hitgroup;
 
 				// scale damage based on the hitgroup we hit.
-				player_damage = scale( in->m_target, damage, weapon_info->m_armor_ratio, group );
+				player_damage = scale_dmg_hypnotic ( in->m_target, damage, weapon_info->m_armor_ratio, group, false );
 
 				// set result data for when we hit a player.
 			    out->m_pen      = pen != 4;

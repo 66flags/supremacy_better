@@ -39,7 +39,7 @@ void InputPrediction::update( ) {
 		int stop  = g_csgo.m_cl->m_last_outgoing_command + g_csgo.m_cl->m_choked_commands;
 
 		// call CPrediction::Update.
-		g_csgo.m_prediction->Update( g_csgo.m_cl->m_delta_tick, valid, start, stop );
+		//g_csgo.m_prediction->Update( g_csgo.m_cl->m_delta_tick, valid, start, stop );
 	}
 
 	static bool unlocked_fakelag = false;
@@ -75,51 +75,120 @@ void InputPrediction::ForceUpdate ( bool error ) {
 		g_csgo.m_cl->m_last_outgoing_command + g_csgo.m_cl->m_choked_commands );
 }
 
+CMoveData data {};
+
+void PostThink ( Player *ent ) {
+	g_csgo.m_model_cache->BeginLock ( );
+
+	static auto post_think_vphysics = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 81 EC ? ? ? ? 53 8B D9 56 57 83 BB" ) ).as< bool ( __thiscall * )( Player * ) > ( );
+	static auto simulate_player_simulated_entities = pattern::find ( g_csgo.m_client_dll, XOR ( "56 8B F1 57 8B BE ? ? ? ? 83 EF 01 78 72 90 8B 86" ) ).as< void ( __thiscall * )( void * ) > ( );
+
+	if ( ent->alive ( ) ) {
+		util::get_method< void ( __thiscall * )( void * ) > ( ent, 329 ) ( ent );
+
+		if ( ent->m_fFlags ( ) & FL_ONGROUND )
+			ent->m_flFallVelocity ( ) = 0.f;
+
+		if ( ent->m_nSequence ( ) == -1 )
+			ent->SetSequence ( 0 );
+
+		util::get_method< void ( __thiscall * )( void * ) > ( ent, 214 ) ( ent );
+		post_think_vphysics ( ent );
+	}
+
+	simulate_player_simulated_entities ( ent );
+	g_csgo.m_model_cache->EndLock ( );
+}
+
 void InputPrediction::run( ) {
-	static CMoveData data{};
+	if ( !g_cl.m_local || !g_cl.m_cmd )
+		return;
 
-	g_csgo.m_prediction->m_in_prediction = true;
-
-	// CPrediction::StartCommand
 	g_cl.m_local->m_pCurrentCommand( ) = g_cl.m_cmd;
 	g_cl.m_local->m_PlayerCommand( )   = *g_cl.m_cmd;
 
 	*g_csgo.m_nPredictionRandomSeed = g_cl.m_cmd->m_random_seed;
 	g_csgo.m_pPredictionPlayer      = g_cl.m_local;
 
-	// backup globals.
 	m_curtime   = g_csgo.m_globals->m_curtime;
 	m_frametime = g_csgo.m_globals->m_frametime;
 
-	// CPrediction::RunCommand
+	g_csgo.m_globals->m_curtime = g_cl.m_local->m_nTickBase ( ) * g_csgo.m_globals->m_interval;
+	g_csgo.m_globals->m_frametime = g_csgo.m_prediction->m_engine_paused ? 0 : g_csgo.m_globals->m_interval;
 
-	// set globals appropriately.
-	g_csgo.m_globals->m_curtime   = game::TICKS_TO_TIME( g_cl.m_local->m_nTickBase( ) );
-	g_csgo.m_globals->m_frametime = g_csgo.m_prediction->m_engine_paused ? 0.f : g_csgo.m_globals->m_interval;
+	m_first_time_predicted = g_csgo.m_prediction->m_first_time_predicted;
+	m_in_prediction = g_csgo.m_prediction->m_in_prediction;
 
-	// set target player ( host ).
-	g_csgo.m_move_helper->SetHost( g_cl.m_local );
-	g_csgo.m_game_movement->StartTrackPredictionErrors( g_cl.m_local );
+	g_csgo.m_prediction->m_first_time_predicted = false;
+	g_csgo.m_prediction->m_in_prediction = true;
 
-	// setup input.
-	g_csgo.m_prediction->SetupMove( g_cl.m_local, g_cl.m_cmd, g_csgo.m_move_helper, &data );
+	g_cl.m_cmd->m_buttons |= g_cl.m_local->m_afButtonForced ( );
+	//g_cl.m_cmd->m_buttons &= ~g_cl.m_local->ButtonDisabled ( );
 
-	// run movement.
-	g_csgo.m_game_movement->ProcessMovement( g_cl.m_local, &data );
-	g_csgo.m_prediction->FinishMove( g_cl.m_local, g_cl.m_cmd, &data );
-	g_csgo.m_game_movement->FinishTrackPredictionErrors( g_cl.m_local );
+	g_csgo.m_move_helper->SetHost ( g_cl.m_local );
+	g_csgo.m_game_movement->StartTrackPredictionErrors ( g_cl.m_local );
 
-	// reset target player ( host ).
-	g_csgo.m_move_helper->SetHost( nullptr );
+	if ( g_cl.m_cmd->m_weapon_select != 0 ) {
+		Weapon *weapon = g_cl.m_local->GetActiveWeapon ( );
+
+		if ( weapon ) {
+			auto data = weapon->GetWpnData ( );
+
+			if ( data )
+				g_cl.m_local->SelectItem ( data->m_weapon_name, g_cl.m_cmd->m_weapon_subtype );
+		}
+	}
+
+	const auto buttons_changed = g_cl.m_cmd->m_buttons ^ g_cl.m_local->m_afButtonLast ( );
+
+	g_cl.m_local->m_nButtons ( ) = g_cl.m_local->m_afButtonLast ( );
+	g_cl.m_local->m_afButtonLast ( ) = g_cl.m_cmd->m_buttons;
+	g_cl.m_local->m_afButtonPressed ( ) = g_cl.m_cmd->m_buttons & buttons_changed;
+	g_cl.m_local->m_afButtonReleased ( ) = buttons_changed & ~g_cl.m_cmd->m_buttons;
+
+	g_csgo.m_prediction->CheckMovingGround ( g_cl.m_local, g_csgo.m_globals->m_frametime );
+	g_csgo.m_prediction->SetLocalViewAngles ( g_cl.m_cmd->m_view_angles );
+
+	if ( g_cl.m_local->PhysicsRunThink ( 0 ) )
+		g_cl.m_local->PreThink ( );
+
+	const auto think_tick = g_cl.m_local->GetThinkTick ( );
+
+	if ( think_tick > 0 && think_tick <= g_cl.m_local->m_nTickBase ( ) ) {
+		g_cl.m_local->GetThinkTick ( ) = -1;
+		static auto set_next_think = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 56 57 8B F9 8B B7 ? ? ? ? 8B C6 C1 E8 16 24 01 74 18" ) ).as< void ( __thiscall * )( void *, int ) > ( );
+		set_next_think ( g_cl.m_local, 0 );
+		//g_cl.m_local->Think ( );
+	}
+
+	g_csgo.m_prediction->SetupMove ( g_cl.m_local, g_cl.m_cmd, g_csgo.m_move_helper, &data );
+	g_csgo.m_game_movement->ProcessMovement ( g_cl.m_local, &data );
+
+	g_csgo.m_prediction->FinishMove ( g_cl.m_local, g_cl.m_cmd, &data );
+	g_csgo.m_move_helper->ProcessImpacts ( );
+
+	PostThink ( g_cl.m_local );
+
+	g_csgo.m_prediction->m_first_time_predicted = m_first_time_predicted;
+	g_csgo.m_prediction->m_in_prediction = m_in_prediction;
 }
 
-void InputPrediction::restore( ) {
-	g_csgo.m_prediction->m_in_prediction = false;
+void InputPrediction::restore ( ) {
+	if ( !g_cl.m_local || !g_cl.m_cmd || !g_csgo.m_move_helper )
+		return;
+
+	g_csgo.m_game_movement->FinishTrackPredictionErrors ( g_cl.m_local );
+	g_csgo.m_move_helper->SetHost ( nullptr );
+
+	g_cl.m_local->m_pCurrentCommand ( ) = nullptr;
 
 	*g_csgo.m_nPredictionRandomSeed = -1;
 	g_csgo.m_pPredictionPlayer      = nullptr;
 
-	// restore globals.
-	g_csgo.m_globals->m_curtime   = m_curtime;
+	g_csgo.m_game_movement->Reset ( );
+
+	g_csgo.m_globals->m_curtime = m_curtime;
 	g_csgo.m_globals->m_frametime = m_frametime;
+	g_csgo.m_prediction->m_in_prediction = m_in_prediction;
+	g_csgo.m_prediction->m_first_time_predicted = m_first_time_predicted;
 }

@@ -344,27 +344,28 @@ void Visuals::StatusIndicators( ) {
 		}
 	}
 
+	float time = std::clamp < float > ( g_cl.m_body_pred - g_csgo.m_globals->m_curtime, 0.f, 1.f );
+
 	// LBY
 	if( g_menu.main.visuals.indicators.get( 0 ) ) {
 		// get the absolute change between current lby and animated angle.
 		float change = std::abs( math::NormalizedAngle( g_cl.m_body - g_cl.m_angle.y ) );
 
 		Indicator_t ind{ };
-		
+
 		// green - 137,195,49
 		// red - 186,1,1
 		ind.color = Color (
-			math::Lerp ( 186, 137, ( change / 180.f ) ),
-			math::Lerp ( 1, 195, ( change / 180.f ) ),
-			math::Lerp ( 1, 49, ( change / 180.f ) ),
+			math::Lerp ( 186, 137, time ),
+			math::Lerp ( 1, 195, time ),
+			math::Lerp ( 1, 49, time ),
 			255
 		);
 			
 		ind.text = XOR( "LBY" );
 		ind.lby = true;
-		ind.change = change;
+		//ind.change = time;
 		indicators.push_back( ind );
-		//g_cl.print ( "LBY: %f", change );
 	}
 
 	// PING
@@ -386,7 +387,7 @@ void Visuals::StatusIndicators( ) {
 		if ( indicator.lby ) {
 			render::FontSize_t text_dim = render::indicator.size ( XOR ( "LBY" ) );
 			
-			Rect change_rect = { 20, g_cl.m_height - 80 - ( 30 * i ), text_dim.m_width * ( indicator.change / 180.f ), text_dim.m_height };
+			Rect change_rect = { 20, g_cl.m_height - 80 - ( 30 * i ), text_dim.m_width * time, text_dim.m_height };
 
 			render::indicator.string ( 20, g_cl.m_height - 80 - ( 30 * i ), { 0, 0, 0, 190 }, indicator.text );
 			

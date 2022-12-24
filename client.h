@@ -61,6 +61,7 @@ public:
 	} anim_data;
 
 	bool m_animate = false;
+	bool m_finished_animating = false;
 
 	// local player variables.
 	Player *m_local;
@@ -108,6 +109,9 @@ public:
 	int       m_old_buttons;
 	ang_t     m_view_angles;
 	ang_t	  m_strafe_angles;
+	BoneArray  m_real_bones [ 128 ];
+	BoneArray  m_real_matrix_origin [ 128 ];
+	vec3_t	   m_real_origin;
 	vec3_t	  m_forward_dir;
 
 	penetration::PenetrationOutput_t m_pen_data;

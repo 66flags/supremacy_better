@@ -18,7 +18,26 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 
 	g_csgo.m_globals->m_curtime = record->m_anim_time;
 	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
-
+	
+	const auto dword_44732EA4 = g_csgo.m_globals->m_realtime;
+	const auto dword_44732EA8 = g_csgo.m_globals->m_curtime;
+	const auto dword_44732EAC = g_csgo.m_globals->m_frametime;
+	const auto dword_44732EB0 = g_csgo.m_globals->m_abs_frametime;
+	const auto dword_44732EB4 = g_csgo.m_globals->m_interp_amt;
+	const auto dword_44732EB8 = g_csgo.m_globals->m_frame;
+	const auto dword_44732EBC = g_csgo.m_globals->m_tick_count;
+	const auto v4 = dword_44732EA8 / g_csgo.m_globals->m_interval;
+	
+	g_csgo.m_globals->m_realtime = g_csgo.m_globals->m_curtime;
+	//g_csgo.m_globals->m_curtime = v1;
+	const auto sim_ticks = ( v4 + 0.5f );
+	
+	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
+	g_csgo.m_globals->m_abs_frametime = g_csgo.m_globals->m_interval;
+	g_csgo.m_globals->m_frame = sim_ticks;
+	g_csgo.m_globals->m_tick_count = sim_ticks;
+	g_csgo.m_globals->m_interp_amt = 0.0;
+	
 	AnimationBackup_t backup;
 
 	backup.m_origin = m_player->m_vecOrigin ( );
@@ -30,6 +49,14 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	backup.m_duck = m_player->m_flDuckAmount ( );
 	backup.m_body = m_player->m_flLowerBodyYawTarget ( );
 	m_player->GetAnimLayers ( backup.m_layers );
+
+	g_csgo.m_globals->m_realtime = dword_44732EA4;
+	g_csgo.m_globals->m_curtime = dword_44732EA8;
+	g_csgo.m_globals->m_frametime = dword_44732EAC;
+	g_csgo.m_globals->m_abs_frametime = dword_44732EB0;
+	g_csgo.m_globals->m_interp_amt = dword_44732EB4;
+	g_csgo.m_globals->m_frame = dword_44732EB8;
+	g_csgo.m_globals->m_tick_count = dword_44732EBC;
 
 	bool bot = game::IsFakePlayer ( m_player->index ( ) );
 
@@ -371,6 +398,64 @@ void Aimbot::think ( ) {
 	apply ( );
 }
 
+// ty cbrs
+void Aimbot::Slow ( CUserCmd *ucmd ) {
+	if ( !g_cl.m_local || !g_cl.m_local->alive ( ) || !( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) || !g_cl.m_local->GetActiveWeapon ( ) || !g_cl.m_local->GetActiveWeapon ( )->GetWpnData ( ) )
+		return;
+
+	auto quick_stop = [ & ] ( ) {
+		const auto target_vel = -g_cl.m_local->m_vecVelocity ( ).normalized ( ) * g_csgo.cl_forwardspeed->GetFloat ( );
+
+		ang_t angles;
+		g_csgo.m_engine->GetViewAngles ( angles );
+
+		vec3_t fwd;
+		math::AngleVectors ( angles, &fwd );
+		const auto right = fwd.cross ( vec3_t ( 0.0f, 0.0f, 1.0f ) );
+
+		ucmd->m_forward_move = ( target_vel.y - ( right.y / right.x ) * target_vel.x ) / ( fwd.y - ( right.y / right.x ) * fwd.x );
+		ucmd->m_side_move = ( target_vel.x - fwd.x * ucmd->m_forward_move ) / right.x;
+
+		ucmd->m_forward_move = std::clamp <float> ( ucmd->m_forward_move, -g_csgo.cl_forwardspeed->GetFloat ( ), g_csgo.cl_forwardspeed->GetFloat ( ) );
+		ucmd->m_side_move = std::clamp <float> ( ucmd->m_side_move, -g_csgo.cl_forwardspeed->GetFloat ( ), g_csgo.cl_sidespeed->GetFloat ( ) );
+
+		ucmd->m_buttons &= ~IN_WALK;
+		ucmd->m_buttons |= IN_SPEED;
+	};
+
+	const auto speed = g_cl.m_local->m_vecVelocity ( ).length_2d ( );
+
+	//    we are slow
+	if ( speed <= 5.0f )
+		return;
+
+	auto max_speed = 260.0f;
+	const auto weapon = g_cl.m_local->GetActiveWeapon ( );
+
+	if ( weapon && weapon->GetWpnData ( ) )
+		max_speed = g_cl.m_local->m_bIsScoped ( ) ? weapon->GetWpnData ( )->m_max_player_speed_alt : weapon->GetWpnData ( )->m_max_player_speed;
+
+	const auto pure_accurate_speed = max_speed * 0.34f;
+	const auto accurate_speed = max_speed * 0.315f;
+
+	//    actually slowwalk
+	if ( speed <= pure_accurate_speed ) {
+		const auto cmd_speed = sqrt ( ucmd->m_forward_move * ucmd->m_forward_move + ucmd->m_side_move * ucmd->m_side_move );
+		const auto local_speed = std::max ( g_cl.m_local->m_vecVelocity ( ).length_2d ( ), 0.1f );
+		const auto speed_multiplier = ( local_speed / cmd_speed ) * ( accurate_speed / local_speed );
+
+		ucmd->m_forward_move = std::clamp <float> ( ucmd->m_forward_move * speed_multiplier, -g_csgo.cl_forwardspeed->GetFloat ( ), g_csgo.cl_forwardspeed->GetFloat ( ) );
+		ucmd->m_side_move = std::clamp <float> ( ucmd->m_side_move * speed_multiplier, -g_csgo.cl_forwardspeed->GetFloat ( ), g_csgo.cl_sidespeed->GetFloat ( ) );
+
+		ucmd->m_buttons &= ~IN_WALK;
+		ucmd->m_buttons |= IN_SPEED;
+	}
+	//    we are fast
+	else {
+		quick_stop ( );
+	}
+}
+
 void Aimbot::find ( ) {
 	struct BestTarget_t { Player *player; vec3_t pos; float damage; LagRecord *record; };
 
@@ -451,6 +536,9 @@ void Aimbot::find ( ) {
 		m_record->cache ( );
 
 		m_stop = !( g_cl.m_buttons & IN_JUMP );
+
+		if ( m_stop && best.damage )
+			Slow ( g_cl.m_cmd );
 
 		bool on = g_menu.main.aimbot.hitchance.get ( ) && g_menu.main.config.mode.get ( ) == 0;
 		bool hit = on && CheckHitchance ( m_target, m_angle );

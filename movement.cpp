@@ -477,10 +477,10 @@ void Movement::AutoPeek( ) {
 
 	else m_invert = false;
 
-	bool can_stop = g_menu.main.movement.autostop_always_on.get( ) || ( !g_menu.main.movement.autostop_always_on.get( ) && g_input.GetKeyState( g_menu.main.movement.autostop.get( ) ) );
-	if( ( g_input.GetKeyState( g_menu.main.movement.autopeek.get( ) ) || can_stop ) && g_aimbot.m_stop ) {
-		Movement::QuickStop( );
-	}
+	//bool can_stop = g_menu.main.movement.autostop_always_on.get( ) || ( !g_menu.main.movement.autostop_always_on.get( ) && g_input.GetKeyState( g_menu.main.movement.autostop.get( ) ) );
+	//if( ( g_input.GetKeyState( g_menu.main.movement.autopeek.get( ) ) || can_stop ) && g_aimbot.m_stop ) {
+	//	Movement::QuickStop( );
+	//}
 }
 
 void Movement::QuickStop( ) {

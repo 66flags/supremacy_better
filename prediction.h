@@ -37,10 +37,15 @@ public:
 	// indexes for virtuals and hooks.
 	enum indices : size_t {
 		SETHOST = 1,
+		PROCESSIMPACTS = 4,
 	};
 
 	__forceinline void SetHost( Entity* host ) {
 		return util::get_method< void( __thiscall* )( decltype( this ), Entity* ) >( this, SETHOST )( this, host );
+	}
+
+	__forceinline void ProcessImpacts ( ) {
+		return util::get_method< void ( __thiscall * )( decltype( this ) ) > ( this, PROCESSIMPACTS )( this );
 	}
 };
 
@@ -54,7 +59,8 @@ public:
 		INPREDICTION            = 14,
 		RUNCOMMAND              = 19,
 		SETUPMOVE               = 20,
-		FINISHMOVE              = 21
+		FINISHMOVE              = 21,
+		CHECKMOVINGGROUND = 18
 	};
 
 public:
@@ -90,6 +96,10 @@ public:
 	__forceinline void FinishMove( Entity* player, CUserCmd* cmd, CMoveData* data ) {
 		return util::get_method< void( __thiscall* )( decltype( this ), Entity*, CUserCmd*, CMoveData* ) >( this, FINISHMOVE )( this, player, cmd, data );
 	}
+
+	__forceinline void CheckMovingGround ( Entity *player, double frametime ) {
+		return util::get_method< void ( __thiscall * )( decltype( this ), Entity *, double ) > ( this, CHECKMOVINGGROUND )( this, player, frametime );
+	}
 };
 
 class CGameMovement {
@@ -101,6 +111,10 @@ public:
 		FINISHTRACKPREDICTIONERRORS = 4,
 		ONLAND                      = 32
 	};
+
+	virtual ~CGameMovement ( void ) = 0;
+	virtual void* pad0001 ( ) = 0;
+	virtual void Reset ( void ) = 0;
 
 	__forceinline void ProcessMovement( Entity* player, CMoveData* data ) {
 		return util::get_method< void( __thiscall* )( decltype( this ), Entity*, CMoveData* ) >( this, PROCESSMOVEMENT )( this, player, data );
