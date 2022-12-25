@@ -67,6 +67,8 @@ using ulong_t = unsigned long;
 #include "penetration.h"
 #include "netvars.h"
 #include "entoffsets.h"
+#include "ik_context.h"
+#include "bitvec.h"
 #include "entity.h"
 #include "rebuilt.h"
 #include "client.h"

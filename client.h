@@ -81,6 +81,7 @@ public:
 	WeaponInfo *m_weapon_info;
 	int         m_weapon_type;
 	bool        m_weapon_fire;
+	activity_modifiers_wrapper m_activity_modifiers;
 
 	// revolver variables.
 	int	 m_revolver_cock;
@@ -129,6 +130,7 @@ public:
 	float  m_speed;
 	float  m_anim_time;
 	float  m_anim_frame;
+	bool   m_update_ent;
 	bool   m_ground;
 	bool   m_lagcomp;
 

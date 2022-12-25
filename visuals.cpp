@@ -1530,7 +1530,7 @@ void Visuals::DebugAimbotPoints( Player* player ) {
 	// get bone matrix.
 	BoneArray matrix[ 128 ];
 
-	bool setup = g_bones.BuildBonesOnetap ( player, matrix, g_csgo.m_globals->m_curtime );
+	bool setup = g_bones.Build ( player, matrix, g_csgo.m_globals->m_curtime );
 	
 	if ( setup )
 		memcpy ( front->m_bones, matrix, sizeof ( BoneArray ) * 128 );

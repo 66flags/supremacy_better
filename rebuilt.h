@@ -1269,7 +1269,6 @@ enum AnimationLayer_t {
 #define CSGO_ANIM_READJUST_THRESHOLD	120.0f
 #define EIGHT_WAY_WIDTH 22.5f
 
-
 struct aimmatrix_transition_t {
 	float m_flDurationStateHasBeenValid;
 	float m_flDurationStateHasBeenInValid;
@@ -1388,6 +1387,41 @@ public:
 	float m_flAimPitchMin;
 	float m_flAimPitchMax;
 	int m_nAnimstateModelVersion;
+
+	__forceinline const char *GetWeaponPrefix ( ) {
+		static auto oGetWeaponPrefix = pattern::find ( g_csgo.m_client_dll, XOR ( "53 56 8B F1 57 33 FF 8B 4E 60 8B 01 FF 90 ? ? ? ? 89 46 64 85 C0 74" ) ).as < const char *( __thiscall * ) ( void * ) > ( );
+		return oGetWeaponPrefix ( this );
+	}
+};
+
+class activity_modifiers_wrapper {
+private:
+	//MEMBER_REL ( "server.dll", "?", add_activity_modifier ( const char *name ), void ( __thiscall * )( void *, const char * ) )( name )
+	uint32_t gap [ 0x4D ] { 0 };
+	CUtlVector<uint16_t> modifiers { };
+public:
+	//CCSGOGamePlayerAnimState *m_state;
+
+	activity_modifiers_wrapper ( ) = default;
+
+	explicit activity_modifiers_wrapper ( CUtlVector< uint16_t > current_modifiers ) {
+		//m_state = state;
+
+		modifiers.RemoveAll ( );
+		modifiers.GrowVector ( current_modifiers.Count ( ) );
+
+		for ( auto i = 0; i < current_modifiers.Count ( ); i++ )
+			modifiers [ i ] = current_modifiers [ i ];
+	}
+
+	void add_modifier ( const char *name ) {
+		static auto add_activity_modifier = pattern::find ( g_csgo.m_server_dll, XOR ( "55 8B EC 8B 55 08 83 EC 24 56 8B F1 85 D2 0F 84 ? ? ? ? 8D 45 DC" ) ).as < void ( __thiscall * )( void *, const char * ) > ( );
+		add_activity_modifier ( this, name );
+	}
+
+	CUtlVector<uint16_t> get ( ) const {
+		return modifiers;
+	}
 };
 
 namespace valve_math {

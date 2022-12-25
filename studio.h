@@ -22,11 +22,18 @@ struct mstudiohitboxset_t {
 };
 
 struct mstudiobone_t {
-	int m_bone_name_index;
-	int m_parent;
-	PAD( 0x98 );
-	int m_flags;
-	PAD( 0x34 );
+	int	m_bone_name_index;
+	int	m_parent;
+	int	m_bonecontroller [ 6 ];
+	vec3_t m_pos;
+	quaternion_t m_quat;
+	float m_rot [ 3 ];
+	vec3_t m_posscale;
+	vec3_t m_rotscale;
+	matrix3x4_t	m_posetobone;
+	quaternion_t m_alignment;
+	int	m_flags;
+
 };
 
 struct studiohdr_t {

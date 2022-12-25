@@ -6,6 +6,7 @@ public:
 	float m_frametime;
 	bool m_has_error;
 	bool m_first_time_predicted;
+	CMoveData data;
 	bool m_in_prediction;
 
 	struct {

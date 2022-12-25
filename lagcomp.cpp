@@ -314,7 +314,7 @@ bool LagCompensation::StartPrediction( AimPlayer* data ) {
 	record->invalidate( );
 
 	// re-setup bones for this record.
-	g_bones.BuildBonesOnetap( data->m_player, record->m_bones, g_csgo.m_globals->m_curtime );
+	g_bones.Build( data->m_player, record->m_bones, g_csgo.m_globals->m_curtime );
 
 	return true;
 }

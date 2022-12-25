@@ -195,15 +195,16 @@ void Client::UnlockHiddenConvars ( ) {
 }
 
 void Client::UpdateLocalAnimations ( ) {
-	if ( !m_processing || !m_local || !m_local->alive ( ) )
+	if ( !m_local || !m_local->alive ( ) )
 		return;
-
+	
 	auto state = m_local->m_PlayerAnimState ( );
 
 	if ( !state )
 		return;
 
 	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
+	//m_activity_modifiers.m_state = game_state;
 
 	//m_angle = m_cmd->m_view_angles;
 
@@ -213,7 +214,7 @@ void Client::UpdateLocalAnimations ( ) {
 	g_csgo.m_globals->m_curtime = game::TICKS_TO_TIME ( m_local->m_nTickBase ( ) );
 	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
 
-	//m_local->m_iEFlags ( ) &= ~0x1000;
+	m_local->m_iEFlags ( ) &= ~0x1000;
 
 	C_AnimationLayer backup_anim_layers [ 13 ];
 	memcpy ( backup_anim_layers, g_cl.m_local->m_AnimOverlay ( ), sizeof ( backup_anim_layers ) );
@@ -227,8 +228,10 @@ void Client::UpdateLocalAnimations ( ) {
 	game_state->m_flAccelerationWeight = backup_anim_layers [ ANIMATION_LAYER_LEAN ].m_weight;
 
 	m_animate = true;
+	
 	game::UpdateAnimationState ( state, g_cl.m_angle );
 	//g_cl.m_local->UpdateClientSideAnimation ( );
+
 	m_animate = false;
 
 	//rebuilt::Update ( game_state, m_cmd->m_view_angles, m_local->m_nTickBase ( ) );
@@ -236,19 +239,18 @@ void Client::UpdateLocalAnimations ( ) {
 	g_csgo.m_globals->m_frametime = backup_frametime;
 	g_csgo.m_globals->m_curtime = backup_curtime;
 
-	// fix model sway.
-	backup_anim_layers [ 12 ].m_weight = 0.f;
-	*( float * ) ( std::uintptr_t ( state ) + 0x9C ) = 0.f;
-
-	if ( !reinterpret_cast < CCSGOGamePlayerAnimState* > ( state )->m_bOnGround )
-		m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
-
 	if ( !*m_packet ) {
 		memcpy ( g_cl.m_local->m_AnimOverlay ( ), backup_anim_layers, sizeof ( backup_anim_layers ) );
 		return;
 	}
-
 	if ( *m_packet ) {
+		if ( !reinterpret_cast < CCSGOGamePlayerAnimState * > ( state )->m_bOnGround )
+			m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
+		
+		// fix model sway.
+		backup_anim_layers [ 12 ].m_weight = 0.f;
+		*( float * ) ( std::uintptr_t ( state ) + 0x9C ) = 0.f;
+		
 		m_local->GetPoseParameters ( anim_data.m_poses );
 
 		memcpy ( anim_data.m_last_layers, anim_data.m_last_queued_layers, sizeof ( anim_data.m_last_layers ) );
@@ -264,7 +266,13 @@ void Client::UpdateLocalAnimations ( ) {
 }
 
 void Client::UpdateInformation ( ) {
-	if ( g_cl.m_lag > 0 ) {
+	auto nci = g_csgo.m_engine->GetNetChannelInfo ( );
+
+	if ( !nci )
+		return;
+
+	if ( !( nci->m_choked_packets == 0 ) ) {
+		// force a client animation update.
 		g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
 		return;
 	}

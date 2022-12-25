@@ -94,6 +94,42 @@ void math::VectorAngles( const vec3_t& forward, ang_t& angles, vec3_t *up ) {
     angles = { pitch, yaw, roll };
 }
 
+
+void math::QuaternionMatrix ( const quaternion_t &q, const vec3_t &pos, matrix3x4_t &matrix ) {
+    QuaternionMatrix ( q, matrix );
+
+    matrix [ 0 ][ 3 ] = pos.x;
+    matrix [ 1 ][ 3 ] = pos.y;
+    matrix [ 2 ][ 3 ] = pos.z;
+}
+
+void math::QuaternionMatrix ( const quaternion_t &q, const vec3_t &pos, const vec3_t &vScale, matrix3x4_t &mat ) {
+    QuaternionMatrix ( q, mat );
+
+    mat [ 0 ][ 0 ] *= vScale.x; mat [ 1 ][ 0 ] *= vScale.x; mat [ 2 ][ 0 ] *= vScale.x;
+    mat [ 0 ][ 1 ] *= vScale.y; mat [ 1 ][ 1 ] *= vScale.y; mat [ 2 ][ 1 ] *= vScale.y;
+    mat [ 0 ][ 2 ] *= vScale.z; mat [ 1 ][ 2 ] *= vScale.z; mat [ 2 ][ 2 ] *= vScale.z;
+    mat [ 0 ][ 3 ] = pos.x; mat [ 1 ][ 3 ] = pos.y; mat [ 2 ][ 3 ] = pos.z;
+}
+
+void math::QuaternionMatrix ( const quaternion_t &q, matrix3x4_t &matrix ) {
+    matrix [ 0 ][ 0 ] = 1.0 - 2.0 * q.y * q.y - 2.0 * q.z * q.z;
+    matrix [ 1 ][ 0 ] = 2.0 * q.x * q.y + 2.0 * q.w * q.z;
+    matrix [ 2 ][ 0 ] = 2.0 * q.x * q.z - 2.0 * q.w * q.y;
+
+    matrix [ 0 ][ 1 ] = 2.0f * q.x * q.y - 2.0f * q.w * q.z;
+    matrix [ 1 ][ 1 ] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.z * q.z;
+    matrix [ 2 ][ 1 ] = 2.0f * q.y * q.z + 2.0f * q.w * q.x;
+
+    matrix [ 0 ][ 2 ] = 2.0f * q.x * q.z + 2.0f * q.w * q.y;
+    matrix [ 1 ][ 2 ] = 2.0f * q.y * q.z - 2.0f * q.w * q.x;
+    matrix [ 2 ][ 2 ] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.y * q.y;
+
+    matrix [ 0 ][ 3 ] = 0.0f;
+    matrix [ 1 ][ 3 ] = 0.0f;
+    matrix [ 2 ][ 3 ] = 0.0f;
+}
+
 void math::AngleVectors( const ang_t& angles, vec3_t* forward, vec3_t* right, vec3_t* up ) {
     float cp = std::cos( deg_to_rad( angles.x ) ), sp = std::sin( deg_to_rad( angles.x ) );
     float cy = std::cos( deg_to_rad( angles.y ) ), sy = std::sin( deg_to_rad( angles.y ) );
@@ -184,6 +220,20 @@ void math::MatrixCopy( const matrix3x4_t &in, matrix3x4_t &out ) {
     std::memcpy( out.Base( ), in.Base( ), sizeof( matrix3x4_t ) );
 }
 
+
+void math::MatrixGetColumn ( const matrix3x4_t &in, int column, vec3_t &out ) {
+    out.x = in [ 0 ][ column ];
+    out.y = in [ 1 ][ column ];
+    out.z = in [ 2 ][ column ];
+}
+
+
+void math::MatrixSetColumn ( const vec3_t &in, int column, matrix3x4_t &out ) {
+    out [ 0 ][ column ] = in.x;
+    out [ 1 ][ column ] = in.y;
+    out [ 2 ][ column ] = in.z;
+}
+
 void math::ConcatTransforms( const matrix3x4_t &in1, const matrix3x4_t &in2, matrix3x4_t &out ) {
     if( &in1 == &out ) {
         matrix3x4_t in1b;
@@ -264,6 +314,12 @@ bool math::IntersectRayWithBox( const vec3_t &start, const vec3_t &delta, const 
     }
 
     return out_info->m_startsolid || ( out_info->m_t1 < out_info->m_t2 && out_info->m_t1 >= 0.f );
+}
+
+void math::VectorScale ( const float *in, float scale, float *out ) {
+    out [ 0 ] = in [ 0 ] * scale;
+    out [ 1 ] = in [ 1 ] * scale;
+    out [ 2 ] = in [ 2 ] * scale;
 }
 
 bool math::IntersectRayWithBox( const vec3_t &start, const vec3_t &delta, const vec3_t &mins, const vec3_t &maxs, float tolerance, CBaseTrace *out_tr, float *fraction_left_solid ) {

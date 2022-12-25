@@ -39,7 +39,7 @@ void InputPrediction::update( ) {
 		int stop  = g_csgo.m_cl->m_last_outgoing_command + g_csgo.m_cl->m_choked_commands;
 
 		// call CPrediction::Update.
-		//g_csgo.m_prediction->Update( g_csgo.m_cl->m_delta_tick, valid, start, stop );
+		g_csgo.m_prediction->Update( g_csgo.m_cl->m_delta_tick, valid, start, stop );
 	}
 
 	static bool unlocked_fakelag = false;
@@ -74,8 +74,6 @@ void InputPrediction::ForceUpdate ( bool error ) {
 		g_csgo.m_cl->m_last_command_ack,
 		g_csgo.m_cl->m_last_outgoing_command + g_csgo.m_cl->m_choked_commands );
 }
-
-CMoveData data {};
 
 void PostThink ( Player *ent ) {
 	g_csgo.m_model_cache->BeginLock ( );

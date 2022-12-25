@@ -1,9 +1,27 @@
 #pragma once
 
+class quaternion_t {
+public:
+    float x, y, z, w;
+};
+
 namespace math {
     // pi constants.
     constexpr float pi   = 3.1415926535897932384f; // pi
     constexpr float pi_2 = pi * 2.f;               // pi * 2
+
+    //__forceinline void VectorMultiply ( const vec3_t &a, float b, vec3_t &c ) {
+    //    c.x = a.x * b;
+    //    c.y = a.y * b;
+    //    c.z = a.z * b;
+    //}
+
+    //__forceinline void VectorMultiply ( const vec3_t &a, const vec3_t &b, vec3_t &c ) {
+    //    c.x = a.x * b.x;
+    //    c.y = a.y * b.y;
+    //    c.z = a.z * b.z;
+    //}
+
 
     // degrees to radians.
     __forceinline constexpr float deg_to_rad( float val ) {
@@ -37,16 +55,22 @@ namespace math {
     float ApproachAngle( float target, float value, float speed );
     void SinCos ( float radians, float *sine, float *cosine );
     void  VectorAngles( const vec3_t& forward, ang_t& angles, vec3_t* up = nullptr );
+    void QuaternionMatrix ( const quaternion_t &q, const vec3_t &pos, matrix3x4_t &matrix );
+    void QuaternionMatrix ( const quaternion_t &q, const vec3_t &pos, const vec3_t &vScale, matrix3x4_t &mat );
+    void QuaternionMatrix ( const quaternion_t &q, matrix3x4_t &matrix );
     void  AngleVectors( const ang_t& angles, vec3_t* forward, vec3_t* right = nullptr, vec3_t* up = nullptr );
     float GetFOV( const ang_t &view_angles, const vec3_t &start, const vec3_t &end );
     void  VectorTransform( const vec3_t& in, const matrix3x4_t& matrix, vec3_t& out );
     void  VectorITransform( const vec3_t& in, const matrix3x4_t& matrix, vec3_t& out );
     void  MatrixAngles( const matrix3x4_t& matrix, ang_t& angles );
     void  MatrixCopy( const matrix3x4_t &in, matrix3x4_t &out );
+    void MatrixGetColumn ( const matrix3x4_t &in, int column, vec3_t &out );
+    void MatrixSetColumn ( const vec3_t &in, int column, matrix3x4_t &out );
     void  ConcatTransforms( const matrix3x4_t &in1, const matrix3x4_t &in2, matrix3x4_t &out );
 
     // computes the intersection of a ray with a box ( AABB ).
     bool IntersectRayWithBox( const vec3_t &start, const vec3_t &delta, const vec3_t &mins, const vec3_t &maxs, float tolerance, BoxTraceInfo_t *out_info );
+    void VectorScale ( const float *in, float scale, float *out );
     bool IntersectRayWithBox( const vec3_t &start, const vec3_t &delta, const vec3_t &mins, const vec3_t &maxs, float tolerance, CBaseTrace *out_tr, float *fraction_left_solid = nullptr );
 
     // computes the intersection of a ray with a oriented box ( OBB ).

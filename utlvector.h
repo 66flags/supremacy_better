@@ -7,6 +7,10 @@ public:
 		return m_pMemory[ i ];
 	}
 
+	T *Base ( ) {
+		return m_pMemory;
+	}
+
 	static int CalcNewAllocationCount( int count, int size, int requested, int bytes ) {
 		if( size )
 			count = ( ( 1 + ( ( requested - 1 ) / size ) ) * size );
@@ -20,6 +24,10 @@ public:
 		}
 
 		return count;
+	}
+
+	int NumAllocated ( ) const {
+		return m_nAllocationCount;
 	}
 
 	__forceinline void Grow( int count = 1 ) {
@@ -46,10 +54,10 @@ public:
 		m_nAllocationCount = new_alloc_count;
 
 		if( m_pMemory )
-			m_pMemory = ( T* )g_pMemAlloc->Realloc( m_pMemory, m_nAllocationCount * sizeof( T ) );
+			m_pMemory = ( T* )g_csgo.m_mem_alloc->Realloc( m_pMemory, m_nAllocationCount * sizeof( T ) );
 
 		else
-			m_pMemory = ( T* )g_pMemAlloc->Alloc( m_nAllocationCount * sizeof( T ) );
+			m_pMemory = ( T* ) g_csgo.m_mem_alloc->Alloc( m_nAllocationCount * sizeof( T ) );
 	}
 
 	__forceinline bool IsExternallyAllocated( ) const {
@@ -111,7 +119,6 @@ public:
 		return elem;
 	}
 
-protected:
 	__forceinline void GrowVector( int num = 1 ) {
 		if( m_Size + num > m_Memory.NumAllocated( ) )
 			m_Memory.Grow( m_Size + num - m_Memory.NumAllocated( ) );

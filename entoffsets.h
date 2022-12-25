@@ -49,6 +49,9 @@ public:
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_iAccount;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_bHasDefuser;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_nHitboxSet;
+	XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flTimeOfLastInjury;
+	XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_LastHitGroup;
+	XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_nRelativeDirectionOfLastInjury;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_angAbsRotation;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_angRotation;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_angNetworkAngles;
@@ -80,6 +83,7 @@ public:
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_pCurrentCommand;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_iEFlags;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flPoseParameter;
+	XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flEncodedController;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_hMyWearables;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_BoneCache;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_hObserverTarget;
@@ -178,7 +182,11 @@ public:
         INIT_XOREDNETVAR( m_aimPunchAngleVel,           HASH( "DT_CSPlayer" ),             HASH( "m_aimPunchAngleVel" ) );
         INIT_XOREDNETVAR( m_vecViewOffset,              HASH( "DT_CSPlayer" ),             HASH( "m_vecViewOffset[0]" ) );
         INIT_XOREDNETVAR( m_flPoseParameter,            HASH( "DT_CSPlayer" ),             HASH( "m_flPoseParameter" ) );
+		INIT_XOREDNETVAR ( m_flEncodedController, HASH ( "DT_CSPlayer" ), HASH ( "m_flEncodedController" ) );
         INIT_XOREDNETVAR( m_hMyWearables,               HASH( "DT_BaseCombatCharacter" ),  HASH( "m_hMyWearables" ) );
+		INIT_XOREDNETVAR ( m_nRelativeDirectionOfLastInjury, HASH ( "DT_BaseCombatCharacter" ), HASH ( "m_nRelativeDirectionOfLastInjury" ) );
+		INIT_XOREDNETVAR ( m_flTimeOfLastInjury, HASH ( "DT_BaseCombatCharacter" ), HASH ( "m_flTimeOfLastInjury" ) );
+		INIT_XOREDNETVAR ( m_LastHitGroup, HASH ( "DT_BaseCombatCharacter" ), HASH ( "m_LastHitGroup" ) );
         INIT_XOREDNETVAR( m_hObserverTarget,            HASH( "DT_CSPlayer" ),             HASH( "m_hObserverTarget" ) );
         INIT_XOREDNETVAR( m_hActiveWeapon,              HASH( "DT_BaseCombatCharacter" ),  HASH( "m_hActiveWeapon" ) );
         INIT_XOREDNETVAR( m_hGroundEntity,              HASH( "DT_CSPlayer" ),             HASH( "m_hGroundEntity" ) );

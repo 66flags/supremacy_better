@@ -51,28 +51,33 @@ void Hooks::UpdateClientSideAnimation ( ) {
 			SetupBones_AttachmentHelper ( g_cl.m_local, g_cl.m_local->GetModelPtr ( ) );
 
 			// force setupbones rebuild
-			g_bones.BuildBonesOnetap ( player, nullptr, g_csgo.m_globals->m_curtime );
+			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
 		}
 	}
-	else if ( player != g_cl.m_local ) {
-		// @onetap
-		if ( player->m_AnimOverlay ( ) ) {
-			for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ ) {
-				player->m_AnimOverlay ( ) [ i ].m_owner = player;
+	
+	if ( player != g_cl.m_local ) {
+		player->SetAbsOrigin ( player->m_vecOrigin ( ) );
+
+		if ( g_cl.m_update_ent ) {
+			// @onetap
+			if ( player->m_AnimOverlay ( ) ) {
+				for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ ) {
+					player->m_AnimOverlay ( ) [ i ].m_owner = player;
+				}
 			}
+
+			// will force GetAbsVelocity in CCSGOPlayerAnimState::Update to not do shit to velocity
+			// also, we hook IsHLTV so we know that we call GetAbsVelocity not EstimateAbsVelocity
+
+			int iEFlags = player->m_iEFlags ( );
+
+			player->m_iEFlags ( ) &= ~( 1 << 12 );
+
+			g_hooks.m_UpdateClientSideAnimation ( this );
+
+			// restore entity flags
+			player->m_iEFlags ( ) = iEFlags;
 		}
-
-		// will force GetAbsVelocity in CCSGOPlayerAnimState::Update to not do shit to velocity
-		// also, we hook IsHLTV so we know that we call GetAbsVelocity not EstimateAbsVelocity
-
-		int iEFlags = player->m_iEFlags ( );
-
-		player->m_iEFlags ( ) &= ~( 1 << 12 );
-
-		g_hooks.m_UpdateClientSideAnimation ( this );
-
-		// restore entity flags
-		player->m_iEFlags ( ) = iEFlags;
 	}
 	else
 		g_hooks.m_UpdateClientSideAnimation ( this );
@@ -166,8 +171,6 @@ void CustomEntityListener::OnEntityCreated ( Entity *ent ) {
 
 				// hook this on every player.
 				g_hooks.m_DoExtraBoneProcessing = vmt->add< Hooks::DoExtraBoneProcessing_t > ( Player::DOEXTRABONEPROCESSING, util::force_cast ( &Hooks::DoExtraBoneProcessing ) );
-
-				if ( player || player->index ( ) == g_csgo.m_engine->GetLocalPlayer ( ) || player->m_iTeamNum ( ) != g_cl.m_local->m_iTeamNum ( ) )
 					g_hooks.m_UpdateClientSideAnimation = vmt->add< Hooks::UpdateClientSideAnimation_t > ( Player::UPDATECLIENTSIDEANIMATION, util::force_cast ( &Hooks::UpdateClientSideAnimation ) );
 				
 				g_hooks.m_NotifyOnLayerChangeCycle = vmt->add< Hooks::NotifyOnLayerChangeCycle_t > ( Player::NOTIFYONLAYERCHANGECYCLE, util::force_cast ( &Hooks::NotifyOnLayerChangeCycle ) );
@@ -179,7 +182,7 @@ void CustomEntityListener::OnEntityCreated ( Entity *ent ) {
 					g_hooks.m_BuildTransformations = vmt->add< Hooks::BuildTransformations_t > ( Player::BUILDTRANSFORMATIONS, util::force_cast ( &Hooks::BuildTransformations ) );
 					g_hooks.m_CalcView = vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
 					g_hooks.m_GetEyeAngles = vmt->add< Hooks::GetEyeAngles_t > ( Player::GETEYEANGLES, util::force_cast ( &Hooks::GetEyeAngles ) );
-					g_hooks.m_AccumulateLayers = vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
+					//g_hooks.m_AccumulateLayers = vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
 				}
 			}
 		}

@@ -129,6 +129,8 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 		m_spawn = m_player->m_flSpawnTime ( );
 	}
 
+	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
+
 	float curtime = g_csgo.m_globals->m_curtime;
 	float frametime = g_csgo.m_globals->m_frametime;
 
@@ -154,6 +156,8 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	g_csgo.m_globals->m_tick_count = sim_ticks;
 	g_csgo.m_globals->m_interp_amt = 0.0;
 	
+	game_state->m_flLastUpdateTime = m_player->m_flSimulationTime ( );
+
 	AnimationBackup_t backup;
 
 	backup.m_origin = m_player->m_vecOrigin ( );
@@ -245,20 +249,18 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 		g_resolver.ResolveAngles ( m_player, record );
 
 	m_player->m_vecOrigin ( ) = record->m_origin;
-	//m_player->m_vecVelocity ( ) = 
-	m_player->m_vecAbsVelocity ( ) = record->m_anim_velocity;
+	m_player->m_vecVelocity ( ) = m_player->m_vecAbsVelocity ( ) = record->m_anim_velocity;
 	m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
-
-	m_player->m_iEFlags ( ) &= ~0x1000;
-
 	m_player->m_angEyeAngles ( ) = record->m_eye_angles;
 
 	if ( state->m_frame == g_csgo.m_globals->m_frame )
 		state->m_frame -= 1;
-
-	m_player->m_bClientSideAnimation ( ) = true;
+	
+	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent = true;
 	m_player->UpdateClientSideAnimation ( );
-	m_player->m_bClientSideAnimation ( ) = false;
+	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent = false;
+
+	//g_cl.m_update_ent [ m_player->index ( ) ] = false;
 
 	if ( fake )
 		g_resolver.ResolvePoses ( m_player, record );
@@ -273,7 +275,7 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	m_player->m_iEFlags ( ) = backup.m_eflags;
 	m_player->m_flDuckAmount ( ) = backup.m_duck;
 	m_player->m_flLowerBodyYawTarget ( ) = backup.m_body;
-	m_player->SetAbsOrigin ( backup.m_origin );
+	//m_player->SetAbsOrigin ( backup.m_origin );
 	m_player->SetAnimLayers ( backup.m_layers );
 
 	g_csgo.m_globals->m_curtime = curtime;
@@ -319,7 +321,7 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 		}
 	}
 
-	bool update = ( m_records.empty ( ) || player->m_flSimulationTime ( ) != player->m_flOldSimulationTime ( ) );
+	bool update = ( m_records.empty ( ) || player->m_flSimulationTime ( ) > m_records.front ( ).get ( )->m_sim_time );
 
 	if ( update ) {
 		m_records.emplace_front ( std::make_shared< LagRecord > ( player ) );
@@ -329,10 +331,10 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 
 		//current->m_has_vel = g_aimbot.FixVelocity ( player, previous, player->m_vecVelocity ( ), current->m_layers, player->m_vecOrigin ( ) );
 		current->m_dormant = false;
-
+		
 		UpdateAnimations ( current );
 
-		g_bones.BuildBonesOnetap ( m_player, current->m_bones, g_csgo.m_globals->m_curtime );
+		g_bones.Build ( m_player, current->m_bones, g_csgo.m_globals->m_curtime );
 	}
 
 	while ( m_records.size ( ) > 256 )

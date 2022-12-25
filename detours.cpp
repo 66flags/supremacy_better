@@ -68,6 +68,20 @@ bool __fastcall detours::SVCMsg_VoiceData ( void *ecx, void *edx, void *a2 ) {
 	return og;
 }
 
+CUtlVector <uint16_t> __forceinline rebuild_modifiers ( CCSGOGamePlayerAnimState *state ) {
+	activity_modifiers_wrapper modifier_wrapper {};
+
+	modifier_wrapper.add_modifier ( state->GetWeaponPrefix ( ) );
+
+	if ( state->m_flSpeedAsPortionOfWalkTopSpeed > .25f )
+		modifier_wrapper.add_modifier ( "moving" );
+
+	if ( state->m_flAnimDuckAmount > .55f )
+		modifier_wrapper.add_modifier ( "crouch" );
+
+	return modifier_wrapper.get ( );
+}
+
 void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 	auto state = ( CCSGOGamePlayerAnimState * ) ecx;
 
@@ -82,6 +96,22 @@ void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 		m_bJumping = true;
 		rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_JUMP ) );
 	}
+
+	g_cl.m_activity_modifiers.add_modifier ( state->GetWeaponPrefix ( ) );
+
+	// update modifiers.
+	if ( state->m_flSpeedAsPortionOfWalkTopSpeed > 0.25f )
+		g_cl.m_activity_modifiers.add_modifier ( "moving" );
+
+	if ( state->m_flAnimDuckAmount > 0.55f )
+		g_cl.m_activity_modifiers.add_modifier ( "crouch" );
+
+	if ( !( g_inputpred.data.m_nOldButtons & FL_ONGROUND ) ) {
+		rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_FALL ) );
+		m_bJumping = true;
+	}
+	else
+		rebuild_modifiers ( state );
 
 	old::SetupMovement ( ecx, edx );
 
@@ -182,12 +212,109 @@ void __vectorcall detours::UpdateAnimationState ( void *ecx, void *a1, float a2,
 	if ( state->m_player != g_cl.m_local )
 		return old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
 
+	auto game_state = ( CCSGOGamePlayerAnimState * ) ecx;
+
 	if ( state->m_frame == g_csgo.m_globals->m_frame )
 		state->m_frame -= 1;
 
 	//auto angle = g_cl.m_angle;
 
-	return old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
+	old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
+
+	//if ( game_state->m_flTimeOfLastKnownInjury < game_state->m_pPlayer->m_flTimeOfLastInjury ( ) ) {
+	//	game_state->m_flTimeOfLastKnownInjury = game_state->m_pPlayer->m_flTimeOfLastInjury ( );
+
+	//	// flinches override flinches of their own priority
+	//	bool bNoFlinchIsPlaying = ( rebuilt::IsLayerSequenceCompleted ( game_state, ANIMATION_LAYER_FLINCH ) || game_state->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_FLINCH ].m_weight <= 0 );
+	//	bool bHeadshotIsPlaying = ( !bNoFlinchIsPlaying && rebuilt::GetLayerActivity ( game_state, ANIMATION_LAYER_FLINCH ) == ACT_CSGO_FLINCH_HEAD );
+
+	//	//if ( game_state->m_pPlayer->GetLastDamageTypeFlags ( ) & DMG_BURN ) {
+	//	//	if ( bNoFlinchIsPlaying ) {
+	//	//		rebuilt::SetSequence ( game_state, ANIMATION_LAYER_FLINCH, rebuilt::SelectWeightedSequence ( game_state, ACT_CSGO_FLINCH_MOLOTOV ) );
+
+	//	//		// clear out all the flinch-related actmods now we selected a sequence
+	//	//		rebuild_modifiers ( game_state );
+	//	//	}
+	//	//}
+	//	if ( bNoFlinchIsPlaying || !bHeadshotIsPlaying || game_state->m_pPlayer->m_LastHitGroup ( ) == HITGROUP_HEAD ) {
+	//		auto damageDir = game_state->m_pPlayer->m_nRelativeDirectionOfLastInjury ( );
+	//		bool bLeft = false;
+	//		bool bRight = false;
+	//		switch ( damageDir ) {
+	//		case DAMAGED_DIR_NONE:
+	//		case DAMAGED_DIR_FRONT:
+	//		{
+	//			g_cl.m_activity_modifiers.add_modifier ( "front" );
+	//			break;
+	//		}
+	//		case DAMAGED_DIR_BACK:
+	//		{
+	//			g_cl.m_activity_modifiers.add_modifier ( "back" );
+	//			break;
+	//		}
+	//		case DAMAGED_DIR_LEFT:
+	//		{
+	//			g_cl.m_activity_modifiers.add_modifier ( "left" );
+	//			bLeft = true;
+	//			break;
+	//		}
+	//		case DAMAGED_DIR_RIGHT:
+	//		{
+	//			g_cl.m_activity_modifiers.add_modifier ( "right" );
+	//			bRight = true;
+	//			break;
+	//		}
+	//		}
+	//		switch ( game_state->m_pPlayer->m_LastHitGroup ( ) ) {
+	//		case HITGROUP_HEAD:
+	//		{
+	//			g_cl.m_activity_modifiers.add_modifier ( "head" );
+	//			break;
+	//		}
+	//		case HITGROUP_CHEST:
+	//		{
+	//			g_cl.m_activity_modifiers.add_modifier ( "chest" );
+	//			break;
+	//		}
+	//		case HITGROUP_LEFTARM:
+	//		{
+	//			if ( !bLeft ) { g_cl.m_activity_modifiers.add_modifier ( "left" ); }
+	//			g_cl.m_activity_modifiers.add_modifier ( "arm" );
+	//			break;
+	//		}
+	//		case HITGROUP_RIGHTARM:
+	//		{
+	//			if ( !bRight ) { g_cl.m_activity_modifiers.add_modifier ( "right" ); }
+	//			g_cl.m_activity_modifiers.add_modifier ( "arm" );
+	//			break;
+	//		}
+	//		case HITGROUP_GENERIC:
+	//		case HITGROUP_STOMACH:
+	//		{
+	//			g_cl.m_activity_modifiers.add_modifier ( "gut" );
+	//			break;
+	//		}
+	//		case HITGROUP_LEFTLEG:
+	//		{
+	//			if ( !bLeft ) { g_cl.m_activity_modifiers.add_modifier ( "left" ); }
+	//			g_cl.m_activity_modifiers.add_modifier ( "leg" );
+	//			break;
+	//		}
+	//		case HITGROUP_RIGHTLEG:
+	//		{
+	//			if ( !bRight ) { g_cl.m_activity_modifiers.add_modifier ( "right" ); }
+	//			g_cl.m_activity_modifiers.add_modifier ( "leg" );
+	//			break;
+	//		}
+	//		}
+	//		rebuilt::SetSequence ( game_state, ANIMATION_LAYER_FLINCH, rebuilt::SelectWeightedSequence ( game_state, ( game_state->m_pPlayer->m_LastHitGroup ( ) == HITGROUP_HEAD ) ? ACT_CSGO_FLINCH_HEAD : ACT_CSGO_FLINCH ) );
+
+	//		// clear out all the flinch-related actmods now we selected a sequence
+	//		rebuild_modifiers ( game_state );
+	//	}
+
+	//}
+
 }
 
 void __fastcall detours::DoProceduralFootPlant ( void *ecx, void *edx, int a1, int a2, int a3, int a4 ) {

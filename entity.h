@@ -206,6 +206,111 @@ enum Weapons_t : int {
 	KNIFE_SHADOW_DAGGERS = 516,
 };
 
+enum RelativeDamagedDirection_t {
+	DAMAGED_DIR_NONE = 0,
+	DAMAGED_DIR_FRONT,
+	DAMAGED_DIR_BACK,
+	DAMAGED_DIR_LEFT,
+	DAMAGED_DIR_RIGHT,
+
+	DAMAGED_DIR_TOTAL
+};
+
+class CStudioHdr {
+public:
+	class mstudioposeparamdesc_t {
+	public:
+		int					sznameindex;
+		__forceinline char *const name ( void ) const { return ( ( char * ) this ) + sznameindex; }
+		int					flags;	// ????
+		float				start;	// starting value
+		float				end;	// ending value
+		float				loop;	// looping range, 0 for no looping, 360 for rotations, etc.
+	};
+
+	int __thiscall GetNumSeq ( ) {
+		int v1; // eax
+
+		v1 = *( int * ) ( std::uintptr_t ( this ) + 4 );
+		if ( v1 )
+			return *( int * ) ( std::uintptr_t ( v1 ) + 20 );
+		else
+			return *( int * ) ( std::uintptr_t ( this ) + 188 );
+	}
+
+	studiohdr_t *m_pStudioHdr;
+	void *m_pVModel;
+};
+
+class C_BoneMergeCache {
+public:
+	__forceinline void Init ( void *owner ) {
+		static auto Init = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 8B 45 08 56 8B F1 89 06 C7 46 ? ? ? ? ? C7 46 ? ? ? ? ? C7 46 ? ? ? ? ? C7 46 ? ? ? ? ? C7 46 ? ? ? ? ? C6 86 ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? 83 BE" ) ).as < void ( __thiscall * )( void *, void * ) > ( );
+		Init ( this, owner );
+	}
+
+	void *operator new ( size_t size ) {
+		static auto C_BoneMergeCache__Constructor = pattern::find ( g_csgo.m_client_dll, XOR ( "56 8B F1 0F 57 C0 C7 86 ?? ?? ?? ?? ?? ?? ?? ?? C7 86 ?? ?? ?? ?? ?? ?? ?? ?? C7 86" ) ).as < void ( __thiscall * )( void * ) > ( );
+		
+		C_BoneMergeCache *ptr = ( C_BoneMergeCache * ) g_csgo.m_mem_alloc->Alloc ( size );
+		C_BoneMergeCache__Constructor ( ptr );
+
+		return ptr;
+	}
+
+	void operator delete( void *ptr ) {
+		g_csgo.m_mem_alloc->Free ( ptr );
+	}
+
+#ifdef CLIENT_DLL
+	void MergeMatchingBones ( int boneMask );
+#else
+	//void BuildMatricesWithBoneMerge ( const CStudioHdr *pStudioHdr, const QAngle &angles,
+	//	const Vector &origin, const Vector pos [ MAXSTUDIOBONES ],
+	//	const Quaternion q [ MAXSTUDIOBONES ], matrix3x4_t bonetoworld [ MAXSTUDIOBONES ],
+	//	CBaseAnimating *pParent, CBoneCache *pParentCache, int boneMask );
+#endif
+
+	// CBoneMergeCache::CopyFromFollow (client.dll: "55 8B EC 83 EC 08 53 56 57 8B F9 89 7D F8 E8 ? ? ? ? 83 7F 10 00 0F 84 ? ? ? ? 8B 87 ? ? ? ? 85 C0 74 75")
+	__forceinline void CopyFromFollow ( const vec3_t followPos [ ], const quaternion_t followQ [ ], int boneMask, vec3_t myPos [ ], quaternion_t myQ [ ] ) {
+		static auto CopyFromFollow = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 08 53 56 57 8B F9 89 7D F8 E8 ? ? ? ? 83 7F 10 00 0F 84 ? ? ? ? 8B 87 ? ? ? ? 85 C0 74 75" ) ).as < void ( __thiscall * )( void *, const vec3_t [ ], const quaternion_t [ ], int, vec3_t [ ], quaternion_t [ ] ) > ( );
+		CopyFromFollow ( this, followPos, followQ, boneMask, myPos, myQ );
+	}
+
+	// CBoneMergeCache::CopyToFollow (client.dll: "55 8B EC 83 EC 24 8B 45 08 57 8B F9 89 7D F4 85 C0 0F 84 ? ? ? ? 05 ? ? ? ? 53 56 89 45 EC")
+	__forceinline void CopyToFollow ( const vec3_t myPos [ ], const quaternion_t myQ [ ], int boneMask, vec3_t followPos [ ], quaternion_t followQ [ ] ) {
+		static auto CopyToFollow = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 24 8B 45 08 57 8B F9 89 7D F4 85 C0 0F 84 ? ? ? ? 05 ? ? ? ? 53 56 89 45 EC" ) ).as < void ( __thiscall * )( void *, const vec3_t [ ], const quaternion_t [ ], int, vec3_t [ ], quaternion_t [ ] ) > ( );
+		CopyToFollow ( this, myPos, myQ, boneMask, followPos, followQ );
+	}
+
+	// CBoneMergeCache::MergeMatchingPoseParams (client.dll: "55 8B EC 83 EC 0C 53 56 8B F1 57 89 75 F8 E8 ? ? ? ? 83 7E 10 00 0F 84 ? ? ? ? 83 BE")
+	__forceinline void MergeMatchingPoseParams ( ) {
+		static auto MergeMatchingPoseParams = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 0C 53 56 8B F1 57 89 75 F8 E8 ? ? ? ? 83 7E 10 00 0F 84 ? ? ? ? 83 BE" ) ).as < void ( __thiscall * )( void * ) > ( );
+		MergeMatchingPoseParams ( this );
+	}
+//protected:
+	void *m_pOwner;
+	void *m_pFollow;
+	CStudioHdr *m_pFollowHdr;
+	const studiohdr_t *m_pFollowRenderHdr;
+	CStudioHdr *m_pOwnerHdr;
+	const studiohdr_t *m_pOwnerRenderHdr;
+	int	m_nCopiedFramecount;
+	int	m_nFollowBoneSetupMask;
+
+	class CMergedBone {
+	public:
+		unsigned short m_iMyBone;
+		unsigned short m_iParentBone;
+	};
+
+	int	m_nOwnerToFollowPoseParamMapping [ 24 ];
+	CUtlVector< CMergedBone > m_MergedBones;
+	PAD ( 12U );
+	unsigned short m_iRawIndexMapping [ 138 ];
+	bool m_bForceCacheClear;
+};
+
 struct RenderableInstance_t {
 	uint8_t m_alpha;
 	__forceinline RenderableInstance_t() : m_alpha{ 255ui8 } {}
@@ -286,6 +391,36 @@ public:
 
 	__forceinline bool &m_bReadyToDraw() {
 		return get< bool >(g_entoffsets.m_bReadyToDraw);
+	}
+
+	__forceinline float &m_flTimeOfLastInjury ( ) {
+		return get< float > ( g_entoffsets.m_flTimeOfLastInjury );
+	}
+
+	__forceinline C_BoneMergeCache* m_pBoneMergeCache ( ) {
+		return get< C_BoneMergeCache* > ( 0x28FC );
+	}
+
+	// misc funcs.
+	__forceinline CStudioHdr *GetModelPtr ( ) {
+		static auto GetModelPtr = pattern::find ( g_csgo.m_client_dll, XOR ( "E8 ? ? ? ? 83 C4 04 8B C8 E8 ? ? ? ? 83 B8" ) ).rel32 ( 0x1 ).as< CStudioHdr* ( __thiscall * )( void * ) > ( );
+		return GetModelPtr ( this );
+	}
+
+	__forceinline float *m_flPoseParameter ( ) {
+		return ( float * ) ( ( uintptr_t ) this + g_entoffsets.m_flPoseParameter );
+	}
+
+	__forceinline float *m_flEncodedController ( ) {
+		return ( float * ) ( ( uintptr_t ) this + g_entoffsets.m_flEncodedController );
+	}
+
+	__forceinline RelativeDamagedDirection_t &m_nRelativeDirectionOfLastInjury ( ) {
+		return get< RelativeDamagedDirection_t > ( g_entoffsets.m_nRelativeDirectionOfLastInjury );
+	}
+
+	__forceinline int &m_LastHitGroup ( ) {
+		return get< int > ( g_entoffsets.m_LastHitGroup );
 	}
 
 public:
@@ -370,6 +505,10 @@ public:
 		return util::get_method< const ang_t &(__thiscall *)(void *) >(this, 11)(this);
 	}
 
+	__forceinline CIKContext *&m_pIK ( ) {
+		return get < CIKContext * > ( 0x2660 );
+	}
+
 	__forceinline bool IsPlayer() {
 		return util::get_method< bool(__thiscall *)(void *) >(this, ISPLAYER)(this);
 	}
@@ -394,6 +533,17 @@ public:
 		g_csgo.InvalidatePhysicsRecursive.as< InvalidatePhysicsRecursive_t >()(this, bits);
 	}
 
+	__forceinline void CalculateIKLocks ( float time ) {
+		using CalculateIKLocks_t = void ( __thiscall * ) ( decltype ( this ), float );
+		
+#if 1
+		static auto CalculateIKLocks = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 81 ? ? ? ? ? 56 57 8B F9 89 7C 24 18" ) ).as < CalculateIKLocks_t > ( );
+#else
+		static auto CalculateIKLocks = pattern::find ( g_csgo.m_server_dll, XOR ( "55 8B EC 83 E4 F8 81 ? ? ? ? ? 56 57 8B F9 89 7C 24 18" ) ).as < CalculateIKLocks_t > ( );
+#endif
+		CalculateIKLocks ( this, time );
+	}
+	
 	__forceinline void SetAbsAngles(const ang_t &angles) {
 		using SetAbsAngles_t = void(__thiscall *)(decltype(this), const ang_t &);
 		g_csgo.SetAbsAngles.as< SetAbsAngles_t >()(this, angles);
@@ -455,21 +605,6 @@ public:
 	PAD(0x4);					// 0x0340
 }; // size: 0x344
 
-class CStudioHdr {
-public:
-	class mstudioposeparamdesc_t {
-	public:
-		int					sznameindex;
-		__forceinline char *const name(void) const { return ((char *)this) + sznameindex; }
-		int					flags;	// ????
-		float				start;	// starting value
-		float				end;	// ending value
-		float				loop;	// looping range, 0 for no looping, 360 for rotations, etc.
-	};
-
-	studiohdr_t *m_pStudioHdr;
-	void *m_pVModel;
-};
 
 class C_AnimationLayer {
 public:
@@ -796,10 +931,6 @@ public:
 		return get< int >(g_entoffsets.m_iEFlags);
 	}
 
-	__forceinline float *m_flPoseParameter() {
-		return (float *)((uintptr_t)this + g_entoffsets.m_flPoseParameter);
-	}
-
 	__forceinline CBaseHandle *m_hMyWearables() {
 		return (CBaseHandle *)((uintptr_t)this + g_entoffsets.m_hMyWearables);
 	}
@@ -835,6 +966,11 @@ public:
 		return get< C_AnimationLayer * >(g_csgo.AnimOverlay);
 	}
 
+	__forceinline int &m_iNumOverlays ( ) {
+		return get< int > ( 0x297C );
+	}
+
+
 	__forceinline float &m_flSpawnTime() {
 		// .text:10381AB3 00C    F3 0F 10 49 10             movss   xmm1, dword ptr [ecx+10h] ; Move Scalar Single-FP
 		// .text:10381AB8 00C    F3 0F 5C 88 90 A2 00 00    subss   xmm1, dword ptr[ eax + 0A290h ]; Scalar Single - FP Subtract
@@ -866,7 +1002,8 @@ public:
 		NOTIFYONLAYERCHANGEWEIGHT = 242,
 		GETEYEANGLES = 164,
 		NOTIFYONLAYERCHANGECYCLE = 243,
-		ACCUMULATELAYERS = 201
+		ACCUMULATELAYERS = 201,
+		UPDATEDISPATCHLAYER = 241,
 	};
 
 public:
@@ -874,6 +1011,11 @@ public:
 	__forceinline ulong_t GetRefEHandle() {
 		using GetRefEHandle_t = ulong_t(__thiscall *)(decltype(this));
 		return util::get_method< GetRefEHandle_t >(this, GETREFEHANDLE)(this);
+	}
+
+	__forceinline bool UpdateDispatchLayer ( C_AnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) {
+		using UpdateDispatchLayer_t = bool ( __thiscall * )( decltype( this ), C_AnimationLayer *, CStudioHdr *, int );
+		return util::get_method< UpdateDispatchLayer_t > ( this, UPDATEDISPATCHLAYER )( this, pLayer, pWeaponStudioHdr, iSequence );
 	}
 
 	__forceinline void BuildTransformations(CStudioHdr *hdr, vec3_t *pos, quaternion_t *q, const matrix3x4_t &transform, int mask, uint8_t *computed) {
@@ -980,16 +1122,6 @@ public:
 
 	__forceinline void UpdateCollisionBounds() {
 		return util::get_method< void(__thiscall *)(decltype(this)) >(this, UPDATECOLLISIONBOUNDS)(this);
-	}
-
-	// misc funcs.
-	__forceinline CStudioHdr *GetModelPtr() {
-		using LockStudioHdr_t = void(__thiscall *)(decltype(this));
-
-		if (!m_studioHdr())
-			g_csgo.LockStudioHdr.as< LockStudioHdr_t >()(this);
-
-		return m_studioHdr();
 	}
 
 	__forceinline Weapon *GetActiveWeapon() {
@@ -1212,6 +1344,7 @@ public:
 	__forceinline int &m_iItemDefinitionIndex() {
 		return get< int >(g_entoffsets.m_iItemDefinitionIndex);
 	}
+
 
 	__forceinline int &m_iClip1() {
 		return get< int >(g_entoffsets.m_iClip1);
