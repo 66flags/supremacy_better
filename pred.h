@@ -8,6 +8,7 @@ public:
 	bool m_first_time_predicted;
 	CMoveData data;
 	bool m_in_prediction;
+	float m_cycle;
 
 	struct {
 		float m_old_velocity_modifier;
@@ -17,6 +18,7 @@ public:
 	void update( );
 	void ForceUpdate ( bool error );
 	void run( );
+	void FixViewmodel ( bool store );
 	void restore( );
 };
 

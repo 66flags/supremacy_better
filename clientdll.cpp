@@ -82,6 +82,9 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 		g_visuals.DrawBeams ( );
 	}
 
+	//if ( stage == FRAME_NET_UPDATE_END )
+	//	g_inputpred.FixViewmodel ( true );
+
 	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END && ( g_cl.m_local && g_cl.m_local->alive ( ) ) ) {
 		g_inputpred.stored.m_old_velocity_modifier = g_cl.m_local->m_flVelocityModifier ( );
 
@@ -95,8 +98,41 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	g_hooks.m_client.GetOldMethod< FrameStageNotify_t > ( CHLClient::FRAMESTAGENOTIFY )( this, stage );
 
 	if ( stage == FRAME_RENDER_START ) {
-		// ...
+//#ifdef _DEBUG
+//		// server hitboxes.
+//		if ( g_menu.main.players.show_server_boxes.get ( ) ) {
+//			float fDuration = -1.f;
+//
+//			static auto DrawServerHitboxes = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? F6 83 ? ? ? ? ? 0F 84 ? ? ? ? 33 FF 39 BB" ) ).rel32 ( 0x1 ).as < void * > ( );
+//			static auto UTIL_PlayerByIndex = pattern::find ( g_csgo.m_client_dll, XOR ( "83 F9 ? 7C ? A1 ? ? ? ? 3B 48 ? 7F ? C1 E1 ? 56 8B 89 ? ? ? ? 85 C9 74 ? 8B 01 FF 50 ? 8B F0 85 F6 74 ? 8B 06" ) ).as < void *( __fastcall* ) ( int ) > ( );
+//
+//			for ( int i = 1; i < g_csgo.m_globals->m_max_clients; i++ ) {
+//				auto e = g_csgo.m_entlist->GetClientEntity ( i );
+//
+//				if ( !e )
+//					continue;
+//
+//				auto ent = ( Player * ) UTIL_PlayerByIndex ( e->index ( ) );
+//
+//				if ( !ent )
+//					continue;
+//
+//				__asm
+//				{
+//					pushad
+//					movss xmm1, fDuration
+//					push 0 //bool monoColor
+//					mov ecx, ent
+//					call DrawServerHitboxes
+//					popad
+//				}
+//			}
+//		}
+//#endif
 	}
+
+	//else if ( stage == FRAME_NET_UPDATE_END )
+		//g_inputpred.FixViewmodel ( false );
 
 	else if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_START ) {
 		// restore non-compressed netvars.
@@ -107,14 +143,27 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 
 	else if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END ) {
 		g_visuals.NoSmoke ( );
+		g_inputpred.FixViewmodel ( false );
 	}
 
 	else if ( stage == FRAME_NET_UPDATE_END ) {
+		// store layers before our player modifies our data.
+		if ( g_cl.m_local && g_cl.m_local->m_AnimOverlay ( ) ) {
+			memcpy ( g_cl.anim_data.m_last_queued_layers, g_cl.m_local->m_AnimOverlay ( ), sizeof ( C_AnimationLayer ) * 13 );
+		}
+
+		// null out layers
+		else if ( !g_cl.m_local ) {
+			memset ( g_cl.anim_data.m_last_queued_layers, 0, sizeof ( C_AnimationLayer ) * 13 );
+		}
+
+		// copy back layers just in-case if we have our shit fucked up.
+		else if ( !g_cl.m_local->alive ( ) ) {
+			memcpy ( g_cl.anim_data.m_last_queued_layers, g_cl.m_local->m_AnimOverlay ( ), sizeof ( C_AnimationLayer ) * 13 );
+		}
+
 		// restore non-compressed netvars.
 		g_netdata.apply ( );
-
-		if ( g_cl.m_local && g_cl.m_local->alive ( ) )
-			g_cl.m_local->GetAnimLayers ( g_cl.anim_data.m_last_queued_layers );
 
 		// update all players.
 		for ( int i { 1 }; i <= g_csgo.m_globals->m_max_clients; ++i ) {

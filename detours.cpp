@@ -18,8 +18,14 @@ bool detours::init ( ) {
 	const auto _update_client_side_animation = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 51 56 8B F1 80 BE ? ? ? ? ? 74" ) ).as < void * > ( );
 	const auto _svcmsg_voicedata = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 E4 F8 A1 ? ? ? ? 81 EC ? ? ? ? 53 56 8B F1 B9 ? ? ? ? 57 FF 50 34 8B 7D 08 85 C0 74 13 8B 47 08 40 50 68 ? ? ? ? FF 15 ? ? ? ? 83 C4 08 8B 47 08 89 44 24 1C 8D 48 01 8B 86 ? ? ? ? 40 89 4C 24 0C 3B C8 75 49" ) ).as < void * > ( );
 	const auto _process_movement = util::get_method < void * > ( g_csgo.m_game_movement, CGameMovement::PROCESSMOVEMENT );
-	
+	const auto _maintain_sequence_transitions = pattern::find ( g_csgo.m_client_dll, XOR ( "53 8B DC 83 EC 08 83 E4 F8 83 C4 04 55 8B 6B 04 89 6C 24 04 8B EC 83 EC 18 56 57 8B F9 F3" ) ).as < void * > ( );
+	const auto _computeposeparam_moveyaw = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F0 83 EC 48 56 8B F1 57 8B 46 14 85 C0 74 09 83 F8 01 0F 85 ? ? ? ? E8" ) ).as < void * > ( );
+	const auto _teleported = pattern::find ( g_csgo.m_client_dll, XOR ( "E8 ? ? ? ? 84 C0 75 0D 8B 87 ? ? ? ? C1 E8 03 A8 01 74 2E 8B" ) ).rel32 ( 0x1 ).as < void * > ( );
+	const auto _process_interp_list = pattern::find ( g_csgo.m_client_dll, XOR ( "0F ? ? ? ? ? ? 3D ? ? ? ? 74 3F" ) ).as < void * > ( );
+	const auto _drawstaticproparrayfast = util::get_method < void * > ( g_csgo.m_model_render, IVModelRender::DRAWSTATICPROPARRAYFAST );
+	const auto _cl_fireevents = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 EC 08 53 8B 1D ? ? ? ? 56 57 83 BB ? ? ? ? ? 74" ) ).as < void * > ( );
 	// create detours.
+	//MH_CreateHook ( _drawstaticproparrayfast, detours::DrawStaticPropArrayFast, ( void ** ) &old::DrawStaticPropArrayFast );
 	MH_CreateHook ( _paint, detours::Paint, ( void ** ) &old::Paint );
 	MH_CreateHook ( _packet_end, detours::PacketEnd, ( void ** ) &old::PacketEnd );
 	MH_CreateHook ( _should_skip_animation_frame, detours::ShouldSkipAnimationFrame, ( void ** ) &old::ShouldSkipAnimationFrame );
@@ -27,17 +33,86 @@ bool detours::init ( ) {
 	MH_CreateHook ( _standard_blending_rules, detours::StandardBlendingRules, ( void ** ) &old::StandardBlendingRules );
 	MH_CreateHook ( _modify_eye_position, detours::ModifyEyePosition, ( void ** ) &old::ModifyEyePosition );
 	MH_CreateHook ( _base_interpolate_part1, detours::BaseInterpolatePart1, ( void ** ) &old::BaseInterpolatePart1 );
-	MH_CreateHook ( _animstate_update, detours::UpdateAnimationState, ( void ** ) &old::UpdateAnimationState );
+//	MH_CreateHook ( _animstate_update, detours::UpdateAnimationState, ( void ** ) &old::UpdateAnimationState );
 	MH_CreateHook ( _do_procedural_footplant, detours::DoProceduralFootPlant, ( void ** ) &old::DoProceduralFootPlant );
 	//MH_CreateHook ( _setup_bones, detours::SetupBones, ( void ** ) &old::SetupBones );
 	MH_CreateHook ( _setup_movement, detours::SetupMovement, ( void ** ) &old::SetupMovement );
 	//MH_CreateHook ( _svcmsg_voicedata, detours::SVCMsg_VoiceData, ( void ** ) &old::SVCMsg_VoiceData );
 	MH_CreateHook ( _process_movement, detours::ProcessMovement, ( void ** ) &old::ProcessMovement );
-
+//	MH_CreateHook ( _maintain_sequence_transitions, detours::MaintainSequenceTransitions, ( void ** ) &old::MaintainSequenceTransitions );
+	MH_CreateHook ( _update_client_side_animation, detours::UpdateClientSideAnimation, ( void ** ) &old::UpdateClientSideAnimation );
+	MH_CreateHook ( _process_interp_list, detours::ProcessInterpolatedList, ( void ** ) &old::ProcessInterpolatedList );
+	//MH_CreateHook ( _computeposeparam_moveyaw, detours::ComputePoseParam_MoveYaw, ( void ** ) &old::ComputePoseParam_MoveYaw );
+	MH_CreateHook ( _teleported, detours::Teleported, ( void ** ) &old::Teleported ); // we dont really need to do this since disabling bone interp clears ik targets already lol
+	MH_CreateHook ( _cl_fireevents, detours::CL_FireEvents, ( void ** ) &old::CL_FireEvents );
+	
 	// enable all hooks.
 	MH_EnableHook ( MH_ALL_HOOKS );
 
 	return true;
+}
+
+void detours::CL_FireEvents ( ) {
+	//  55 8B EC 83 EC 08 53 8B 1D ? ? ? ? 56 57 83 BB ? ? ? ? ? 74
+	CEventInfo *ei = g_csgo.m_cl->m_events;
+	CEventInfo *next = nullptr;
+
+	if ( !ei ) {
+		return old::CL_FireEvents ( );
+	}
+
+	do {
+		next = *reinterpret_cast< CEventInfo ** >( reinterpret_cast< uintptr_t >( ei ) + 0x38 );
+
+		uint16_t classID = ei->m_class_id - 1;
+
+		auto m_pCreateEventFn = ei->m_client_class->m_pCreateEvent;
+		if ( !m_pCreateEventFn ) {
+			continue;
+		}
+
+		void *pCE = m_pCreateEventFn ( );
+		if ( !pCE ) {
+			continue;
+		}
+
+		if ( classID == 170 ) {
+			ei->m_fire_delay = 0.0f;
+		}
+		ei = next;
+	} while ( next != nullptr );
+
+	old::CL_FireEvents ( );
+}
+
+void detours::ProcessInterpolatedList ( ) {
+	// extrapolate - 80 3d ? ? ? ? ? 8d 57 + 0x2
+	static auto s_bAllowExtrapolation = pattern::find ( g_csgo.m_client_dll, XOR ( "80 3D ? ? ? ? ? 8D 57" ) ).add ( 0x2 ).to ( ).as < bool * > ( );
+	*s_bAllowExtrapolation = false;
+	old::ProcessInterpolatedList ( );
+}
+
+int __fastcall detours::DrawStaticPropArrayFast ( void* ecx, void* edx, void *props, int count, bool shadow_deph ) {
+	if ( g_menu.main.visuals.transparent_props.get ( ) )
+		g_csgo.m_studio_render->SetAlphaModulation ( g_menu.main.visuals.transparent_props_opacity.get ( ) / 100.f );
+
+	return old::DrawStaticPropArrayFast ( ecx, edx, props, count, shadow_deph );
+}
+
+bool __fastcall detours::Teleported ( void *ecx, void *edx ) {
+	if ( g_bones.m_running )
+		return true; // force uninterpolated bones and ik targets to be cleared.
+	return old::Teleported ( ecx, edx );
+}
+
+void __fastcall detours::ComputePoseParam_MoveYaw ( void *ecx, void *edx, void *hdr ) {
+	//SetLocalAngles ( QAngle ( 0, m_flCurrentFeetYaw, 0 ) );
+	old::ComputePoseParam_MoveYaw ( ecx, edx, hdr );
+}
+
+void __fastcall detours::MaintainSequenceTransitions ( void* ecx, void* edx, void* bone_setup, float cycle, vec3_t pos [ ], quaternion_t q [ ] ) {
+	if ( !g_bones.m_running )
+		return old::MaintainSequenceTransitions ( ecx, edx, bone_setup, cycle, pos, q );
 }
 
 int __fastcall detours::BaseInterpolatePart1 ( void *ecx, void *edx, float &curtime, vec3_t &old_origin, ang_t &old_angs, int &no_more_changes ) {
@@ -68,6 +143,75 @@ bool __fastcall detours::SVCMsg_VoiceData ( void *ecx, void *edx, void *a2 ) {
 	return og;
 }
 
+void __fastcall detours::UpdateClientSideAnimation ( void* ecx, void* edx ) {
+	auto player = ( Player * ) ecx;
+
+	if ( !player ) {
+		//memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
+		return old::UpdateClientSideAnimation ( ecx, edx );
+	}
+
+	if ( player->index ( ) == g_cl.m_local->index ( ) ) {
+		auto state = ( CCSGOGamePlayerAnimState * ) g_cl.m_local->m_PlayerAnimState ( );
+
+		if ( g_cl.m_animate )
+			old::UpdateClientSideAnimation ( ecx, edx );
+		else {
+			// fix viewmodel addons not updating.
+			g_cl.m_local->m_PlayerAnimState ( )->m_player = nullptr;
+			old::UpdateClientSideAnimation ( g_cl.m_local, 0 );
+			g_cl.m_local->m_PlayerAnimState ( )->m_player = g_cl.m_local;
+
+			// restore data.
+			g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
+			g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
+			state->m_flFootYaw = g_cl.anim_data.m_rotation.y;
+
+			// restore layers lol.
+			memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
+
+			// this will update the attachments origin.
+			static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
+			SetupBones_AttachmentHelper ( g_cl.m_local, g_cl.m_local->GetModelPtr ( ) );
+
+			// force setupbones rebuild.
+			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
+		}
+	}
+	else
+		old::UpdateClientSideAnimation ( ecx, edx );
+	
+	if ( g_cl.m_local && player->m_iTeamNum ( ) != g_cl.m_local->m_iTeamNum ( ) ) {
+		player->SetAbsOrigin ( player->m_vecOrigin ( ) );
+
+		if ( g_cl.m_update_ent ) {
+			// @onetap
+			if ( player->m_AnimOverlay ( ) ) {
+				for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ ) {
+					player->m_AnimOverlay ( ) [ i ].m_owner = player;
+				}
+			}
+
+			// will force GetAbsVelocity in CCSGOPlayerAnimState::Update to not do shit to velocity
+			// also, we hook IsHLTV so we know that we call GetAbsVelocity not EstimateAbsVelocity
+
+			int iEFlags = player->m_iEFlags ( );
+
+			player->m_iEFlags ( ) &= ~( 1 << 12 );
+
+			old::UpdateClientSideAnimation ( ecx, edx );
+
+			// restore entity flags
+			player->m_iEFlags ( ) = iEFlags;
+		}
+		else
+			old::UpdateClientSideAnimation ( ecx, edx );
+	}
+	
+	else
+		old::UpdateClientSideAnimation ( ecx, edx );
+}
+
 CUtlVector <uint16_t> __forceinline rebuild_modifiers ( CCSGOGamePlayerAnimState *state ) {
 	activity_modifiers_wrapper modifier_wrapper {};
 
@@ -85,7 +229,10 @@ CUtlVector <uint16_t> __forceinline rebuild_modifiers ( CCSGOGamePlayerAnimState
 void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 	auto state = ( CCSGOGamePlayerAnimState * ) ecx;
 
-	if ( !state || !state->m_pPlayer || state->m_pPlayer != g_cl.m_local )
+	if ( !state )
+		return old::SetupMovement ( ecx, edx );
+
+	if ( !state->m_pPlayer || state->m_pPlayer != g_cl.m_local )
 		return old::SetupMovement ( ecx, edx );
 
 	bool &m_bJumping = state->m_bFlashed;
@@ -96,15 +243,6 @@ void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 		m_bJumping = true;
 		rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_JUMP ) );
 	}
-
-	g_cl.m_activity_modifiers.add_modifier ( state->GetWeaponPrefix ( ) );
-
-	// update modifiers.
-	if ( state->m_flSpeedAsPortionOfWalkTopSpeed > 0.25f )
-		g_cl.m_activity_modifiers.add_modifier ( "moving" );
-
-	if ( state->m_flAnimDuckAmount > 0.55f )
-		g_cl.m_activity_modifiers.add_modifier ( "crouch" );
 
 	if ( !( g_inputpred.data.m_nOldButtons & FL_ONGROUND ) ) {
 		rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_FALL ) );
@@ -206,117 +344,6 @@ void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 	}
 }
 
-void __vectorcall detours::UpdateAnimationState ( void *ecx, void *a1, float a2, float a3, float a4, void *a5 ) {
-	const auto state = ( CCSGOPlayerAnimState * ) ecx;
-
-	if ( state->m_player != g_cl.m_local )
-		return old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
-
-	auto game_state = ( CCSGOGamePlayerAnimState * ) ecx;
-
-	if ( state->m_frame == g_csgo.m_globals->m_frame )
-		state->m_frame -= 1;
-
-	//auto angle = g_cl.m_angle;
-
-	old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
-
-	//if ( game_state->m_flTimeOfLastKnownInjury < game_state->m_pPlayer->m_flTimeOfLastInjury ( ) ) {
-	//	game_state->m_flTimeOfLastKnownInjury = game_state->m_pPlayer->m_flTimeOfLastInjury ( );
-
-	//	// flinches override flinches of their own priority
-	//	bool bNoFlinchIsPlaying = ( rebuilt::IsLayerSequenceCompleted ( game_state, ANIMATION_LAYER_FLINCH ) || game_state->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_FLINCH ].m_weight <= 0 );
-	//	bool bHeadshotIsPlaying = ( !bNoFlinchIsPlaying && rebuilt::GetLayerActivity ( game_state, ANIMATION_LAYER_FLINCH ) == ACT_CSGO_FLINCH_HEAD );
-
-	//	//if ( game_state->m_pPlayer->GetLastDamageTypeFlags ( ) & DMG_BURN ) {
-	//	//	if ( bNoFlinchIsPlaying ) {
-	//	//		rebuilt::SetSequence ( game_state, ANIMATION_LAYER_FLINCH, rebuilt::SelectWeightedSequence ( game_state, ACT_CSGO_FLINCH_MOLOTOV ) );
-
-	//	//		// clear out all the flinch-related actmods now we selected a sequence
-	//	//		rebuild_modifiers ( game_state );
-	//	//	}
-	//	//}
-	//	if ( bNoFlinchIsPlaying || !bHeadshotIsPlaying || game_state->m_pPlayer->m_LastHitGroup ( ) == HITGROUP_HEAD ) {
-	//		auto damageDir = game_state->m_pPlayer->m_nRelativeDirectionOfLastInjury ( );
-	//		bool bLeft = false;
-	//		bool bRight = false;
-	//		switch ( damageDir ) {
-	//		case DAMAGED_DIR_NONE:
-	//		case DAMAGED_DIR_FRONT:
-	//		{
-	//			g_cl.m_activity_modifiers.add_modifier ( "front" );
-	//			break;
-	//		}
-	//		case DAMAGED_DIR_BACK:
-	//		{
-	//			g_cl.m_activity_modifiers.add_modifier ( "back" );
-	//			break;
-	//		}
-	//		case DAMAGED_DIR_LEFT:
-	//		{
-	//			g_cl.m_activity_modifiers.add_modifier ( "left" );
-	//			bLeft = true;
-	//			break;
-	//		}
-	//		case DAMAGED_DIR_RIGHT:
-	//		{
-	//			g_cl.m_activity_modifiers.add_modifier ( "right" );
-	//			bRight = true;
-	//			break;
-	//		}
-	//		}
-	//		switch ( game_state->m_pPlayer->m_LastHitGroup ( ) ) {
-	//		case HITGROUP_HEAD:
-	//		{
-	//			g_cl.m_activity_modifiers.add_modifier ( "head" );
-	//			break;
-	//		}
-	//		case HITGROUP_CHEST:
-	//		{
-	//			g_cl.m_activity_modifiers.add_modifier ( "chest" );
-	//			break;
-	//		}
-	//		case HITGROUP_LEFTARM:
-	//		{
-	//			if ( !bLeft ) { g_cl.m_activity_modifiers.add_modifier ( "left" ); }
-	//			g_cl.m_activity_modifiers.add_modifier ( "arm" );
-	//			break;
-	//		}
-	//		case HITGROUP_RIGHTARM:
-	//		{
-	//			if ( !bRight ) { g_cl.m_activity_modifiers.add_modifier ( "right" ); }
-	//			g_cl.m_activity_modifiers.add_modifier ( "arm" );
-	//			break;
-	//		}
-	//		case HITGROUP_GENERIC:
-	//		case HITGROUP_STOMACH:
-	//		{
-	//			g_cl.m_activity_modifiers.add_modifier ( "gut" );
-	//			break;
-	//		}
-	//		case HITGROUP_LEFTLEG:
-	//		{
-	//			if ( !bLeft ) { g_cl.m_activity_modifiers.add_modifier ( "left" ); }
-	//			g_cl.m_activity_modifiers.add_modifier ( "leg" );
-	//			break;
-	//		}
-	//		case HITGROUP_RIGHTLEG:
-	//		{
-	//			if ( !bRight ) { g_cl.m_activity_modifiers.add_modifier ( "right" ); }
-	//			g_cl.m_activity_modifiers.add_modifier ( "leg" );
-	//			break;
-	//		}
-	//		}
-	//		rebuilt::SetSequence ( game_state, ANIMATION_LAYER_FLINCH, rebuilt::SelectWeightedSequence ( game_state, ( game_state->m_pPlayer->m_LastHitGroup ( ) == HITGROUP_HEAD ) ? ACT_CSGO_FLINCH_HEAD : ACT_CSGO_FLINCH ) );
-
-	//		// clear out all the flinch-related actmods now we selected a sequence
-	//		rebuild_modifiers ( game_state );
-	//	}
-
-	//}
-
-}
-
 void __fastcall detours::DoProceduralFootPlant ( void *ecx, void *edx, int a1, int a2, int a3, int a4 ) {
 	return;
 }
@@ -374,11 +401,9 @@ void __fastcall detours::ModifyEyePosition ( void *ecx, void *edx, vec3_t &eye_p
 void __fastcall detours::PacketEnd ( void *ecx, void *edx ) {
 	old::PacketEnd ( ecx, edx );
 
-	// [COLLAPSED LOCAL DECLARATIONS. PRESS KEYPAD CTRL-"+" TO EXPAND]
-
 	auto nc = g_csgo.m_engine->GetNetChannelInfo ( );
 
-	if ( nc && nc->m_choked_packets > 0 ) {
+	if ( nc && ( g_menu.main.aimbot.enable.get ( ) || g_menu.main.antiaim.lag_enable.get ( ) ) && g_csgo.m_engine->IsInGame ( ) ) {
 		const auto backup_packets = nc->m_choked_packets;
 
 		auto out_sequence_nr = *( int * ) ( std::uintptr_t ( nc ) + 0x18 );

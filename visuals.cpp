@@ -57,8 +57,14 @@ void Visuals::ModulateWorld( ) {
 			g_csgo.r_DrawSpecificStaticProp->SetValue( 0 );
 		}
 
-		for( const auto& p : props )
-			p->AlphaModulate( g_menu.main.visuals.transparent_props_opacity.get ( ) / 100.f );
+		static float old_prop_opacity = g_menu.main.visuals.transparent_props_opacity.get ( );
+
+		if ( g_menu.main.visuals.transparent_props_opacity.get ( ) != old_prop_opacity ) {
+			for ( const auto &p : props )
+				p->AlphaModulate ( g_menu.main.visuals.transparent_props_opacity.get ( ) / 100.f );
+
+			old_prop_opacity = g_menu.main.visuals.transparent_props_opacity.get ( );
+		}
 	}
 
 	// disable transparent props.
@@ -260,7 +266,7 @@ void Visuals::think( ) {
 	else
 		oof_opacity += ( 255 / 0.7f ) * g_csgo.m_globals->m_frametime;
 
-	if ( oof_opacity > 255.f || oof_opacity < 0.f )
+	if ( oof_opacity >= 255.f || oof_opacity <= 0.f )
 		bswitch = !bswitch;
 
 	// draw esp on ents.
@@ -348,17 +354,14 @@ void Visuals::StatusIndicators( ) {
 
 	// LBY
 	if( g_menu.main.visuals.indicators.get( 0 ) ) {
-		// get the absolute change between current lby and animated angle.
-		float change = std::abs( math::NormalizedAngle( g_cl.m_body - g_cl.m_angle.y ) );
-
 		Indicator_t ind{ };
 
 		// green - 137,195,49
 		// red - 186,1,1
 		ind.color = Color (
-			math::Lerp ( 186, 137, time ),
-			math::Lerp ( 1, 195, time ),
-			math::Lerp ( 1, 49, time ),
+			math::Lerp ( 137, 186, time ),
+			math::Lerp ( 195, 1, time ),
+			math::Lerp ( 49, 1, time ),
 			255
 		);
 			
@@ -366,6 +369,7 @@ void Visuals::StatusIndicators( ) {
 		ind.lby = true;
 		//ind.change = time;
 		indicators.push_back( ind );
+		//g_cl.print ( "%f\n", ( 1.f - time ) );
 	}
 
 	// PING
@@ -387,7 +391,7 @@ void Visuals::StatusIndicators( ) {
 		if ( indicator.lby ) {
 			render::FontSize_t text_dim = render::indicator.size ( XOR ( "LBY" ) );
 			
-			Rect change_rect = { 20, g_cl.m_height - 80 - ( 30 * i ), text_dim.m_width * time, text_dim.m_height };
+			Rect change_rect = { 20, g_cl.m_height - 80 - ( 30 * i ), text_dim.m_width * ( 1.f - time ), text_dim.m_height };
 
 			render::indicator.string ( 20, g_cl.m_height - 80 - ( 30 * i ), { 0, 0, 0, 190 }, indicator.text );
 			
@@ -458,12 +462,11 @@ void Visuals::PenetrationCrosshair( ) {
 	x = g_cl.m_width / 2;
 	y = g_cl.m_height / 2;
 
+	//valid_player_hit = ( g_cl.m_pen_data.m_target && g_cl.m_pen_data.m_target->enemy( g_cl.m_local ) );
+	//if( valid_player_hit )
+	//	final_color = colors::transparent_yellow;
 
-	valid_player_hit = ( g_cl.m_pen_data.m_target && g_cl.m_pen_data.m_target->enemy( g_cl.m_local ) );
-	if( valid_player_hit )
-		final_color = colors::transparent_yellow;
-
-	else if( g_cl.m_pen_data.m_pen )
+	if( g_cl.m_pen_data.m_pen )
 		final_color = colors::transparent_green;
 
 	else
@@ -473,7 +476,11 @@ void Visuals::PenetrationCrosshair( ) {
 	//             draw damage string?
 
 	// draw small square in center of screen.
-	render::rect_filled( x - 1, y - 1, 3, 3, final_color );
+	//render::rect_filled( x - 1, y - 1, 3, 3, final_color );
+
+	// draw small cross in center of screen.
+	render::rect ( x, y - 1, 1, 3, final_color );
+	render::rect ( x - 1, y , 3, 1, final_color );
 }
 
 void Visuals::draw( Entity* ent ) {
@@ -728,7 +735,7 @@ void Visuals::OffScreen( Player* player, int alpha ) {
 
 		// render!
 		color = g_menu.main.players.offscreen_color.get( ); // damage_data.m_color;
-		color.a( ) = ( alpha == 255 ) ? oof_opacity : alpha / 2;
+		color.a( ) = oof_opacity;
 
 		g_csgo.m_surface->DrawSetColor( color );
 		g_csgo.m_surface->DrawTexturedPolygon( 3, verts );
@@ -938,6 +945,17 @@ void Visuals::DrawPlayer( Player* player ) {
 			// bomb.
 			if( *it == 5 && player->HasC4( ) )
 				flags.push_back( { XOR( "BOMB" ), { 255, 0, 0, low_alpha } } );
+
+			if ( *it == 6 ) {
+				AimPlayer *data = &g_aimbot.m_players [ player->index ( ) - 1 ];
+
+				if ( data && data->m_records.size ( ) ) {
+					LagRecord *current = data->m_records.front ( ).get ( );
+
+					if ( current->m_shifting )
+						flags.push_back ( { XOR ( "SHIFT" ), { 255, 255, 255, low_alpha } } );
+				}
+			}	
 		}
 
 		// iterate flags.
@@ -1397,7 +1415,7 @@ void Visuals::DrawHitboxMatrix( LagRecord* record, Color col, float time ) {
 			math::VectorTransform( bbox->m_mins, matrix, mins );
 			math::VectorTransform( bbox->m_maxs, matrix, maxs );
 
-			g_csgo.m_debug_overlay->AddCapsuleOverlay( mins, maxs, bbox->m_radius, col.r( ), col.g( ), col.b( ), col.a( ), time, 0, 0 );
+			g_csgo.m_debug_overlay->AddCapsuleOverlay( mins, maxs, bbox->m_radius, col.r( ), col.g( ), col.b( ), col.a( ), time, 0, 1 );
 		}
 	}
 }
@@ -1475,11 +1493,11 @@ void Visuals::DrawBeams( ) {
 				// note - dex; possible beam models: sprites/physbeam.vmt | sprites/white.vmt
 				beam_info.m_vecStart = start;
 				beam_info.m_vecEnd = end;
-				beam_info.m_nModelIndex = g_csgo.m_model_info->GetModelIndex( XOR( "sprites/purplelaser1.vmt" ) );
-				beam_info.m_pszModelName = XOR( "sprites/purplelaser1.vmt" );
+				beam_info.m_nModelIndex = g_csgo.m_model_info->GetModelIndex( XOR( "sprites/physbeam.vmt" ) );
+				beam_info.m_pszModelName = XOR( "sprites/physbeam.vmt" );
 				beam_info.m_flHaloScale = 0.f;
 				beam_info.m_flLife = g_menu.main.visuals.impact_beams_time.get( );
-				beam_info.m_flWidth = 2.f;
+				beam_info.m_flWidth = 2.2f;
 				beam_info.m_flEndWidth = 2.f;
 				beam_info.m_flFadeLength = 0.f;
 				beam_info.m_flAmplitude = 0.f;   // beam 'jitter'.

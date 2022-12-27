@@ -74,7 +74,7 @@ float Resolver::GetAwayAngle ( LagRecord *record ) {
 	// we have no historical origins.
 	// no choice but to use the most recent one.
 	//if( g_cl.m_net_pos.empty( ) ) {
-	math::VectorAngles ( g_cl.m_local->m_vecOrigin ( ) - record->m_pred_origin, away );
+	math::VectorAngles ( g_cl.m_local->m_vecOrigin ( ) - record->m_origin, away );
 	return away.y;
 	//}
 

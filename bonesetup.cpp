@@ -1,5 +1,9 @@
 #include "includes.h"
 
+// NOTE - hypnotic:
+// Pretty much rebuilt server setupbones except there's some crashing issues
+// For now you're better off just using client setupbones with a few fixes :P
+
 CBoneSetup::CBoneSetup ( const CStudioHdr *studio_hdr, int bone_mask, float *pose_parameters )
 	: m_pStudioHdr ( studio_hdr )
 	, m_boneMask ( bone_mask )
@@ -58,8 +62,6 @@ void CBoneSetup::CalcBoneAdj ( vec3_t pos [ ], quaternion_t q [ ], const float c
 Bones g_bones {};;
 
 bool Bones::Build ( Player *player, BoneArray *out, float curtime ) {
-	matrix3x4a_t mat [ 128 ];
-
 #if 1
 	const auto cur_time = g_csgo.m_globals->m_curtime;
 	const auto frame_time = g_csgo.m_globals->m_frametime;
@@ -75,18 +77,24 @@ bool Bones::Build ( Player *player, BoneArray *out, float curtime ) {
 	g_csgo.m_globals->m_tick_count = interval_per_tick;
 
 	const auto backup_effects = player->m_fEffects ( );
-	const auto last_setup_time = player->m_flLastBoneSetupTime ( );
+//	const auto backup_abs_origin = player->GetAbsOrigin ( );
+	const auto backup_setup_time = player->m_flLastBoneSetupTime ( );
+	const auto backup_maintain_seq_transitions_value = *( bool * ) ( std::uintptr_t ( player ) + 0x9F0 );
 
+	*( bool * ) ( std::uintptr_t ( player ) + 0x9F0 ) = false; // skip call to MaintainSequenceTransitions
 	player->m_fEffects ( ) |= EF_NOINTERP;
+//	player->SetAbsOrigin ( player->m_vecOrigin ( ) );
 	player->m_flLastBoneSetupTime ( ) = 0;
 	player->InvalidateBoneCache ( );
 
 	m_running = true;
-	bool v18 = player->SetupBones ( out, 128, 0x7FF00, curtime );
+	bool setup = player->SetupBones ( out, 128, 0x7FF00, curtime );
 	m_running = false;
 
 	player->m_fEffects ( ) = backup_effects;
-	player->m_flLastBoneSetupTime ( ) = last_setup_time;
+	player->m_flLastBoneSetupTime ( ) = backup_setup_time;
+	//player->SetAbsOrigin ( backup_abs_origin );
+	*( bool * ) ( std::uintptr_t ( player ) + 0x9F0 ) = backup_maintain_seq_transitions_value;
 
 	g_csgo.m_globals->m_curtime = cur_time;
 	g_csgo.m_globals->m_frametime = frame_time;
@@ -95,14 +103,12 @@ bool Bones::Build ( Player *player, BoneArray *out, float curtime ) {
 	g_csgo.m_globals->m_tick_count = tick_count;
 #else
 	// build server bones.
-	SetupBones ( player, mat, 0x7FF00 );
-
-	// copy aligned matrix to our output.
-	memcpy ( out, mat, sizeof ( BoneArray ) * 128 );
+	SetupBones ( player, out, 0x7FF00 );
 #endif
 
-	return true;
+	return setup;
 }
+
 void Bones::Studio_BuildMatrices (
 	const CStudioHdr *pStudioHdr,
 	const ang_t &angles,
@@ -111,7 +117,7 @@ void Bones::Studio_BuildMatrices (
 	const quaternion_t q [ ],
 	int iBone,
 	float flScale,
-	matrix3x4a_t bonetoworld [ 128 ],
+	BoneArray bonetoworld [ 128 ],
 	int boneMask
 ) {
 	//BONE_PROFILE_FUNC ( );
@@ -141,8 +147,8 @@ void Bones::Studio_BuildMatrices (
 		}
 	}
 
-	matrix3x4a_t bonematrix;
-	matrix3x4a_t rotationmatrix; // model to world transformation
+	matrix3x4_t bonematrix;
+	matrix3x4_t rotationmatrix; // model to world transformation
 	math::AngleMatrix ( angles, origin, rotationmatrix );
 
 	// Account for a change in scale
@@ -169,10 +175,10 @@ void Bones::Studio_BuildMatrices (
 				math::QuaternionMatrix ( q [ i ], pos [ i ], bonematrix );
 
 				if ( bone->m_parent == -1 ) {
-					ConcatTransforms ( rotationmatrix, bonematrix, bonetoworld [ i ] );
+					ConcatTransforms ( rotationmatrix, bonematrix, &bonetoworld [ i ] );
 				}
 				else {
-					ConcatTransforms ( bonetoworld [ bone->m_parent ], bonematrix, bonetoworld [ i ] );
+					ConcatTransforms ( bonetoworld [ bone->m_parent ], bonematrix, &bonetoworld [ i ] );
 				}
 			}
 		}
@@ -185,20 +191,22 @@ void Bones::Studio_BuildMatrices (
 				math::QuaternionMatrix ( q [ i ], pos [ i ], bonematrix );
 
 				if ( bone->m_parent == -1 ) {
-					math::ConcatTransforms ( rotationmatrix, bonematrix, bonetoworld [ i ] );
+					ConcatTransforms ( rotationmatrix, bonematrix, &bonetoworld [ i ] );
 				}
 				else {
-					math::ConcatTransforms ( bonetoworld [ bone->m_parent ], bonematrix, bonetoworld [ i ] );
+					ConcatTransforms ( bonetoworld [ bone->m_parent ], bonematrix, &bonetoworld [ i ] );
 				}
 			}
 		}
 	}
 }
 
-void Bones::SetupBones ( Player *player, matrix3x4a_t *pBoneToWorld, int boneMask ) {
+void Bones::SetupBones ( Player *player, BoneArray *pBoneToWorld, int boneMask ) {
 	g_csgo.m_model_cache->BeginLock ( );
 
 	auto studio_hdr = player->GetModelPtr ( );
+
+	matrix3x4a_t aligned_pBoneToWorld [ 128 ];
 
 	if ( studio_hdr ) {
 		alignas( 16 ) vec3_t pos [ 128 ];
@@ -226,8 +234,11 @@ void Bones::SetupBones ( Player *player, matrix3x4a_t *pBoneToWorld, int boneMas
 		Studio_BuildMatrices ( studio_hdr, player->GetAbsAngles ( ), player->m_vecOrigin ( ), pos, q, -1, 1.0f, pBoneToWorld, boneMask );
 	}
 
-	//if ( pBoneToWorld && boneMask >= player->m_BoneCache ( ).m_CachedBoneCount )
-	//	memcpy ( pBoneToWorld, player->m_BoneCache ( ).m_pCachedBones, sizeof ( matrix3x4a_t ) * player->m_iBoneCount ( ) );
+	if ( pBoneToWorld && boneMask >= player->m_BoneCache ( ).m_CachedBoneCount )
+		memcpy ( pBoneToWorld, player->m_BoneCache ( ).m_pCachedBones, sizeof ( matrix3x4a_t ) * player->m_iBoneCount ( ) );
+
+	// copy aligned matrix to our output.
+	//memcpy ( out, mat, sizeof ( BoneArray ) * 128 );
 
 	g_csgo.m_model_cache->EndLock ( );
 }
@@ -264,11 +275,11 @@ void Bones::GetSkeleton ( Player *player, CStudioHdr *studio_hdr, vec3_t *pos, q
 		if ( weapon ) {
 			weapon_world_model = weapon->GetWeaponWorldModel ( );
 			if ( weapon_world_model && weapon_world_model->GetModelPtr ( ) ) {
-				bone_merge_backup = weapon_world_model->m_pBoneMergeCache ( );
+				//bone_merge_backup = weapon_world_model->m_pBoneMergeCache ( );
 
-				bone_merge_cache = new C_BoneMergeCache;
-				*( C_BoneMergeCache ** ) ( std::uintptr_t ( weapon_world_model ) + 0x28FC ) = bone_merge_cache;
-				weapon_world_model->m_pBoneMergeCache ( )->Init ( weapon_world_model );
+				//bone_merge_cache = new C_BoneMergeCache;
+				//*( C_BoneMergeCache ** ) ( std::uintptr_t ( weapon_world_model ) + 0x28FC ) = bone_merge_cache;
+				//weapon_world_model->m_pBoneMergeCache ( )->Init ( weapon_world_model );
 
 				if ( weapon_world_model->m_pBoneMergeCache ( ) )
 					do_weapon_setup = true;
@@ -340,7 +351,7 @@ void Bones::GetSkeleton ( Player *player, CStudioHdr *studio_hdr, vec3_t *pos, q
 	//}
 }
 
-void Bones::BuildMatrices ( Player *player, CStudioHdr *studio_hdr, vec3_t *pos, quaternion_t *q, matrix3x4_t *bone_to_world, int bone_mask ) {
+void Bones::BuildMatrices ( Player *player, CStudioHdr *studio_hdr, vec3_t *pos, quaternion_t *q, BoneArray *bone_to_world, int bone_mask ) {
 	int i = 0, j = 0;
 	int chain [ 128 ] = { };
 	int chain_length = studio_hdr->m_pStudioHdr->m_num_bones;
@@ -370,12 +381,12 @@ void Bones::BuildMatrices ( Player *player, CStudioHdr *studio_hdr, vec3_t *pos,
 	}
 }
 
-void Bones::ConcatTransforms ( const matrix3x4_t &m0, const matrix3x4_t &m1, matrix3x4_t &out ) {
+void Bones::ConcatTransforms ( const matrix3x4_t &m0, const matrix3x4_t &m1, matrix3x4_t *out ) {
 	for ( int i = 0; i < 3; i++ ) {
-		out [ i ][ 3 ] = m1 [ 0 ][ 3 ] * m0 [ i ][ 0 ] + m1 [ 1 ][ 3 ] * m0 [ i ][ 1 ] + m1 [ 2 ][ 3 ] * m0 [ i ][ 2 ] + m0 [ i ][ 3 ];
+		*out [ i ][ 3 ] = m1 [ 0 ][ 3 ] * m0 [ i ][ 0 ] + m1 [ 1 ][ 3 ] * m0 [ i ][ 1 ] + m1 [ 2 ][ 3 ] * m0 [ i ][ 2 ] + m0 [ i ][ 3 ];
 
 		for ( int j = 0; j < 3; j++ ) {
-			out [ i ][ j ] = m0 [ i ][ 0 ] * m1 [ 0 ][ j ] + m0 [ i ][ 1 ] * m1 [ 1 ][ j ] + m0 [ i ][ 2 ] * m1 [ 2 ][ j ];
+			*out [ i ][ j ] = m0 [ i ][ 0 ] * m1 [ 0 ][ j ] + m0 [ i ][ 1 ] * m1 [ 1 ][ j ] + m0 [ i ][ 2 ] * m1 [ 2 ][ j ];
 		}
 	}
 }

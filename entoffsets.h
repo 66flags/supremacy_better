@@ -33,6 +33,7 @@ public:
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_vecMaxs;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_iTeamNum;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_nSequence;
+	XoredNetvar < GET_XOR_KEYUI32, __COUNTER__ > m_hViewModel;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flCycle;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flC4Blow;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_bBombTicking;
@@ -111,6 +112,8 @@ public:
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_nFallbackSeed;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flFallbackWear;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_iViewModelIndex;
+	XoredNetvar < GET_XOR_KEYUI32, __COUNTER__ > m_bIsWalking;
+	XoredNetvar < GET_XOR_KEYUI32, __COUNTER__ > m_flAnimTime;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_iWorldModelIndex;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_iAccountID;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_iItemIDHigh;
@@ -145,7 +148,8 @@ public:
         INIT_XOREDNETVAR( m_iTeamNum,                   HASH( "DT_BaseEntity" ),           HASH( "m_iTeamNum" ) );
 		INIT_XOREDNETVAR( m_flVelocityModifier,         HASH( "DT_CSPlayer" ), HASH( "m_flVelocityModifier" ) );
         INIT_XOREDNETVAR( m_nSequence,                  HASH( "DT_PredictedViewModel" ),   HASH( "m_nSequence" ) );
-        INIT_XOREDNETVAR( m_flCycle,                    HASH( "DT_CSPlayer" ),             HASH( "m_flCycle" ) );
+        INIT_XOREDNETVAR( m_flCycle,                    HASH( "DT_BaseAnimating" ),        HASH( "m_flCycle" ) );
+		INIT_XOREDNETVAR ( m_flAnimTime, HASH ( "DT_BaseEntity" ), HASH ( "m_flAnimTime" ) );
         INIT_XOREDNETVAR( m_flC4Blow,                   HASH( "DT_PlantedC4" ),            HASH( "m_flC4Blow" ) );
         INIT_XOREDNETVAR( m_bBombTicking,               HASH( "DT_PlantedC4" ),            HASH( "m_bBombTicking" ) );
         INIT_XOREDNETVAR( m_nModelIndex,                HASH( "DT_BasePlayer" ),           HASH( "m_nModelIndex" ) );
@@ -170,6 +174,9 @@ public:
         INIT_XOREDNETVAR( m_bClientSideAnimation,       HASH( "DT_CSPlayer" ),             HASH( "m_bClientSideAnimation" ) );
         INIT_XOREDNETVAR( m_bHasHeavyArmor,             HASH( "DT_CSPlayer" ),             HASH( "m_bHasHeavyArmor" ) );
         INIT_XOREDNETVAR( m_bIsScoped,                  HASH( "DT_CSPlayer" ),             HASH( "m_bIsScoped" ) );
+		INIT_XOREDNETVAR ( m_hViewModel, HASH ( "DT_CSPlayer" ), HASH ( "m_hViewModel[0]" ) );
+		// bIsWalking
+		INIT_XOREDNETVAR ( m_bIsWalking, HASH ( "DT_CSPlayer" ), HASH ( "m_bIsWalking" ) );
         INIT_XOREDNETVAR( m_bDucking,                   HASH( "DT_CSPlayer" ),             HASH( "m_bDucking" ) );
         INIT_XOREDNETVAR( m_bSpotted,                   HASH( "DT_BaseEntity" ),           HASH( "m_bSpotted" ) );
         INIT_XOREDNETVAR( m_iObserverMode,              HASH( "DT_BasePlayer" ),           HASH( "m_iObserverMode" ) );

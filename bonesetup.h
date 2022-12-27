@@ -3,17 +3,16 @@
 class Bones {
 
 public:
-	bool m_running;
-
+	bool m_running = false;
 public:
 	bool setup( Player* player, BoneArray* out, float curtime, LagRecord *record );
 	bool Build ( Player *player, BoneArray *out, float curtime );
-    void Studio_BuildMatrices ( const CStudioHdr *pStudioHdr, const ang_t &angles, const vec3_t &origin, const vec3_t pos [ ], const quaternion_t q [ ], int iBone, float flScale, matrix3x4a_t bonetoworld [ 128 ], int boneMask );
-	void SetupBones ( Player *player, matrix3x4a_t *pBoneToWorld, int boneMask );
+    void Studio_BuildMatrices ( const CStudioHdr *pStudioHdr, const ang_t &angles, const vec3_t &origin, const vec3_t pos [ ], const quaternion_t q [ ], int iBone, float flScale, BoneArray bonetoworld [ 128 ], int boneMask );
+	void SetupBones ( Player *player, BoneArray *pBoneToWorld, int boneMask );
     void *GetSeqDesc ( void *ptr, int i );
     void GetSkeleton ( Player *player, CStudioHdr *studio_hdr, vec3_t *pos, quaternion_t *q, int bone_mask, CIKContext *ik );
-    void BuildMatrices ( Player *player, CStudioHdr *studio_hdr, vec3_t *pos, quaternion_t *q, matrix3x4_t *bone_to_world, int bone_mask );
-    void ConcatTransforms ( const matrix3x4_t &m0, const matrix3x4_t &m1, matrix3x4_t &out );
+    void BuildMatrices ( Player *player, CStudioHdr *studio_hdr, vec3_t *pos, quaternion_t *q, BoneArray *bone_to_world, int bone_mask );
+    void ConcatTransforms ( const matrix3x4_t &m0, const matrix3x4_t &m1, matrix3x4_t *out );
 	bool BuildBones( Player* target, int mask, BoneArray* out, LagRecord* record );
 };
 

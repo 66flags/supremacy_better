@@ -361,14 +361,14 @@ bool penetration::run( PenetrationInput_t* in, PenetrationOutput_t* out ) {
 
 			// validate that we hit the target we aimed for.
 			if( trace.m_entity && trace.m_entity == in->m_target && game::IsValidHitgroup( trace.m_hitgroup ) ) {
-				int group = ( weapon->m_iItemDefinitionIndex( ) == ZEUS ) ? HITGROUP_GENERIC : trace.m_hitgroup;
+				int group = ( weapon->m_iItemDefinitionIndex ( ) == ZEUS ) ? HITGROUP_GENERIC : trace.m_hitgroup;
 
 				// scale damage based on the hitgroup we hit.
-				player_damage = scale_dmg_hypnotic ( in->m_target, damage, weapon_info->m_armor_ratio, group, false );
+				player_damage = scale_dmg_hypnotic ( in->m_target, damage, weapon_info->m_armor_ratio, group, weapon->m_iItemDefinitionIndex ( ) == ZEUS );
 
 				// set result data for when we hit a player.
 			    out->m_pen      = pen != 4;
-			    out->m_hitgroup = group;
+			    out->m_hitgroup = trace.m_hitgroup;
 			    out->m_damage   = player_damage;
 			    out->m_target   = in->m_target;
 
@@ -389,7 +389,7 @@ bool penetration::run( PenetrationInput_t* in, PenetrationOutput_t* out ) {
 			if( trace.m_entity && trace.m_entity->IsPlayer( ) && game::IsValidHitgroup( trace.m_hitgroup ) ) {
 				int group = ( weapon->m_iItemDefinitionIndex( ) == ZEUS ) ? HITGROUP_GENERIC : trace.m_hitgroup;
 
-				player_damage = scale( trace.m_entity->as< Player* >( ), damage, weapon_info->m_armor_ratio, group );
+				player_damage = scale_dmg_hypnotic ( trace.m_entity->as< Player * > ( ), damage, weapon_info->m_armor_ratio, group, weapon->m_iItemDefinitionIndex ( ) == ZEUS );
 
 				// set result data for when we hit a player.
 				out->m_hitgroup = group;

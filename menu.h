@@ -22,7 +22,8 @@ public:
 	Checkbox	  penetrate_minimal_damage_hp;
 	Checkbox      knifebot;
 	Checkbox	  zeusbot;
-
+	Checkbox      show_capsules;
+	
 	// col2.
 	Dropdown      zoom;
 	Checkbox      nospread;
@@ -56,6 +57,9 @@ public:
 		fov_amount.setup( "", XOR( "fov_amount" ), 1.f, 180.f, false, 0, 180.f, 1.f, XOR( L"°" ) );
 		fov_amount.AddShowCallback( callbacks::IsFovOn );
 		RegisterElement( &fov_amount );
+
+		show_capsules.setup ( "show capsules", XOR ( "show_capsules" ) );
+		RegisterElement ( &show_capsules );
 
 		hitbox.setup( XOR( "hitbox" ), XOR( "hitbox" ), { XOR( "head" ), XOR( "chest" ), XOR( "body" ), XOR( "arms" ), XOR( "legs" ) } );
 		RegisterElement( &hitbox );
@@ -117,8 +121,8 @@ public:
 		hitchance_amount.AddShowCallback( callbacks::IsHitchanceOn );
 		RegisterElement( &hitchance_amount, 1 );
 
-		lagfix.setup( XOR( "predict fake-lag" ), XOR( "lagfix" ) );
-		RegisterElement( &lagfix, 1 );
+		//lagfix.setup( XOR( "predict fake-lag" ), XOR( "lagfix" ) );
+		//RegisterElement( &lagfix, 1 );
 
 		correct.setup( XOR( "correct anti-aim" ), XOR( "correct" ) );
 		RegisterElement( &correct, 1 );
@@ -429,6 +433,7 @@ public:
 	Colorpicker   ammo_color;		
 	Checkbox      lby_update;
 	Colorpicker   lby_update_color;
+	Checkbox show_server_boxes;
 
 	// col2.
 	MultiDropdown skeleton;
@@ -451,6 +456,7 @@ public:
 	Colorpicker   chams_friendly_invis;
 	Slider        chams_friendly_blend;
 	Checkbox      chams_local;
+
 	Colorpicker   chams_local_col;
 	Slider        chams_local_blend;
 	Checkbox      chams_local_scope;
@@ -486,7 +492,7 @@ public:
 		health.setup( XOR( "health" ), XOR( "health" ), { XOR( "enemy" ), XOR( "friendly" ) } );
 		RegisterElement( &health );
 
-		flags_enemy.setup( XOR( "flags enemy" ), XOR( "flags_enemy" ), { XOR( "money" ), XOR( "armor" ), XOR( "scoped" ), XOR( "flashed" ), XOR( "reloading" ), XOR( "bomb" ) } );
+		flags_enemy.setup( XOR( "flags enemy" ), XOR( "flags_enemy" ), { XOR( "money" ), XOR( "armor" ), XOR( "scoped" ), XOR( "flashed" ), XOR( "reloading" ), XOR( "bomb" ), XOR ( "exploit" ) } );
 		RegisterElement( &flags_enemy );
 
 		flags_friendly.setup( XOR( "flags friendly" ), XOR( "flags_friendly" ), { XOR( "money" ), XOR( "armor" ), XOR( "scoped" ), XOR( "flashed" ), XOR( "reloading" ), XOR( "bomb" ) } );
@@ -579,6 +585,12 @@ public:
 
 		chams_local_scope_opacity.setup ( XOR ( "scope opacity" ), XOR ( "chams_local_scope_opacity" ), 0.f, 100.f, false, 0, 100.f, 1.f, XOR ( L"%" ) );
 		RegisterElement ( &chams_local_scope_opacity, 1 );
+
+#ifdef _DEBUG
+		show_server_boxes.setup ( XOR ( "show server boxes" ), XOR ( "show_server_boxes" ), 1 );
+		RegisterElement ( &show_server_boxes );
+#endif	
+
 	}
 };
 
@@ -660,7 +672,7 @@ public:
 		RegisterElement( &world );
 
 		transparent_props.setup( XOR( "transparent props" ), XOR( "transparent_props" ) );
-		transparent_props.SetCallback( Visuals::ModulateWorld );
+		//transparent_props.SetCallback( Visuals::ModulateWorld );
 		RegisterElement( &transparent_props );
 
 		transparent_props_opacity.setup ( XOR ( "transparent props opacity" ), XOR ( "transparent_props_opacity" ), 0.f, 100.f, false, 0, 100.f, 1.f, XOR ( L"%" ) );
@@ -762,7 +774,7 @@ public:
 
 	Keybind  fakewalk;
 	Keybind  autopeek;
-	Keybind  autostop;
+	Checkbox  autostop;
 	Checkbox autostop_always_on;
 
 public:
@@ -781,20 +793,20 @@ public:
 		strafe_type.setup ( XOR ( "strafe type" ), XOR ( "strafetype" ), { XOR ( "view" ), XOR ( "directional" ) } );
 		RegisterElement ( &strafe_type );
 
-		cstrafe.setup( XOR( "c-strafe" ), XOR( "cstrafe" ) );
-		RegisterElement( &cstrafe );
+		//cstrafe.setup( XOR( "c-strafe" ), XOR( "cstrafe" ) );
+		//RegisterElement( &cstrafe );
 
-		astrafe.setup( XOR( "a-strafe" ), XOR( "astrafe" ) );
-		RegisterElement( &astrafe );
+		//astrafe.setup( XOR( "a-strafe" ), XOR( "astrafe" ) );
+		//RegisterElement( &astrafe );
 
-		zstrafe.setup( XOR( "z-strafe" ), XOR( "zstrafe" ) );
-		RegisterElement( &zstrafe );
+		//zstrafe.setup( XOR( "z-strafe" ), XOR( "zstrafe" ) );
+		//RegisterElement( &zstrafe );
 
-		z_freq.setup( "", XOR( "z_freq" ), 1.f, 100.f, false, 0, 50.f, 0.5f, XOR( L"hz" ) );
-		RegisterElement( &z_freq );
+		//z_freq.setup( "", XOR( "z_freq" ), 1.f, 100.f, false, 0, 50.f, 0.5f, XOR( L"hz" ) );
+		//RegisterElement( &z_freq );
 
-		z_dist.setup( "", XOR( "z_dist" ), 1.f, 100.f, false, 0, 20.f, 0.5f, XOR( L"%" ) );
-		RegisterElement( &z_dist );
+		//z_dist.setup( "", XOR( "z_dist" ), 1.f, 100.f, false, 0, 20.f, 0.5f, XOR( L"%" ) );
+		//RegisterElement( &z_dist );
 
 		fakewalk.setup( XOR( "fake-walk" ), XOR( "fakewalk" ) );
 		RegisterElement( &fakewalk, 1 );
@@ -802,12 +814,12 @@ public:
 		autopeek.setup( XOR( "automatic peek" ), XOR( "autopeek" ) );
 		RegisterElement( &autopeek, 1 );
 
-		autostop_always_on.setup( XOR( "automatic stop always on" ), XOR( "auto_stop_always" ) );
-		RegisterElement( &autostop_always_on, 1 );
-
 		autostop.setup( XOR( "automatic stop" ), XOR( "autostop" ) );
-		autostop.AddShowCallback( callbacks::AUTO_STOP );
 		RegisterElement( &autostop, 1 );
+
+		//autostop.setup( XOR( "automatic stop" ), XOR( "autostop" ) );
+		//autostop.AddShowCallback( callbacks::AUTO_STOP );
+		//RegisterElement( &autostop, 1 );
 	}
 };
 

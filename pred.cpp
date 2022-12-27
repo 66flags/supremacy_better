@@ -1,15 +1,15 @@
 #include "includes.h"
 #include "pred.h"
 
-InputPrediction g_inputpred{};;
+InputPrediction g_inputpred {};;
 
-void InputPrediction::update( ) {
-	bool        valid{ g_csgo.m_cl->m_delta_tick > 0 };
+void InputPrediction::update ( ) {
+	bool        valid { g_csgo.m_cl->m_delta_tick > 0 };
 	//int         outgoing_command, current_command;
 	//CUserCmd    *cmd;
 
 	// render start was not called.
-	if( g_cl.m_stage == FRAME_NET_UPDATE_END ) {
+	if ( g_cl.m_stage == FRAME_NET_UPDATE_END ) {
 		/*outgoing_command = g_csgo.m_cl->m_last_outgoing_command + g_csgo.m_cl->m_choked_commands;
 
 		// this must be done before update ( update will mark the unpredicted commands as predicted ).
@@ -36,20 +36,20 @@ void InputPrediction::update( ) {
 		// so the above code is not fucking needed.
 
 		int start = g_csgo.m_cl->m_last_command_ack;
-		int stop  = g_csgo.m_cl->m_last_outgoing_command + g_csgo.m_cl->m_choked_commands;
+		int stop = g_csgo.m_cl->m_last_outgoing_command + g_csgo.m_cl->m_choked_commands;
 
 		// call CPrediction::Update.
-		g_csgo.m_prediction->Update( g_csgo.m_cl->m_delta_tick, valid, start, stop );
+		g_csgo.m_prediction->Update ( g_csgo.m_cl->m_delta_tick, valid, start, stop );
 	}
 
 	static bool unlocked_fakelag = false;
-	if( !unlocked_fakelag ) {
-		auto cl_move_clamp = pattern::find( g_csgo.m_engine_dll, XOR("B8 ? ? ? ? 3B F0 0F 4F F0 89 5D FC") ) + 1;
+	if ( !unlocked_fakelag ) {
+		auto cl_move_clamp = pattern::find ( g_csgo.m_engine_dll, XOR ( "B8 ? ? ? ? 3B F0 0F 4F F0 89 5D FC" ) ) + 1;
 		unsigned long protect = 0;
 
-		VirtualProtect( ( void * )cl_move_clamp, 4, PAGE_EXECUTE_READWRITE, &protect );
-		*( std::uint32_t * )cl_move_clamp = 62;
-		VirtualProtect( ( void * )cl_move_clamp, 4, protect, &protect );
+		VirtualProtect ( ( void * ) cl_move_clamp, 4, PAGE_EXECUTE_READWRITE, &protect );
+		*( std::uint32_t * ) cl_move_clamp = 62;
+		VirtualProtect ( ( void * ) cl_move_clamp, 4, protect, &protect );
 		unlocked_fakelag = true;
 	}
 }
@@ -98,20 +98,39 @@ void PostThink ( Player *ent ) {
 	g_csgo.m_model_cache->EndLock ( );
 }
 
-void InputPrediction::run( ) {
+void InputPrediction::FixViewmodel ( bool store ) {
+	static float last_cycle = 0.f;
+	static float last_sequence = 0.f;
+
+	if ( !g_cl.m_local || !g_cl.m_local->alive ( ) )
+		return;
+
+	if ( g_cl.m_local->m_hViewModel ( ) == 0xFFFFFFF )
+		return;
+
+	auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
+
+	g_cl.m_local->m_flCycle ( ) = last_cycle;
+	g_cl.m_local->m_nSequence ( ) = last_sequence;
+
+	last_cycle = viewmodel->m_flCycle ( );
+	last_sequence = viewmodel->m_nSequence ( );
+}
+
+void InputPrediction::run ( ) {
 	if ( !g_cl.m_local || !g_cl.m_cmd )
 		return;
 
-	g_cl.m_local->m_pCurrentCommand( ) = g_cl.m_cmd;
-	g_cl.m_local->m_PlayerCommand( )   = *g_cl.m_cmd;
+	g_cl.m_local->m_pCurrentCommand ( ) = g_cl.m_cmd;
+	g_cl.m_local->m_PlayerCommand ( ) = *g_cl.m_cmd;
 
 	*g_csgo.m_nPredictionRandomSeed = g_cl.m_cmd->m_random_seed;
-	g_csgo.m_pPredictionPlayer      = g_cl.m_local;
+	g_csgo.m_pPredictionPlayer = g_cl.m_local;
 
-	m_curtime   = g_csgo.m_globals->m_curtime;
+	m_curtime = g_csgo.m_globals->m_curtime;
 	m_frametime = g_csgo.m_globals->m_frametime;
 
-	g_csgo.m_globals->m_curtime = g_cl.m_local->m_nTickBase ( ) * g_csgo.m_globals->m_interval;
+	g_csgo.m_globals->m_curtime = game::TICKS_TO_TIME ( g_cl.m_local->m_nTickBase ( ) );
 	g_csgo.m_globals->m_frametime = g_csgo.m_prediction->m_engine_paused ? 0 : g_csgo.m_globals->m_interval;
 
 	m_first_time_predicted = g_csgo.m_prediction->m_first_time_predicted;
@@ -124,6 +143,9 @@ void InputPrediction::run( ) {
 	//g_cl.m_cmd->m_buttons &= ~g_cl.m_local->ButtonDisabled ( );
 
 	g_csgo.m_move_helper->SetHost ( g_cl.m_local );
+
+	//FixViewmodel ( true );
+
 	g_csgo.m_game_movement->StartTrackPredictionErrors ( g_cl.m_local );
 
 	if ( g_cl.m_cmd->m_weapon_select != 0 ) {
@@ -156,7 +178,7 @@ void InputPrediction::run( ) {
 		g_cl.m_local->GetThinkTick ( ) = -1;
 		static auto set_next_think = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 56 57 8B F9 8B B7 ? ? ? ? 8B C6 C1 E8 16 24 01 74 18" ) ).as< void ( __thiscall * )( void *, int ) > ( );
 		set_next_think ( g_cl.m_local, 0 );
-		//g_cl.m_local->Think ( );
+		g_cl.m_local->Think ( );
 	}
 
 	g_csgo.m_prediction->SetupMove ( g_cl.m_local, g_cl.m_cmd, g_csgo.m_move_helper, &data );
@@ -181,7 +203,7 @@ void InputPrediction::restore ( ) {
 	g_cl.m_local->m_pCurrentCommand ( ) = nullptr;
 
 	*g_csgo.m_nPredictionRandomSeed = -1;
-	g_csgo.m_pPredictionPlayer      = nullptr;
+	g_csgo.m_pPredictionPlayer = nullptr;
 
 	g_csgo.m_game_movement->Reset ( );
 

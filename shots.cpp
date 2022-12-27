@@ -3,6 +3,7 @@
 Shots g_shots{ };
 
 void Shots::OnShotFire( Player *target, float damage, int bullets, LagRecord *record ) {
+	//static auto sv_showlagcompensation_duration = g_csgo.m_cvar->FindVar ( HASH ( "sv_showlagcompensation_duration" ) );
 
 	// iterate all bullets in this shot.
 	for ( int i{ }; i < bullets; ++i ) {

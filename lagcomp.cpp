@@ -41,21 +41,15 @@ bool LagCompensation::StartPrediction( AimPlayer* data ) {
 	float flTargetTime = game::TICKS_TO_TIME ( g_cl.m_cmd->m_tick ) - g_cl.m_lerp;
 
 	// check if lc broken.
-	vec3_t delta = record->m_origin - record->m_old_origin;
-	if ( delta.length_sqr ( ) > 4096.f ) {
-		// lost track, too much difference
+	if ( size > 1 && ( ( record->m_origin - data->m_records [ 1 ]->m_origin ).length_sqr ( ) > 4096.f
+		|| size > 2 && ( data->m_records [ 1 ]->m_origin - data->m_records [ 2 ]->m_origin ).length_sqr ( ) > 4096.f ) )
 		record->m_broke_lc = true;
+
+	if ( !record->m_broke_lc )
 		return false;
-	}
 
 	if ( record->m_sim_time <= flTargetTime )
 		return false; // hurra, stop
-
-	// we are not breaking lagcomp at this point.
-	// return false so it can aim at all the records it once
-	// since server-sided lagcomp is still active and we can abuse that.
-	if( !record->m_broke_lc )
-		return false;
 
 	int simulation = game::TIME_TO_TICKS( record->m_sim_time );
 
@@ -65,11 +59,10 @@ bool LagCompensation::StartPrediction( AimPlayer* data ) {
 
 	// compute the amount of lag that we will predict for, if we have one set of data, use that.
 	// if we have more data available, use the prevoius lag delta to counter weird fakelags that switch between 14 and 2.
-	int lag = ( size <= 2 ) ? game::TIME_TO_TICKS( record->m_sim_time - data->m_records[ 1 ]->m_sim_time )
-								  : game::TIME_TO_TICKS( data->m_records[ 1 ]->m_sim_time - data->m_records[ 2 ]->m_sim_time );
+	int lag =  game::TIME_TO_TICKS ( record->m_sim_time - record->m_old_sim_time );
 
 	// clamp this just to be sure.
-	math::clamp( lag, 1, 15 );
+	math::clamp ( lag, 1, 17 );
 
 	// get the delta in ticks between the last server net update
 	// and the net update on which we created this record.
@@ -139,13 +132,11 @@ bool LagCompensation::StartPrediction( AimPlayer* data ) {
 
 	int pred = 0;
 	
-	int delta_ticks = game::TIME_TO_TICKS( record->m_old_sim_time - record->m_sim_time );
-
-	for ( int i = 0; i <= delta_ticks; i++ ) {
-		// extrapolate velocity.
-		data->m_player->m_vecVelocity ( ).x = math::Lerp ( record->m_velocity.x, current->m_velocity.x, static_cast< float >( i + 1 ) / static_cast< float >( delta_ticks ) );
-		data->m_player->m_vecVelocity ( ).y = math::Lerp ( record->m_velocity.y, current->m_velocity.y, static_cast< float >( i + 1 ) / static_cast< float >( delta_ticks ) );
-		data->m_player->m_vecVelocity ( ).z = math::Lerp ( record->m_velocity.z, current->m_velocity.z, static_cast< float >( i + 1 ) / static_cast< float >( delta_ticks ) );
+	for ( int i = 0; i <= lag; i++ ) {
+		auto delta = static_cast< float >( i + 1 ) / static_cast< float >( lag );
+		
+		//if ( lag > 1 ) 
+		//	data->m_player->m_flDuckAmount ( ) = math::Lerp ( record->m_duck, current->m_duck, delta );
 
 		if ( !( record->m_flags & FL_ONGROUND ) )
 			record->m_velocity.z -= g_csgo.sv_gravity->GetFloat ( ) * game::TICKS_TO_TIME ( 1 );
@@ -194,6 +185,8 @@ bool LagCompensation::StartPrediction( AimPlayer* data ) {
 
 		if ( trace.m_fraction != 1.0f && trace.m_plane.m_normal.z > 0.7f )
 			record->m_flags |= FL_ONGROUND;
+
+		pred++;
 	}
 
 	// start our predicton loop.

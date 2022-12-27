@@ -368,6 +368,10 @@ public:
 		return get< float >(g_entoffsets.m_flCycle);
 	}
 
+	__forceinline float &m_flAnimTime ( ) {
+		return get< float > ( g_entoffsets.m_flAnimTime );
+	}
+
 	__forceinline float &m_flC4Blow() {
 		return get< float >(g_entoffsets.m_flC4Blow);
 	}
@@ -383,6 +387,10 @@ public:
 	__forceinline int &m_fEffects() {
 		// todo; netvar.
 		return get< int >(g_entoffsets.m_fEffects);
+	}
+
+	__forceinline bool &m_bIsWalking ( ) {
+		return get< bool > ( g_entoffsets.m_bIsWalking );
 	}
 
 	__forceinline int &m_nModelIndex() {
@@ -665,6 +673,10 @@ public:
 		return get< vec3_t >(g_entoffsets.m_vecAbsVelocity);
 	}
 
+	__forceinline uint32_t &m_hViewModel ( ) {
+		return get< uint32_t > ( g_entoffsets.m_hViewModel );
+	}
+
 	__forceinline int &m_lifeState() {
 		return get< int >(g_entoffsets.m_lifeState);
 	}
@@ -718,6 +730,10 @@ public:
 		// .text:101E007A 674     74 17				   jz      short loc_101E0093; Jump if Zero( ZF = 1 )
 		// .text:101E007C 674     8A 83 F8 35 00 00	   mov     al, [ ebx + 35F8h ]
 		return get< bool >(g_csgo.IsLocalPlayer);
+	}
+
+	__forceinline void Think ( ) {
+		util::get_method < void ( __thiscall * ) ( void * ) > ( this, 137 )( this );
 	}
 
 	__forceinline CCSGOPlayerAnimState *m_PlayerAnimState() {
@@ -1194,6 +1210,10 @@ public:
 
 		return false;
 	}
+};
+
+class ViewModel : public Player {
+public:
 };
 
 class WeaponInfo {

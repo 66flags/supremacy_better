@@ -3,10 +3,17 @@
 namespace detours {
 	bool init ( );
 
+	void CL_FireEvents ( );
+	void ProcessInterpolatedList ( );
+	int __fastcall DrawStaticPropArrayFast ( void *ecx, void *edx, void *props, int count, bool shadow_deph );
+	//void __fastcall StaticPropInit ( void *ecx, void *edx, int index, void *lump, model_t *mdl );
+	bool __fastcall Teleported ( void *ecx, void *edx );
+	void __fastcall ComputePoseParam_MoveYaw ( void *ecx, void *edx, void *hdr );
 	void NotifyOnLayerChangeWeight ( void *ecx, void *edx, const C_AnimationLayer *layer, const float new_weight );
 	void NotifyOnLayerChangeCycle ( void *ecx, void *edx, const C_AnimationLayer *layer, const float new_cycle );
 	void __fastcall DoProceduralFootPlant ( void *ecx, void *edx, int a1, int a2, int a3, int a4 );
 	void __fastcall UpdateClientSideAnimation ( void *ecx, void *edx );
+	void __fastcall MaintainSequenceTransitions ( void *ecx, void *edx, void *bone_setup, float cycle, vec3_t pos [ ], quaternion_t q [ ] );
 	int __fastcall BaseInterpolatePart1 ( void *ecx, void *edx, float &curtime, vec3_t &old_origin, ang_t &old_angs, int &no_more_changes );
 	void __fastcall ProcessMovement ( void *ecx, void *edx, Entity *player, CMoveData *data );
 	bool __fastcall SVCMsg_VoiceData ( void *ecx, void *edx, void* a2 );
@@ -37,5 +44,11 @@ namespace detours {
 		inline decltype ( &detours::DoProceduralFootPlant ) DoProceduralFootPlant;
 		inline decltype ( &detours::SetupBones ) SetupBones;
 		inline decltype ( &detours::UpdateClientSideAnimation ) UpdateClientSideAnimation;
+		inline decltype ( &detours::ProcessInterpolatedList ) ProcessInterpolatedList;
+		inline decltype ( &detours::MaintainSequenceTransitions ) MaintainSequenceTransitions;
+		inline decltype ( &detours::ComputePoseParam_MoveYaw ) ComputePoseParam_MoveYaw;
+		inline decltype ( &detours::DrawStaticPropArrayFast ) DrawStaticPropArrayFast;
+		inline decltype ( &detours::Teleported ) Teleported;
+		inline decltype ( &detours::CL_FireEvents ) CL_FireEvents;
 	}
 }

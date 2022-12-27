@@ -626,6 +626,9 @@ void HVH::AntiAim( ) {
 	if( g_csgo.m_gamerules->m_bFreezePeriod( ) || ( g_cl.m_flags & FL_FROZEN ) || ( g_cl.m_cmd->m_buttons & IN_USE ) )
 		return;
 
+	if ( g_cl.m_local->m_MoveType ( ) == MOVETYPE_LADDER || g_cl.m_local->m_MoveType ( ) == MOVETYPE_NOCLIP )
+		return;
+
 	// grenade throwing
 	// CBaseCSGrenade::ItemPostFrame()
 	// https://github.com/VSES/SourceEngine2007/blob/master/src_main/game/shared/cstrike/weapon_basecsgrenade.cpp#L209

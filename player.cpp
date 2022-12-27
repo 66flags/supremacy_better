@@ -27,62 +27,6 @@ void Hooks::BuildTransformations ( int a2, int a3, int a4, int a5, int a6, int a
 	*reinterpret_cast< int * >( uintptr_t ( player ) + 0x291C ) = bone_jiggle;
 }
 
-void Hooks::UpdateClientSideAnimation ( ) {
-	auto player = ( Player * ) this;
-
-	if ( !player || !player->alive ( ) )
-		return g_hooks.m_UpdateClientSideAnimation ( this );
-
-	if ( player == g_cl.m_local ) {
-		auto state = ( CCSGOGamePlayerAnimState * ) g_cl.m_local->m_PlayerAnimState ( );
-
-		if ( g_cl.m_animate ) {
-			g_hooks.m_UpdateClientSideAnimation ( this );
-		}
-		else {
-			memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
-
-			g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
-			g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
-			state->m_flFootYaw = g_cl.m_rotation.y;
-
-			// this will update the attachments origin
-			static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
-			SetupBones_AttachmentHelper ( g_cl.m_local, g_cl.m_local->GetModelPtr ( ) );
-
-			// force setupbones rebuild
-			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
-		}
-	}
-	
-	if ( player != g_cl.m_local ) {
-		player->SetAbsOrigin ( player->m_vecOrigin ( ) );
-
-		if ( g_cl.m_update_ent ) {
-			// @onetap
-			if ( player->m_AnimOverlay ( ) ) {
-				for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ ) {
-					player->m_AnimOverlay ( ) [ i ].m_owner = player;
-				}
-			}
-
-			// will force GetAbsVelocity in CCSGOPlayerAnimState::Update to not do shit to velocity
-			// also, we hook IsHLTV so we know that we call GetAbsVelocity not EstimateAbsVelocity
-
-			int iEFlags = player->m_iEFlags ( );
-
-			player->m_iEFlags ( ) &= ~( 1 << 12 );
-
-			g_hooks.m_UpdateClientSideAnimation ( this );
-
-			// restore entity flags
-			player->m_iEFlags ( ) = iEFlags;
-		}
-	}
-	else
-		g_hooks.m_UpdateClientSideAnimation ( this );
-}
-
 void Hooks::CalcView ( vec3_t &eye_origin, ang_t &eye_angles, float &z_near, float &z_far, float &fov ) {
 	Player *player = ( Player * ) this;
 
@@ -123,17 +67,19 @@ ang_t &Hooks::GetEyeAngles ( ) {
 void Hooks::AccumulateLayers ( void *setup, vec3_t &pos, void *q, float time ) {
 	auto player = ( Player * ) this;
 
-	static auto iks_off = pattern::find ( g_csgo.m_client_dll, XOR ( "8D 47 FC 8B 8F" ) ).add ( 5 ).to ( ).add ( 4 ).as< uint32_t > ( );
+	if ( !g_bones.m_running )
+		return g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
+
 	static auto accumulate_pose = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? 83 BF ? ? ? ? ? 0F 84 ? ? ? ? 8D" ) ).rel32 ( 0x1 ).as<void ( __thiscall * )( void *, vec3_t &, void *, int, float, float, float, void * )> ( );
 
-	if ( !player || !player->IsPlayer ( ) || player->m_iHealth ( ) <= 0 || !player->m_AnimOverlay ( ) || !*reinterpret_cast< void ** >( reinterpret_cast< uintptr_t >( player ) + iks_off ) )
+	if ( !player || !player->IsPlayer ( ) || player->m_iHealth ( ) <= 0 || !player->m_AnimOverlay ( ) || !player->m_pIK ( ) )
 		return g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
 
 	for ( auto animLayerIndex = 0; animLayerIndex < 13; animLayerIndex++ ) {
 		auto &layer = player->m_AnimOverlay ( ) [ animLayerIndex ];
 
 		if ( layer.m_weight > 0.0f && layer.m_order >= 0 && layer.m_order < 13 )
-			accumulate_pose ( *reinterpret_cast< void ** >( setup ), pos, q, layer.m_sequence, layer.m_cycle, layer.m_weight, time, *reinterpret_cast< void ** >( reinterpret_cast< uintptr_t >( player ) + iks_off ) );
+			accumulate_pose ( *reinterpret_cast< void ** >( setup ), pos, q, layer.m_sequence, layer.m_cycle, layer.m_weight, time, player->m_pIK ( ) );
 	}
 }
 
@@ -171,18 +117,17 @@ void CustomEntityListener::OnEntityCreated ( Entity *ent ) {
 
 				// hook this on every player.
 				g_hooks.m_DoExtraBoneProcessing = vmt->add< Hooks::DoExtraBoneProcessing_t > ( Player::DOEXTRABONEPROCESSING, util::force_cast ( &Hooks::DoExtraBoneProcessing ) );
-					g_hooks.m_UpdateClientSideAnimation = vmt->add< Hooks::UpdateClientSideAnimation_t > ( Player::UPDATECLIENTSIDEANIMATION, util::force_cast ( &Hooks::UpdateClientSideAnimation ) );
-				
+				//	g_hooks.m_UpdateClientSideAnimation = vmt->add< Hooks::UpdateClientSideAnimation_t > ( Player::UPDATECLIENTSIDEANIMATION, util::force_cast ( &Hooks::UpdateClientSideAnimation ) );		
 				g_hooks.m_NotifyOnLayerChangeCycle = vmt->add< Hooks::NotifyOnLayerChangeCycle_t > ( Player::NOTIFYONLAYERCHANGECYCLE, util::force_cast ( &Hooks::NotifyOnLayerChangeCycle ) );
 				g_hooks.m_NotifyOnLayerChangeWeight = vmt->add< Hooks::NotifyOnLayerChangeWeight_t > ( Player::NOTIFYONLAYERCHANGEWEIGHT, util::force_cast ( &Hooks::NotifyOnLayerChangeWeight ) );
-
+				//g_hooks.m_AccumulateLayers = vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
+				
 				// local gets special treatment.
 				if ( player->index ( ) == g_csgo.m_engine->GetLocalPlayer ( ) ) {
 					g_hooks.m_GetActiveWeapon = vmt->add< Hooks::GetActiveWeapon_t > ( Player::GETACTIVEWEAPON, util::force_cast ( &Hooks::GetActiveWeapon ) );
 					g_hooks.m_BuildTransformations = vmt->add< Hooks::BuildTransformations_t > ( Player::BUILDTRANSFORMATIONS, util::force_cast ( &Hooks::BuildTransformations ) );
 					g_hooks.m_CalcView = vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
 					g_hooks.m_GetEyeAngles = vmt->add< Hooks::GetEyeAngles_t > ( Player::GETEYEANGLES, util::force_cast ( &Hooks::GetEyeAngles ) );
-					//g_hooks.m_AccumulateLayers = vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
 				}
 			}
 		}

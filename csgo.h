@@ -183,7 +183,8 @@ extern CSGO g_csgo;
 
 namespace game {
 	__forceinline float GetClientInterpAmount() {
-		return std::max(g_csgo.cl_interp->GetFloat(), g_csgo.cl_interp_ratio->GetFloat() / g_csgo.cl_updaterate->GetFloat());
+		static auto min = g_csgo.m_cvar->FindVar ( HASH ( "sv_client_min_interp_ratio" ) );
+		return std::max < float > ( g_csgo.cl_interp->GetFloat ( ), min->GetFloat ( ) / g_csgo.cl_updaterate->GetFloat ( ) );
 	}
 
 	__forceinline int TIME_TO_TICKS(float time) {

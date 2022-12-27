@@ -3,7 +3,7 @@
 Movement g_movement{ };;
 
 void Movement::JumpRelated( ) {
-	if( g_cl.m_local->m_MoveType( ) == MOVETYPE_NOCLIP )
+	if ( g_cl.m_local->m_MoveType ( ) == MOVETYPE_LADDER || g_cl.m_local->m_MoveType ( ) == MOVETYPE_NOCLIP )
 		return;
 
 	if( ( g_cl.m_cmd->m_buttons & IN_JUMP ) && !( g_cl.m_flags & FL_ONGROUND ) ) {

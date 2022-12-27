@@ -130,21 +130,26 @@ bool Chams::GenerateLerpedMatrix( int index, BoneArray* out ) {
 		max_unlag = sv_maxunlag->GetFloat( );
 	}
 
+	auto time_valid_no_deadtime = [ & ] ( float t ) {
+		const auto correct = std::clamp ( channel_info->GetAvgLatency ( 0 ) + channel_info->GetAvgLatency ( 1 ) + g_cl.m_lerp, 0.0f, g_csgo.sv_maxunlag->GetFloat ( ) );
+		return std::fabs ( correct - ( g_csgo.m_globals->m_curtime - t ) ) <= 0.2f;
+	};
+
 	for( auto it = data->m_records.rbegin( ); it != data->m_records.rend( ); it++ ) {
 		current_record = it->get( );
 
 		bool end = it + 1 == data->m_records.rend( );
 
-		if( current_record && current_record->valid( ) && ( !end && ( ( it + 1 )->get( ) ) ) ) {
-			if( current_record->m_origin.dist_to( ent->GetAbsOrigin( ) ) < 1.f ) {
+		if( current_record && ( !end && ( ( it + 1 )->get ( ) ) ) && time_valid_no_deadtime ( it->get ( )->m_sim_time ) ) {
+			if( current_record->m_origin.dist_to( ent->m_vecOrigin ( ) ) < 1.f ) {
 				return false;
 			}
 
-			vec3_t next = end ? ent->GetAbsOrigin( ) : ( it + 1 )->get( )->m_origin;
+			vec3_t next = end ? ent->m_vecOrigin ( ) : ( it + 1 )->get( )->m_origin;
 			float  time_next = end ? ent->m_flSimulationTime( ) : ( it + 1 )->get( )->m_sim_time;
 
 			float total_latency = channel_info->GetAvgLatency( 0 ) + channel_info->GetAvgLatency( 1 );
-			std::clamp( total_latency, 0.f, max_unlag );
+			std::clamp < float > ( total_latency, 0.f, max_unlag );
 
 			float correct = total_latency + g_cl.m_lerp;
 			float time_delta = time_next - current_record->m_sim_time;

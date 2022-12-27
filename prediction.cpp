@@ -38,29 +38,31 @@ void Hooks::RunCommand( Entity* ent, CUserCmd* cmd, IMoveHelper* movehelper ) {
 	// airstuck jitter / overpred fix.
 	if( cmd->m_tick >= std::numeric_limits< int >::max( ) )
 		return;
+	
+	if ( g_cl.m_local ) {
+		if ( !g_csgo.m_cl->m_choked_commands ) {
+			auto nci = g_csgo.m_engine->GetNetChannelInfo ( );
 
-	if ( !g_csgo.m_cl->m_choked_commands ) {
-		auto nci = g_csgo.m_engine->GetNetChannelInfo ( );
+			if ( nci && g_cl.m_cmd->m_command_number > old_num ) {
+				const auto latency = game::TIME_TO_TICKS ( nci->GetLatency ( 1 ) );
 
-		if ( nci && g_cl.m_cmd->m_command_number > old_num ) {
-			const auto latency = game::TIME_TO_TICKS ( nci->GetLatency ( 1 ) );
+				if ( g_inputpred.stored.m_velocity_modifier < 1.0f )
+					g_inputpred.stored.m_velocity_modifier = std::clamp < float > ( g_inputpred.stored.m_velocity_modifier + ( game::TICKS_TO_TIME ( 1 ) + latency ) * ( 1.0f / 2.5f ), 0.0f, 1.0f );
 
-			if ( g_inputpred.stored.m_velocity_modifier < 1.0f )
-				g_inputpred.stored.m_velocity_modifier = std::clamp < float > ( g_inputpred.stored.m_velocity_modifier + ( game::TICKS_TO_TIME ( 1 ) + latency ) * ( 1.0f / 2.5f ), 0.0f, 1.0f );
+				old_num = g_cl.m_cmd->m_command_number;
+			}
+
+			if ( !( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) )
+				g_cl.m_local->m_flVelocityModifier ( ) = g_inputpred.stored.m_velocity_modifier;
 		}
-
-		if ( !( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) )
-			g_cl.m_local->m_flVelocityModifier ( ) = g_inputpred.stored.m_velocity_modifier;
 	}
 
+	//g_inputpred.FixViewmodel ( false );
 	g_hooks.m_prediction.GetOldMethod< RunCommand_t >( CPrediction::RUNCOMMAND )( this, ent, cmd, movehelper );
-	
+	g_netdata.store ( );
+
 	if ( ent )
-		*( int** )( std::uintptr_t ( ent ) + 0x3238 ) = 0;
-
-	// store non compressed netvars.
-	g_netdata.store( );
-
+		*( int* )( std::uintptr_t ( ent ) + 0x3238 ) = 0;
 
 	//if ( g_cl.m_cmd->m_command_number > old_num ) {
 

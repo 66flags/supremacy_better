@@ -32,9 +32,9 @@ public:
 		return util::get_method< t( __thiscall* )( decltype( this ), int ) >( this, GETCLIENTENTITY )( this, index );
 	}
 
-	template< typename t = Entity* >
-	__forceinline t GetClientEntityFromHandle( EHANDLE handle ) {
-		return util::get_method< t( __thiscall* )( decltype( this ), EHANDLE ) >( this, GETCLIENTENTITYFROMHANDLE )( this, handle );
+	template< typename t = Entity*, typename H = EHANDLE >
+	__forceinline t GetClientEntityFromHandle( H handle ) {
+		return util::get_method< t( __thiscall* )( decltype( this ), H ) >( this, GETCLIENTENTITYFROMHANDLE )( this, handle );
 	}
 
 	template< typename t = Entity* >

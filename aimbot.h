@@ -67,6 +67,7 @@ public:
 	//std::deque< float >            m_prefer_air;
 
 public:
+	VelocityDetail_t FixVelocity ( C_AnimationLayer *animlayers, LagRecord *previous, Player *player );
 	void UpdateAnimations( LagRecord* record );
 	void OnNetUpdate( Player* player );
 	void OnRoundStart( Player* player );

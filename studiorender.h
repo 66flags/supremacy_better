@@ -262,6 +262,7 @@ public:
 class CStudioRenderContext {
 public:
 	enum indices : size_t {
+		SETALPHAMODULATION	   = 28,
 		DRAWMODEL              = 29,
 		FORCEDMATERIALOVERRIDE = 33
 	};
@@ -274,6 +275,10 @@ public:
 	__forceinline void ForcedMaterialOverride( IMaterial* mat ) {
 		return util::get_method< void( __thiscall* )( void *, IMaterial *, int, int ) >( this, FORCEDMATERIALOVERRIDE )( this, mat, 0, 0 );
 	}
+
+	__forceinline void SetAlphaModulation ( float opacity ) {
+		return util::get_method< void ( __thiscall * )( void *, float ) > ( this, SETALPHAMODULATION )( this, opacity );
+	}
 };
 
 class IVModelRender {
@@ -281,7 +286,8 @@ public:
 	enum indices : size_t {
 		FORCEDMATERIALOVERRIDE = 1,
 		ISFORCEDMATERIALOVERRIDE = 2,
-		DRAWMODELEXECUTE       = 21
+		DRAWMODELEXECUTE       = 21,
+		DRAWSTATICPROPARRAYFAST = 23,
 	};
 
 	// dont use this, just a wrapper.
