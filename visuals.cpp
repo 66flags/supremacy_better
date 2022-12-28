@@ -330,7 +330,7 @@ void Visuals::Spectators( ) {
 
 void Visuals::StatusIndicators( ) {
 	// dont do if dead.
-	if( !g_cl.m_local->alive ( ) )
+	if( !g_cl.m_processing )
 		return;
 
 	// compute hud size.
@@ -415,7 +415,7 @@ void Visuals::StatusIndicators( ) {
 
 void Visuals::SpreadCrosshair( ) {
 	// dont do if dead.
-	if( !g_cl.m_local->alive ( ) )
+	if( !g_cl.m_processing )
 		return;
 
 	if( !g_menu.main.visuals.spread_xhair.get( ) )
@@ -456,7 +456,7 @@ void Visuals::PenetrationCrosshair( ) {
 	bool  valid_player_hit;
 	Color final_color;
 
-	if( !g_menu.main.visuals.pen_crosshair.get( ) || !g_cl.m_local->alive ( ) )
+	if( !g_menu.main.visuals.pen_crosshair.get( ) || !g_cl.m_processing )
 		return;
 
 	x = g_cl.m_width / 2;
@@ -650,7 +650,7 @@ void Visuals::OffScreen( Player* player, int alpha ) {
 	if( !g_menu.main.players.offscreen.get( ) )
 		return;
 
-	if( !g_cl.m_local->alive ( ) || !g_cl.m_local->enemy( player ) )
+	if( !g_cl.m_processing || !g_cl.m_local->enemy( player ) )
 		return;
 
 	// get the player's center screen position.
@@ -1555,7 +1555,7 @@ void Visuals::DrawBeams( ) {
 	auto vis_impacts = &g_shots.m_vis_impacts;
 
 	// the local player is dead, clear impacts.
-	if( !g_cl.m_local->alive ( ) ) {
+	if( !g_cl.m_processing ) {
 		if( !vis_impacts->empty( ) )
 			vis_impacts->clear( );
 	}
@@ -1611,17 +1611,16 @@ void Visuals::DrawBeams( ) {
 				// note - dex; possible beam models: sprites/physbeam.vmt | sprites/white.vmt
 				beam_info.m_vecStart = start;
 				beam_info.m_vecEnd = end;
-				beam_info.m_nModelIndex = g_csgo.m_model_info->GetModelIndex ( XOR ( "sprites/physbeam.vmt" ) )
+				beam_info.m_nModelIndex = g_csgo.m_model_info->GetModelIndex( XOR( "sprites/physbeam.vmt" ) );
 				beam_info.m_pszModelName = XOR( "sprites/physbeam.vmt" );
 				beam_info.m_flHaloScale = 0.f;
-				beam_info.m_nType = 0;
 				beam_info.m_flLife = g_menu.main.visuals.impact_beams_time.get( );
-				beam_info.m_flWidth = 3.5f;
-				beam_info.m_flEndWidth = 1.1f;
-				beam_info.m_flFadeLength = 0.1f;
+				beam_info.m_flWidth = 2.2f;
+				beam_info.m_flEndWidth = 2.f;
+				beam_info.m_flFadeLength = 0.f;
 				beam_info.m_flAmplitude = 0.f;   // beam 'jitter'.
 				beam_info.m_flBrightness = 255.f;
-				beam_info.m_flSpeed = 0.2f;  // seems to control how fast the 'scrolling' of beam is... once fully spawned.
+				beam_info.m_flSpeed = 0.5f;  // seems to control how fast the 'scrolling' of beam is... once fully spawned.
 				beam_info.m_nStartFrame = 0;
 				beam_info.m_flFrameRate = 0.f;
 				beam_info.m_nSegments = 2;     // controls how much of the beam is 'split up', usually makes m_flAmplitude and m_flSpeed much more noticeable.
