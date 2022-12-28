@@ -99,25 +99,25 @@ void PostThink ( Player *ent ) {
 }
 
 void InputPrediction::FixViewmodel ( bool store ) {
-	static float last_cycle = 0.f;
-	static float last_sequence = 0.f;
+	//static float last_cycle = 0.f;
+	//static float last_sequence = 0.f;
 
-	if ( !g_cl.m_local->alive ( ) )
-		return;
+	//if ( !g_cl.m_local->alive ( ) )
+	//	return;
 
-	if ( g_cl.m_local->m_hViewModel ( ) == 0xFFFFFFF )
-		return;
+	//if ( g_cl.m_local->m_hViewModel ( ) == 0xFFFFFFF )
+	//	return;
 
-	auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
+	//auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
 
-	if ( store ) {
-		last_cycle = viewmodel->m_flCycle ( );
-		last_sequence = viewmodel->m_nSequence ( );
-	}
-	else {
-		viewmodel->m_flCycle ( ) = last_cycle;
-		viewmodel->m_nSequence ( ) = last_sequence;
-	}
+	//if ( store ) {
+	//	last_cycle = viewmodel->m_flCycle ( );
+	//	last_sequence = viewmodel->m_nSequence ( );
+	//}
+	//else {
+	//	viewmodel->m_flCycle ( ) = last_cycle;
+	//	viewmodel->m_nSequence ( ) = last_sequence;
+	//}
 }
 
 void InputPrediction::run ( ) {
