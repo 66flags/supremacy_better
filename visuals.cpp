@@ -1611,7 +1611,7 @@ void Visuals::DrawBeams( ) {
 				// note - dex; possible beam models: sprites/physbeam.vmt | sprites/white.vmt
 				beam_info.m_vecStart = start;
 				beam_info.m_vecEnd = end;
-				beam_info.m_nModelIndex = 1;
+				beam_info.m_nModelIndex = g_csgo.m_model_info->GetModelIndex ( XOR ( "sprites/physbeam.vmt" ) )
 				beam_info.m_pszModelName = XOR( "sprites/physbeam.vmt" );
 				beam_info.m_flHaloScale = 0.f;
 				beam_info.m_nType = 0;
