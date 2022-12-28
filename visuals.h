@@ -109,6 +109,7 @@ public:
 	void DrawSkeleton( Player* player, int opacity );
 	void RenderGlow( );
 	void DrawHitboxMatrix( LagRecord* record, Color col, float time );
+    void DrawHitboxMatrix ( Player *player, BoneArray *bones, Color col, float time );
     void DrawBeams( );
 	void DebugAimbotPoints( Player* player );
 };

@@ -2,7 +2,7 @@
 
 Aimbot g_aimbot { };;
 
-bool Aimbot::FixVelocity ( Player *ent, LagRecord* previous, vec3_t &vel, C_AnimationLayer* animlayers, const vec3_t &origin ) {
+bool Aimbot::FixVelocity ( Player *ent, LagRecord *previous, vec3_t &vel, C_AnimationLayer *animlayers, const vec3_t &origin ) {
 	const auto idx = ent->index ( );
 
 	vel.zero ( );
@@ -81,7 +81,7 @@ bool Aimbot::FixVelocity ( Player *ent, LagRecord* previous, vec3_t &vel, C_Anim
 	else {
 		if ( animlayers [ 4 ].m_weight > 0.0f
 			&& animlayers [ 4 ].m_playback_rate > 0.0f
-			&& rebuilt::GetLayerActivity ( ( CCSGOGamePlayerAnimState* )ent->m_PlayerAnimState ( ), ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ) == 985 /* act_csgo_jump */ ) {
+			&& rebuilt::GetLayerActivity ( ( CCSGOGamePlayerAnimState * ) ent->m_PlayerAnimState ( ), ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ) == 985 /* act_csgo_jump */ ) {
 			vel.z = ( ( animlayers [ 4 ].m_cycle / animlayers [ 4 ].m_playback_rate ) / game::TICKS_TO_TIME ( 1 ) + 0.5f ) * game::TICKS_TO_TIME ( 1 );
 			vel.z = g_csgo.sv_jump_impulse->GetFloat ( ) - vel.z * g_csgo.sv_gravity->GetFloat ( );
 		}
@@ -129,7 +129,7 @@ const float CS_PLAYER_SPEED_WALK_MODIFIER = 0.52f;
 const float CS_PLAYER_SPEED_CLIMB_MODIFIER = 0.34f;
 const float CS_PLAYER_HEAVYARMOR_FLINCH_MODIFIER = 0.5f;
 
-VelocityDetail_t AimPlayer::FixVelocity ( C_AnimationLayer* animlayers, LagRecord* previous, Player *player ) {
+VelocityDetail_t AimPlayer::FixVelocity ( C_AnimationLayer *animlayers, LagRecord *previous, Player *player ) {
 	if ( !animlayers )
 		return DETAIL_NONE;
 
@@ -185,7 +185,7 @@ VelocityDetail_t AimPlayer::FixVelocity ( C_AnimationLayer* animlayers, LagRecor
 		//
 		//		avg_velocity.x = cos_dir * vel_len;
 		//		avg_velocity.y = sin_dir * vel_len;
-		//		
+		//
 		//		velocity = avg_velocity;
 		//	}
 		//}
@@ -292,7 +292,7 @@ VelocityDetail_t AimPlayer::FixVelocity ( C_AnimationLayer* animlayers, LagRecor
 		//	}
 		//	else if ( move_layer.weight != 0.0f ) {
 		//		float want_speed = speed;
-		//		
+		//
 		//		if ( ( player->flags ( ) & Flags::Ducking ) != 0 )
 		//			want_speed *= CS_PLAYER_SPEED_DUCK_MODIFIER;
 		//		else if ( player->is_walking ( ) )
@@ -327,7 +327,7 @@ VelocityDetail_t AimPlayer::FixVelocity ( C_AnimationLayer* animlayers, LagRecor
 		//		///* player is accelerating */
 		//		//else if ( accelerating )
 		//		//	detail = lagcomp::VelocityDetail::Accelerating;
-		//		
+		//
 		//		//csgo::csgo.engine_client->client_cmd_unrestricted ( fmt::format ( "echo [lotus] {}, {}\n", move_layer.weight, speed ).c_str ( ) );
 		//	}
 		//}
@@ -362,16 +362,212 @@ VelocityDetail_t AimPlayer::FixVelocity ( C_AnimationLayer* animlayers, LagRecor
 	return DETAIL_NONE;
 }
 
+float accelerate_rebuilt ( CUserCmd *cmd, Player *local, vec3_t wish_dir, const vec3_t &wish_speed, bool &ducking ) {
+	//static auto sv_accelerate_use_weapon_speed = g_csgo.m_cvar->FindVar ( HASH ( "sv_accelerate_use_weapon_speed" ) );
+	//static auto sv_accelerate = g_csgo.m_cvar->FindVar ( HASH ( "sv_accelerate" ) );
+
+	//float duck_amount; // xmm3_4
+	//int flags_check; // edx
+	//char in_duck; // al
+	//char is_ducking; // al
+	//float duck_speed; // xmm0_4
+	//int duck_speed_ptr; // eax
+	//float next_duck; // xmm2_4
+	//float backup_next_duck; // xmm3_4
+	//char new_flags; // al
+	//char new_is_ducking; // cl
+	//Weapon* v19; // ecx
+	//Weapon *weapon; // eax
+	////double ( __thiscall * GetMaxSpeed )( _DWORD * ); // eax
+	//float speed2d; // [esp-24h] [ebp-30h]
+	//float v26; // [esp-24h] [ebp-30h]
+	////int ( __thiscall * GetZoomLevels )( _DWORD * ); // [esp-20h] [ebp-2Ch]
+	////int ( __thiscall * GetWeaponId )( _DWORD * ); // [esp-1Ch] [ebp-28h]
+	//CUserCmd *cmd_1; // [esp-14h] [ebp-20h]
+	//char is_ducking_1; // [esp-14h] [ebp-20h]
+	//Weapon *v31; // [esp-14h] [ebp-20h]
+	//Weapon *v32; // [esp-10h] [ebp-1Ch]
+	//bool v33; // [esp-1h] [ebp-Dh]
+	//int v34; // [esp+8h] [ebp-4h] BYREF
+
+	//cmd_1 = cmd;
+	//speed2d = ( float ) ( ( float ) ( wish_dir.y * wish_speed.y ) + ( float ) ( wish_dir.x * wish_speed.x ) ) + ( float ) ( wish_dir.z * wish_speed [ 2 ] );
+	//duck_amount = local->m_flDuckAmount ( );
+	//flags_check = local->m_fFlags ( );
+	//in_duck = 1;
+	//if ( ( cmd_1->m_buttons & IN_DUCK ) == 0 ) {
+	//	is_ducking = local->m_bDucking ( );
+	//	if ( duck_amount > 0.0 )
+	//		is_ducking = 1;
+	//	is_ducking_1 = is_ducking;
+	//	if ( is_ducking || duck_amount >= 1.0 ) {
+	//		duck_speed = 2.0;
+	//		duck_speed_ptr = local->m_flDuckSpeed ( );
+	//		if ( duck_speed_ptr >= 1.5f )
+	//			duck_speed = duck_speed_ptr;
+	//		next_duck = std::fmaxf ( 0.0f, duck_amount - ( float ) ( duck_speed * game::TICKS_TO_TIME ( 1 ) ) );
+	//		backup_next_duck = next_duck;
+	//		if ( next_duck <= 0.0 )
+	//			next_duck = 0.0;
+	//		new_flags = flags_check & ~2;
+	//		if ( backup_next_duck > 0.0 )
+	//			new_flags = local->m_fFlags ( );
+	//		flags_check = new_flags & ~2;
+	//		if ( next_duck > 0.75 )
+	//			flags_check = new_flags;
+	//		new_is_ducking = 0;
+	//		if ( backup_next_duck > 0.0 )
+	//			new_is_ducking = is_ducking_1;
+	//		if ( new_is_ducking )
+	//			goto LABEL_19;
+	//	}
+	//	if ( ( flags_check & 2 ) != 0 )
+	//		LABEL_19:
+	//	in_duck = 1;
+	//	else
+	//		in_duck = 0;
+	//}
+	//ducking = in_duck;
+	//v33 = ( cmd->m_buttons & IN_SPEED ) != 0 && !in_duck;
+	//if ( sv_accelerate_use_weapon_speed->GetInt ( ) ) {
+	//	v19 = local->GetActiveWeapon ( );
+	//	weapon = v19;
+	//	v32 = weapon;
+	//	v31 = weapon;
+	//	if ( weapon ) {
+	//		// GetMaxSpeed (441)
+	//		auto GetMaxSpeed = local->m_bIsScoped ( ) ? weapon->GetWpnData ( )->m_max_player_speed_alt : weapon->GetWpnData ( )->m_max_player_speed;
+	//		// GetZoomLevels (461)
+	//
+	//		if ( weapon->m_zoomLevel ( ) > 0 ) {
+	//			// GetWeaponId (442)
+	//			if ( ( !ducking && !is_walking ) || ( ( is_walking || ducking ) && slowed_by_scope ) )
+	//				acceleration_scale *= std::min ( 1.0f, ( max_speed / max_speed ) );
+	//		}
+	//	}
+	//}
+	//auto accel = g_csgo.sv_airaccelerate->GetFloat ( );
+
+	//if ( local->m_bIsWalking ( ) && wish_speed > ( goal_speed - 5.0f ) )
+	//	accel *= std::clamp ( 1.0f - ( std::max ( 0.0f, wanted_speed - ( goal_speed - 5.0f ) ) / std::max ( 0.0f, goal_speed - ( goal_speed - 5.0f ) ) ), 0.0f, 1.0f );
+	//
+	return 0.f;
+}
+
+void Aimbot::Stop ( CUserCmd *cmd, float target_speed, vec3_t &cur_velocity, vec3_t a8, bool compensate_for_duck ) {
+	auto weapon = g_cl.m_weapon;
+
+	if ( !weapon )
+		return;
+
+	static auto sv_stopspeed = g_csgo.m_cvar->FindVar ( HASH ( "sv_stopspeed" ) );
+	static auto sv_friction = g_csgo.m_cvar->FindVar ( HASH ( "sv_friction" ) );
+
+	//v46 = a3;
+	//v47 = retaddr;
+	auto vel = cur_velocity;
+	auto not_in_jump = !( cmd->m_buttons & IN_JUMP );
+	auto delta_target_speed = target_speed;
+	auto max_speed = g_cl.m_local->m_bIsScoped ( ) ? weapon->GetWpnData ( )->m_max_player_speed_alt : weapon->GetWpnData ( )->m_max_player_speed;
+	// = a2;
+
+	if ( not_in_jump
+		&& std::sqrtf ( ( ( cmd->m_forward_move * cmd->m_forward_move ) + ( cmd->m_side_move * cmd->m_side_move ) ) + ( cmd->m_up_move * cmd->m_up_move ) ) >= 38.0f ) {
+		//*&speed2d_sqr = LODWORD ( vel.x );
+		auto speed2d_sqr = vel.length_2d_sqr ( );
+		//	*&speed2d1 = *&speed2d_sqr;
+		auto speed2d1 = std::sqrtf ( speed2d_sqr );
+		auto speed2d = speed2d1;
+		//	*&speed2d = *&speed2d1;
+
+		if ( speed2d1 >= 28.0 ) {
+			auto stop_speed = sv_stopspeed->GetFloat ( );
+			stop_speed = std::max < float > ( stop_speed, speed2d );
+
+			auto friction = sv_friction->GetFloat ( );
+			auto tick_interval = game::TICKS_TO_TIME ( 1 );
+			stop_speed = friction * stop_speed;
+			auto max_stop_speed = std::max < float > ( speed2d - ( tick_interval * stop_speed ), 0.0f );
+			auto delta_target_speed_1 = delta_target_speed - max_stop_speed;
+			const auto max_stop_speed_vec = vec3_t { vel.x * ( max_stop_speed / speed2d ), vel.y * ( max_stop_speed / speed2d ),  ( max_stop_speed / speed2d ) * 0.0f };
+
+			delta_target_speed = delta_target_speed_1;
+
+			if ( fabs ( delta_target_speed_1 ) >= 0.5 ) {
+				vec3_t move_dir;
+
+				if ( delta_target_speed_1 >= 0.0 ) {
+					cmd->m_buttons &= ~IN_SPEED;
+
+					vec3_t fwd;
+					math::AngleVectors ( cmd->m_view_angles, &fwd, &vel );
+					const auto right = fwd.cross ( vec3_t ( 0.0f, 0.0f, 1.0f ) );
+
+					move_dir.y = ( vel.y - ( right.y / right.x ) * vel.x ) / ( fwd.y - ( right.y / right.x ) * fwd.x );
+					move_dir.x = ( vel.x - fwd.x * cmd->m_forward_move ) / right.x;
+					move_dir.z = 0.f;
+				}
+
+				//move_dir.z = 0.0;
+				//auto inv_vel = 1.0 / ( std::sqrtf ( ( -vel.x * -vel.x ) + ( -vel.y * -vel.y ) ) + 0.00000011920929f );
+				//auto vel_norm_y = inv_vel * -vel.y;
+				//auto vel_norm_x = inv_vel * -vel.x;
+				//move_dir.x = vel_norm_x;
+				//move_dir.y = vel_norm_y;
+
+				//if ( vel_norm_y != 0.0 || vel_norm_x != 0.0 )
+				//	atan2f ( );
+
+				a8.y = 0.0f;
+				a8.x = 90.0f;
+				a8.z = 0.0f;
+
+				cmd->m_side_move = 0.0;
+				cmd->m_forward_move = 450.0;
+				delta_target_speed = -delta_target_speed_1;
+				//compensate_for_duck = 0;
+				stop_speed = -4917.7676;
+				auto speed = max_speed;
+				//cmd_2 = cmd_1;
+				auto v40 = util::get_method < float ( __thiscall * )( Player * ) > ( g_cl.m_local, 269 ) ( g_cl.m_local );
+				max_speed = g_cl.m_local->m_flMaxspeed ( ) + max_speed;
+				auto v25 = max_speed;
+				auto acceleration_amount = v25;
+				auto speed_dot_dir = ( ( max_stop_speed_vec.y * move_dir.y ) + ( max_stop_speed_vec.x * move_dir.x ) )
+					+ ( max_stop_speed_vec.z * move_dir.z );
+				auto addspeed = std::min < float > ( max_speed, v40 ) - speed_dot_dir;
+				float zero = 0.0f;
+				if ( addspeed > 0.0 )
+					zero = fminf ( addspeed, acceleration_amount );
+				if ( zero > ( delta_target_speed + 0.5 ) ) {
+
+					auto move_length = speed_dot_dir + delta_target_speed;
+
+					if ( g_cl.m_local->m_flDuckAmount ( ) + speed == 1.0f )
+						move_length = move_length / 0.34f;
+
+					auto move_scale = move_length
+						/ ( std::sqrtf (
+							( ( cmd->m_forward_move * cmd->m_forward_move ) + ( cmd->m_side_move * cmd->m_side_move ) )
+							+ ( cmd->m_up_move * cmd->m_up_move ) )
+							+ 0.00000011920929f );
+					cmd->m_forward_move = cmd->m_forward_move * move_scale;
+					cmd->m_side_move = cmd->m_side_move * move_scale;
+					cmd->m_up_move = cmd->m_up_move * move_scale;
+				}
+			}
+			else {
+				cmd->m_side_move = 0.0f;
+				cmd->m_up_move = 0.0f;
+			}
+		}
+	}
+}
+
 void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	CCSGOPlayerAnimState *state = m_player->m_PlayerAnimState ( );
 	if ( !state )
 		return;
-
-	if ( m_player->m_flSpawnTime ( ) != m_spawn ) {
-		game::ResetAnimationState ( state );
-
-		m_spawn = m_player->m_flSpawnTime ( );
-	}
 
 	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
 
@@ -386,18 +582,18 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	const auto dword_44732EB8 = g_csgo.m_globals->m_frame;
 	const auto dword_44732EBC = g_csgo.m_globals->m_tick_count;
 	const auto v4 = dword_44732EA8 / g_csgo.m_globals->m_interval;
-	
+
 	g_csgo.m_globals->m_curtime = record->m_anim_time;
 	g_csgo.m_globals->m_realtime = g_csgo.m_globals->m_curtime;
 	//g_csgo.m_globals->m_curtime = v1;
 	const auto sim_ticks = ( v4 + 0.5f );
-	
+
 	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
 	g_csgo.m_globals->m_abs_frametime = g_csgo.m_globals->m_interval;
 	g_csgo.m_globals->m_frame = sim_ticks;
 	g_csgo.m_globals->m_tick_count = sim_ticks;
 	g_csgo.m_globals->m_interp_amt = 0.0;
-	
+
 	game_state->m_flLastUpdateTime = m_player->m_flSimulationTime ( );
 
 	AnimationBackup_t backup;
@@ -433,13 +629,13 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 			record->m_velocity_detail = FixVelocity ( record->m_layers, previous, m_player );
 		}
 	}
-	
+
 	record->m_anim_velocity = record->m_velocity;
 
 	if ( record->m_lag > 1 && !bot ) {
 		float speed = m_player->m_vecVelocity ( ).length_2d ( );
 
-		if ( record->m_flags & FL_ONGROUND && record->m_layers [ 6 ].m_weight == 0.f && ( speed > 0.1f && speed < 100.f) || record->m_has_vel )
+		if ( record->m_flags & FL_ONGROUND && record->m_layers [ 6 ].m_weight == 0.f && ( speed > 0.1f && speed < 100.f ) || record->m_has_vel )
 			record->m_fake_walk = true;
 
 		if ( record->m_fake_walk )
@@ -468,8 +664,8 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 				const auto crouch_amount = m_player->m_flDuckAmount ( );
 				const auto crouch_speed = std::max ( 1.5f, m_player->m_flDuckSpeed ( ) );
 
-			//	m_player->m_flDuckAmount ( ) = record->m_flags & FL_DUCKING ? valve_math::Approach ( 1.0f, m_player->m_flDuckAmount ( ), game::TICKS_TO_TIME ( m_player->m_nTickBase ( ) ) * crouch_speed ) : crouch_amount;
-				
+				//	m_player->m_flDuckAmount ( ) = record->m_flags & FL_DUCKING ? valve_math::Approach ( 1.0f, m_player->m_flDuckAmount ( ), game::TICKS_TO_TIME ( m_player->m_nTickBase ( ) ) * crouch_speed ) : crouch_amount;
+
 				if ( !record->m_fake_walk ) {
 					vec3_t velo = record->m_velocity - previous->m_velocity;
 
@@ -489,7 +685,7 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 
 	if ( state->m_frame == g_csgo.m_globals->m_frame )
 		state->m_frame -= 1;
-	
+
 	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent [ m_player->index ( ) ] = true;
 
 	if ( fake ) {
@@ -499,7 +695,7 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 		m_player->m_angEyeAngles ( ) = record->m_eye_angles;
 		m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
 	}
-	
+
 	m_player->UpdateClientSideAnimation ( );
 	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent [ m_player->index ( ) ] = false;
 
@@ -572,27 +768,24 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 
 		current->m_dormant = false;
 
-		if ( current ) {
-			int lag = game::TIME_TO_TICKS ( player->m_flSimulationTime ( ) - current->m_sim_time );
-			math::clamp ( lag, 1, 17 );
+		int lag = game::TIME_TO_TICKS ( player->m_flSimulationTime ( ) - player->m_flOldSimulationTime ( ) );
+		math::clamp ( lag, 1, 17 );
 
-			for ( int i = 0; i < lag; i++ ) {
-				const auto time = game::TICKS_TO_TIME ( i + 1 );
+		for ( int i = 0; i < lag; i++ ) {
+			const auto time = game::TICKS_TO_TIME ( i + 1 );
 
-				const auto backup_simtime = player->m_flSimulationTime ( );
-				const auto backup_old_simtime = current->m_old_sim_time;
+			const auto backup_simtime = player->m_flSimulationTime ( );
+			const auto backup_old_simtime = current->m_old_sim_time;
 
-				current->m_shifting = false;
+			current->m_shifting = false;
 
-				UpdateAnimations ( current );
-			}
-
+			UpdateAnimations ( current );
 		}
-	
+
 		BoneArray m [ 128 ];
-		
+
 		g_bones.Build ( m_player, m, g_csgo.m_globals->m_curtime );
-		memcpy ( current->m_bones, m, sizeof ( current->m_bones ) );
+		memcpy ( current->m_bones, m, sizeof ( BoneArray ) * 128 );
 	}
 
 	//// ghetto fix
@@ -623,7 +816,6 @@ void AimPlayer::OnRoundStart ( Player *player ) {
 
 	m_records.clear ( );
 	m_hitboxes.clear ( );
-
 }
 
 void AimPlayer::SetupHitboxes ( LagRecord *record, bool history ) {
@@ -816,6 +1008,7 @@ void Aimbot::Slow ( CUserCmd *ucmd ) {
 
 		ucmd->m_forward_move = std::clamp <float> ( ucmd->m_forward_move, -g_csgo.cl_forwardspeed->GetFloat ( ), g_csgo.cl_forwardspeed->GetFloat ( ) );
 		ucmd->m_side_move = std::clamp <float> ( ucmd->m_side_move, -g_csgo.cl_forwardspeed->GetFloat ( ), g_csgo.cl_sidespeed->GetFloat ( ) );
+				
 
 		ucmd->m_buttons &= ~IN_WALK;
 		ucmd->m_buttons |= IN_SPEED;
@@ -925,9 +1118,12 @@ void Aimbot::find ( ) {
 
 	m_stop = g_menu.main.movement.autostop.get ( ) && !( g_cl.m_buttons & IN_JUMP );
 
+	vec3_t a8;
+
 	if ( m_stop && ( best.damage && best.player ) )
 		Slow ( g_cl.m_cmd );
-	
+		//Stop ( g_cl.m_cmd, g_cl.m_local->m_vecVelocity ( ).length_2d ( ), g_cl.m_local->m_vecVelocity ( ), a8, true );
+
 	if ( best.player && best.record ) {
 		math::VectorAngles ( best.pos - g_cl.m_shoot_pos, m_angle );
 
@@ -1085,7 +1281,7 @@ bool AimPlayer::SetupHitboxPoints ( LagRecord *record, BoneArray *bones, int ind
 
 				points.push_back ( { bbox->m_maxs.x, bbox->m_maxs.y - r, bbox->m_maxs.z } );
 
-				CCSGOGamePlayerAnimState *state = ( CCSGOGamePlayerAnimState * )record->m_player->m_PlayerAnimState ( );
+				CCSGOGamePlayerAnimState *state = ( CCSGOGamePlayerAnimState * ) record->m_player->m_PlayerAnimState ( );
 
 				if ( state && state->m_flVelocityLengthXY <= 0.1f && record->m_eye_angles.x <= state->m_flAimPitchMin ) {
 					points.push_back ( { bbox->m_maxs.x - r, bbox->m_maxs.y, bbox->m_maxs.z } );
@@ -1303,7 +1499,7 @@ bool Aimbot::SelectTarget ( LagRecord *record, const vec3_t &aim, float damage )
 
 void Aimbot::apply ( ) {
 	static auto sv_showlagcompensation_duration = g_csgo.m_cvar->FindVar ( HASH ( "sv_showlagcompensation_duration" ) );
-	
+
 	bool attack, attack2;
 	attack = ( g_cl.m_cmd->m_buttons & IN_ATTACK );
 	attack2 = ( g_cl.m_weapon_id == REVOLVER && g_cl.m_cmd->m_buttons & IN_ATTACK2 );
@@ -1320,9 +1516,15 @@ void Aimbot::apply ( ) {
 			if ( !g_menu.main.aimbot.silent.get ( ) )
 				g_csgo.m_engine->SetViewAngles ( m_angle );
 
-			if ( g_menu.main.aimbot.show_capsules.get ( ) )
+			if ( g_menu.main.aimbot.show_capsules.get ( ) ) {
 				g_visuals.DrawHitboxMatrix ( m_record, { 255, 255, 255, 150 }, sv_showlagcompensation_duration->GetFloat ( ) );
 
+//#ifdef _DEBUG
+//				BoneArray server_bones [ 128 ];
+//				g_bones.BuildServer ( m_record->m_player, server_bones, g_csgo.m_globals->m_curtime, false );
+//				g_visuals.DrawHitboxMatrix ( m_record->m_player, server_bones, { 255, 0, 0, 150 }, sv_showlagcompensation_duration->GetFloat ( ) );
+//#endif
+			}
 		}
 
 		if ( g_menu.main.aimbot.nospread.get ( ) && g_menu.main.config.mode.get ( ) == 1 )

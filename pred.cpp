@@ -110,11 +110,14 @@ void InputPrediction::FixViewmodel ( bool store ) {
 
 	auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
 
-	viewmodel->m_flCycle ( ) = last_cycle;
-	viewmodel->m_nSequence ( ) = last_sequence;
-
-	last_cycle = viewmodel->m_flCycle ( );
-	last_sequence = viewmodel->m_nSequence ( );
+	if ( store ) {
+		last_cycle = viewmodel->m_flCycle ( );
+		last_sequence = viewmodel->m_nSequence ( );
+	}
+	else {
+		viewmodel->m_flCycle ( ) = last_cycle;
+		viewmodel->m_nSequence ( ) = last_sequence;
+	}
 }
 
 void InputPrediction::run ( ) {
@@ -143,9 +146,6 @@ void InputPrediction::run ( ) {
 	//g_cl.m_cmd->m_buttons &= ~g_cl.m_local->ButtonDisabled ( );
 
 	g_csgo.m_move_helper->SetHost ( g_cl.m_local );
-
-	//FixViewmodel ( true );
-
 	g_csgo.m_game_movement->StartTrackPredictionErrors ( g_cl.m_local );
 
 	if ( g_cl.m_cmd->m_weapon_select != 0 ) {
@@ -158,6 +158,8 @@ void InputPrediction::run ( ) {
 				g_cl.m_local->SelectItem ( data->m_weapon_name, g_cl.m_cmd->m_weapon_subtype );
 		}
 	}
+
+	//FixViewmodel ( true );
 
 	const auto buttons_changed = g_cl.m_cmd->m_buttons ^ g_cl.m_local->m_afButtonLast ( );
 

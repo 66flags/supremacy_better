@@ -83,7 +83,7 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	}
 
 	//if ( stage == FRAME_NET_UPDATE_END )
-	//	g_inputpred.FixViewmodel ( true );
+		//g_inputpred.FixViewmodel ( false );
 
 	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END && ( g_cl.m_local && g_cl.m_local->alive ( ) ) ) {
 		g_inputpred.stored.m_old_velocity_modifier = g_cl.m_local->m_flVelocityModifier ( );
@@ -143,7 +143,7 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 
 	else if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END ) {
 		g_visuals.NoSmoke ( );
-		g_inputpred.FixViewmodel ( false );
+		//g_inputpred.FixViewmodel ( false );
 	}
 
 	else if ( stage == FRAME_NET_UPDATE_END ) {

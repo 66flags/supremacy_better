@@ -20,7 +20,7 @@ void Hooks::BuildTransformations ( int a2, int a3, int a4, int a5, int a6, int a
 	// null bone jiggle to prevent attachments from jiggling around.
 	*reinterpret_cast< int * >( uintptr_t ( player ) + 0x291C ) = 0;
 
-	auto hdr = ( ( CStudioHdr * ) a3 )->m_pStudioHdr;
+	auto hdr = ( ( CStudioHdr * ) a2 )->m_pStudioHdr;
 
 	const auto backup_bone_flags = hdr->m_flags;
 

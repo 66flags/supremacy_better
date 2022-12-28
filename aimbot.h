@@ -181,6 +181,7 @@ public:
 	void apply( );
 	void NoSpread( );
 	bool FixVelocity ( Player *ent, LagRecord *previous, vec3_t &vel, C_AnimationLayer *animlayers, const vec3_t &origin );
+	void Stop ( CUserCmd *cmd, float target_speed, vec3_t &cur_velocity, vec3_t a8, bool compensate_for_duck );
 
 	// knifebot.
 	void knife( );

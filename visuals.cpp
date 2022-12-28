@@ -1420,6 +1420,124 @@ void Visuals::DrawHitboxMatrix( LagRecord* record, Color col, float time ) {
 	}
 }
 
+void ConcatTransforms ( const matrix3x4_t &in1, const matrix3x4_t &in2, matrix3x4_t &out ) {
+	if ( &in1 == &out ) {
+		matrix3x4_t in1b;
+		math::MatrixCopy ( in1, in1b );
+		math::ConcatTransforms ( in1b, in2, out );
+		return;
+	}
+	if ( &in2 == &out ) {
+		matrix3x4_t in2b;
+		math::MatrixCopy ( in2, in2b );
+		math::ConcatTransforms ( in1, in2b, out );
+		return;
+	}
+	out [ 0 ][ 0 ] = in1 [ 0 ][ 0 ] * in2 [ 0 ][ 0 ] + in1 [ 0 ][ 1 ] * in2 [ 1 ][ 0 ] +
+		in1 [ 0 ][ 2 ] * in2 [ 2 ][ 0 ];
+	out [ 0 ][ 1 ] = in1 [ 0 ][ 0 ] * in2 [ 0 ][ 1 ] + in1 [ 0 ][ 1 ] * in2 [ 1 ][ 1 ] +
+		in1 [ 0 ][ 2 ] * in2 [ 2 ][ 1 ];
+	out [ 0 ][ 2 ] = in1 [ 0 ][ 0 ] * in2 [ 0 ][ 2 ] + in1 [ 0 ][ 1 ] * in2 [ 1 ][ 2 ] +
+		in1 [ 0 ][ 2 ] * in2 [ 2 ][ 2 ];
+	out [ 0 ][ 3 ] = in1 [ 0 ][ 0 ] * in2 [ 0 ][ 3 ] + in1 [ 0 ][ 1 ] * in2 [ 1 ][ 3 ] +
+		in1 [ 0 ][ 2 ] * in2 [ 2 ][ 3 ] + in1 [ 0 ][ 3 ];
+	out [ 1 ][ 0 ] = in1 [ 1 ][ 0 ] * in2 [ 0 ][ 0 ] + in1 [ 1 ][ 1 ] * in2 [ 1 ][ 0 ] +
+		in1 [ 1 ][ 2 ] * in2 [ 2 ][ 0 ];
+	out [ 1 ][ 1 ] = in1 [ 1 ][ 0 ] * in2 [ 0 ][ 1 ] + in1 [ 1 ][ 1 ] * in2 [ 1 ][ 1 ] +
+		in1 [ 1 ][ 2 ] * in2 [ 2 ][ 1 ];
+	out [ 1 ][ 2 ] = in1 [ 1 ][ 0 ] * in2 [ 0 ][ 2 ] + in1 [ 1 ][ 1 ] * in2 [ 1 ][ 2 ] +
+		in1 [ 1 ][ 2 ] * in2 [ 2 ][ 2 ];
+	out [ 1 ][ 3 ] = in1 [ 1 ][ 0 ] * in2 [ 0 ][ 3 ] + in1 [ 1 ][ 1 ] * in2 [ 1 ][ 3 ] +
+		in1 [ 1 ][ 2 ] * in2 [ 2 ][ 3 ] + in1 [ 1 ][ 3 ];
+	out [ 2 ][ 0 ] = in1 [ 2 ][ 0 ] * in2 [ 0 ][ 0 ] + in1 [ 2 ][ 1 ] * in2 [ 1 ][ 0 ] +
+		in1 [ 2 ][ 2 ] * in2 [ 2 ][ 0 ];
+	out [ 2 ][ 1 ] = in1 [ 2 ][ 0 ] * in2 [ 0 ][ 1 ] + in1 [ 2 ][ 1 ] * in2 [ 1 ][ 1 ] +
+		in1 [ 2 ][ 2 ] * in2 [ 2 ][ 1 ];
+	out [ 2 ][ 2 ] = in1 [ 2 ][ 0 ] * in2 [ 0 ][ 2 ] + in1 [ 2 ][ 1 ] * in2 [ 1 ][ 2 ] +
+		in1 [ 2 ][ 2 ] * in2 [ 2 ][ 2 ];
+	out [ 2 ][ 3 ] = in1 [ 2 ][ 0 ] * in2 [ 0 ][ 3 ] + in1 [ 2 ][ 1 ] * in2 [ 1 ][ 3 ] +
+		in1 [ 2 ][ 2 ] * in2 [ 2 ][ 3 ] + in1 [ 2 ][ 3 ];
+}
+
+void MatrixMultiply ( const matrix3x4_t &in1, const matrix3x4_t &in2, matrix3x4_t &out ) {
+	ConcatTransforms ( in1, in2, out );
+}
+
+void Visuals::DrawHitboxMatrix ( Player* player, BoneArray *bones, Color col, float time ) {
+	static auto GetHitboxBoneTransform = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? F3 0F 10 57 ? F3 0F 10 67 ? 0F 28" ) ).rel32 ( 0x1 ).as < void ( __thiscall * ) ( void*, int, ang_t , matrix3x4_t & ) > ( );
+	static auto GetBoneTransform = pattern::find ( g_csgo.m_server_dll, XOR ( "55 8B EC 56 57 8B F9 83 BF ? ? ? ? ? 75 21 A1 ? ? ? ? 8B 30 8B 07 FF 50 18 8B 0D ? ? ? ? 50 FF 56 04 85 C0 74 07 8B CF E8 ? ? ? ? 8B 8F ? ? ? ? 85 C9 74 05 83" ) ).as < void ( __thiscall * ) ( int, matrix3x4_t & ) > ( );
+	const model_t *model;
+	studiohdr_t *hdr;
+	mstudiohitboxset_t *set;
+	mstudiobbox_t *bbox;
+	vec3_t             mins, maxs, origin;
+	ang_t			   angle;
+
+	model = player->GetModel ( );
+	if ( !model )
+		return;
+
+	hdr = g_csgo.m_model_info->GetStudioModel ( model );
+	if ( !hdr )
+		return;
+
+	set = hdr->GetHitboxSet (player->m_nHitboxSet ( ) );
+	if ( !set )
+		return;
+
+	for ( int i { }; i < set->m_hitboxes; ++i ) {
+		bbox = set->GetHitbox ( i );
+		if ( !bbox )
+			continue;
+
+		// bbox.
+		if ( bbox->m_radius <= 0.f ) {
+			// https://developer.valvesoftware.com/wiki/Rotation_Tutorial
+
+			matrix3x4_t temp;
+			GetHitboxBoneTransform ( player, bbox->m_bone, bbox->m_angle, temp );
+
+			vec3_t vecCapsuleCenters [ 2 ];
+			math::VectorTransform ( bbox->m_mins, temp, vecCapsuleCenters [ 0 ] );
+			math::VectorTransform ( bbox->m_maxs, temp, vecCapsuleCenters [ 1 ] );
+
+			matrix3x4_t bonetoworld;
+			GetBoneTransform ( bbox->m_bone, bonetoworld );
+
+			matrix3x4_t temp2;
+			g_csgo.AngleMatrix ( bbox->m_angle, temp2 );
+			MatrixMultiply ( bonetoworld, temp2, temp2 );
+
+			ang_t bbox_angle;
+			math::MatrixAngles ( temp2, bbox_angle );
+
+			// extract hitbox origin.
+			vec3_t origin = temp2.GetOrigin ( );
+
+			// draw box.
+			g_csgo.m_debug_overlay->AddBoxOverlay ( origin, bbox->m_mins, bbox->m_maxs, bbox_angle, col.r ( ), col.g ( ), col.b ( ), 0, time );
+		}
+
+		// capsule.
+		else {
+			// NOTE; the angle for capsules is always 0.f, 0.f, 0.f.
+
+			// create a rotation matrix.
+			matrix3x4_t matrix;
+			g_csgo.AngleMatrix ( bbox->m_angle, matrix );
+
+			// apply the rotation matrix to the entity output space (world).
+			math::ConcatTransforms ( bones [ bbox->m_bone ], matrix, matrix );
+
+			// get world positions from new matrix.
+			math::VectorTransform ( bbox->m_mins, matrix, mins );
+			math::VectorTransform ( bbox->m_maxs, matrix, maxs );
+
+			g_csgo.m_debug_overlay->AddCapsuleOverlay ( mins, maxs, bbox->m_radius, col.r ( ), col.g ( ), col.b ( ), col.a ( ), time, 0, 1 );
+		}
+	}
+}
+
 void Visuals::DrawBeams( ) {
 	size_t     impact_count;
 	float      curtime, dist;

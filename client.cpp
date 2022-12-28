@@ -432,7 +432,6 @@ void Client::EndMove ( CUserCmd *cmd ) {
 	//if ( g_cl.m_packet )
 
 	UpdateInformation ( );
-	UpdateLocalAnimations ( );
 	
 	//if ( g_csgo.m_input->CAM_IsThirdPerson ( ) )
 	//	g_csgo.m_prediction->SetLocalViewAngles ( g_cl.m_angle );
@@ -513,6 +512,25 @@ void Client::OnTick ( CUserCmd *cmd ) {
 	// restore curtime/frametime
 	// and prediction seed/player.
 	g_inputpred.restore ( );
+
+	UpdateLocalAnimations ( );
+
+	if ( !*m_packet ) {
+		auto nc = g_csgo.m_engine->GetNetChannelInfo ( );
+
+		if ( nc && m_lag > 0 && ( nc->m_choked_packets % 4 ) && ( g_menu.main.aimbot.enable.get ( ) || g_menu.main.antiaim.lag_enable.get ( ) ) && g_csgo.m_engine->IsInGame ( ) ) {
+			const auto backup_packets = nc->m_choked_packets;
+
+			auto out_sequence_nr = *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
+
+			nc->m_choked_packets = 0;
+			nc->SendDatagram ( 0 );
+			nc->m_choked_packets = backup_packets;
+
+			-- *( int * ) ( std::uintptr_t ( nc ) + 0x2C );
+			-- *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
+		}
+	}
 }
 
 void Client::SetAngles ( ) {

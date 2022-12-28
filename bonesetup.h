@@ -6,7 +6,8 @@ public:
 	bool m_running = false;
 public:
 	bool setup( Player* player, BoneArray* out, float curtime, LagRecord *record );
-	bool Build ( Player *player, BoneArray *out, float curtime );
+    void BuildServer ( Player *player, BoneArray *out, float curtime, bool debug );
+    bool Build ( Player *player, BoneArray *out, float curtime );
     void Studio_BuildMatrices ( const CStudioHdr *pStudioHdr, const ang_t &angles, const vec3_t &origin, const vec3_t pos [ ], const quaternion_t q [ ], int iBone, float flScale, BoneArray bonetoworld [ 128 ], int boneMask );
 	void SetupBones ( Player *player, BoneArray *pBoneToWorld, int boneMask );
     void *GetSeqDesc ( void *ptr, int i );

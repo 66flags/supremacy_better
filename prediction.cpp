@@ -57,8 +57,14 @@ void Hooks::RunCommand( Entity* ent, CUserCmd* cmd, IMoveHelper* movehelper ) {
 		}
 	}
 
-	//g_inputpred.FixViewmodel ( false );
+	if ( g_cl.m_cmd->m_command_number > old_num )
+		g_inputpred.FixViewmodel ( false );
+
 	g_hooks.m_prediction.GetOldMethod< RunCommand_t >( CPrediction::RUNCOMMAND )( this, ent, cmd, movehelper );
+
+	if ( g_cl.m_cmd->m_command_number > old_num )
+		g_inputpred.FixViewmodel ( true );
+
 	g_netdata.store ( );
 
 	if ( ent )

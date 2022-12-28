@@ -61,6 +61,16 @@ void CBoneSetup::CalcBoneAdj ( vec3_t pos [ ], quaternion_t q [ ], const float c
 
 Bones g_bones {};;
 
+void Bones::BuildServer ( Player *player, BoneArray *out, float curtime, bool debug = false ) {
+#ifdef _DEBUG
+	static auto SetupBones = pattern::find ( g_csgo.m_server_dll, XOR ( "55 8B EC 83 E4 F0 B8 ? ? ? ? E8 ? ? ? ? 8B C1 56 57" ) ).as < void ( __thiscall* ) ( void*, matrix3x4a_t *, int ) > ( );
+
+	matrix3x4a_t m [ 128 ];
+	SetupBones ( player, m, 0x7FF00 );
+	memcpy ( out, m, sizeof ( BoneArray ) * 128 );
+#endif
+}
+
 bool Bones::Build ( Player *player, BoneArray *out, float curtime ) {
 #if 1
 	const auto cur_time = g_csgo.m_globals->m_curtime;

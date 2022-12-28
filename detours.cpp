@@ -394,21 +394,6 @@ void __fastcall detours::ModifyEyePosition ( void *ecx, void *edx, vec3_t &eye_p
 
 void __fastcall detours::PacketEnd ( void *ecx, void *edx ) {
 	old::PacketEnd ( ecx, edx );
-
-	auto nc = g_csgo.m_engine->GetNetChannelInfo ( );
-
-	if ( nc && ( g_menu.main.aimbot.enable.get ( ) || g_menu.main.antiaim.lag_enable.get ( ) ) && g_csgo.m_engine->IsInGame ( ) ) {
-		const auto backup_packets = nc->m_choked_packets;
-
-		auto out_sequence_nr = *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
-
-		nc->m_choked_packets = 0;
-		nc->SendDatagram ( 0 );
-		nc->m_choked_packets = backup_packets;
-
-		-- *( int * ) ( std::uintptr_t ( nc ) + 0x2C );
-		-- *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
-	}
 }
 
 bool __fastcall detours::ShouldSkipAnimationFrame ( void *ecx, void *edx ) {
