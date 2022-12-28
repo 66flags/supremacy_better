@@ -146,11 +146,9 @@ bool __fastcall detours::SVCMsg_VoiceData ( void *ecx, void *edx, void *a2 ) {
 void __fastcall detours::UpdateClientSideAnimation ( void* ecx, void* edx ) {
 	auto player = ( Player * ) ecx;
 
-	if ( !player ) {
-		//memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
+	if ( !player || game::IsFakePlayer ( player->index ( ) ) )
 		return old::UpdateClientSideAnimation ( ecx, edx );
-	}
-
+	
 	if ( player->index ( ) == g_cl.m_local->index ( ) ) {
 		auto state = ( CCSGOGamePlayerAnimState * ) g_cl.m_local->m_PlayerAnimState ( );
 
@@ -184,7 +182,7 @@ void __fastcall detours::UpdateClientSideAnimation ( void* ecx, void* edx ) {
 	if ( g_cl.m_local && player->m_iTeamNum ( ) != g_cl.m_local->m_iTeamNum ( ) ) {
 		player->SetAbsOrigin ( player->m_vecOrigin ( ) );
 
-		if ( g_cl.m_update_ent ) {
+		if ( g_cl.m_update_ent [ player->index ( ) ] ) {
 			// @onetap
 			if ( player->m_AnimOverlay ( ) ) {
 				for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ ) {
@@ -192,16 +190,12 @@ void __fastcall detours::UpdateClientSideAnimation ( void* ecx, void* edx ) {
 				}
 			}
 
-			// will force GetAbsVelocity in CCSGOPlayerAnimState::Update to not do shit to velocity
-			// also, we hook IsHLTV so we know that we call GetAbsVelocity not EstimateAbsVelocity
-
 			int iEFlags = player->m_iEFlags ( );
 
 			player->m_iEFlags ( ) &= ~( 1 << 12 );
 
 			old::UpdateClientSideAnimation ( ecx, edx );
 
-			// restore entity flags
 			player->m_iEFlags ( ) = iEFlags;
 		}
 		else

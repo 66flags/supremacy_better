@@ -490,18 +490,18 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	if ( state->m_frame == g_csgo.m_globals->m_frame )
 		state->m_frame -= 1;
 	
-	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent = true;
+	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent [ m_player->index ( ) ] = true;
 
-	if ( fake )
+	if ( fake ) {
 		g_resolver.ResolveAngles ( m_player, record );
+		state->m_eye_pitch = record->m_eye_angles.x;
+		state->m_eye_yaw = record->m_eye_angles.y;
+		m_player->m_angEyeAngles ( ) = record->m_eye_angles;
+		m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
+	}
 	
-	state->m_eye_pitch = record->m_eye_angles.x;
-	state->m_eye_yaw = record->m_eye_angles.y;
-	
-	m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
-	m_player->m_angEyeAngles ( ) = record->m_eye_angles;
 	m_player->UpdateClientSideAnimation ( );
-	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent = false;
+	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent [ m_player->index ( ) ] = false;
 
 	if ( fake )
 		g_resolver.ResolvePoses ( m_player, record );
@@ -584,30 +584,15 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 
 				current->m_shifting = false;
 
-				player->m_flDuckAmount ( ) = math::Lerp ( player->m_flDuckAmount ( ), current->m_duck, static_cast< float >( i + 1 ) / static_cast< float >( lag ) );
-	/*			player->m_flSimulationTime ( ) = current->m_sim_time + time;
-				player->m_flOldSimulationTime ( ) = current->m_old_sim_time - game::TICKS_TO_TIME ( 1 );*/
-
-				//if ( current->m_lag > 0 && current->m_lag < 16 && m_records.size ( ) >= 2 ) {
-				//	LagRecord *previous = m_records [ 1 ].get ( );
-
-				//	if ( previous && !previous->dormant ( ) )
-				//		current->m_has_vel = g_aimbot.FixVelocity ( m_player, previous, m_player->m_vecVelocity ( ), current->m_layers, m_player->m_vecOrigin ( ) );
-
-				//	current->m_velocity = m_player->m_vecVelocity ( );
-				//}
-
 				UpdateAnimations ( current );
-
-				//player->m_flSimulationTime ( ) = backup_simtime;
-				//player->m_flOldSimulationTime ( ) = backup_old_simtime;
 			}
 
 		}
 	
 		BoneArray m [ 128 ];
+		
 		g_bones.Build ( m_player, m, g_csgo.m_globals->m_curtime );
-		memcpy ( current->m_bones, m, sizeof ( BoneArray ) * 128 );
+		memcpy ( current->m_bones, m, sizeof ( current->m_bones ) );
 	}
 
 	//// ghetto fix

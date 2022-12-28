@@ -110,8 +110,8 @@ void InputPrediction::FixViewmodel ( bool store ) {
 
 	auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
 
-	g_cl.m_local->m_flCycle ( ) = last_cycle;
-	g_cl.m_local->m_nSequence ( ) = last_sequence;
+	viewmodel->m_flCycle ( ) = last_cycle;
+	viewmodel->m_nSequence ( ) = last_sequence;
 
 	last_cycle = viewmodel->m_flCycle ( );
 	last_sequence = viewmodel->m_nSequence ( );

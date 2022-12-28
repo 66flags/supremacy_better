@@ -20,8 +20,21 @@ void Hooks::BuildTransformations ( int a2, int a3, int a4, int a5, int a6, int a
 	// null bone jiggle to prevent attachments from jiggling around.
 	*reinterpret_cast< int * >( uintptr_t ( player ) + 0x291C ) = 0;
 
+	auto hdr = ( ( CStudioHdr * ) a3 )->m_pStudioHdr;
+
+	const auto backup_bone_flags = hdr->m_flags;
+
+	for ( auto i = 0; i < hdr->m_num_bones; i++ ) {
+		auto bone = hdr->GetBone ( i );
+
+		if ( bone )
+			bone->m_flags &= ~0x04;
+	}
+	
 	// call og.
 	g_hooks.m_BuildTransformations ( this, a2, a3, a4, a5, a6, a7 );
+
+	hdr->m_flags = backup_bone_flags;
 
 	// restore bone jiggle.
 	*reinterpret_cast< int * >( uintptr_t ( player ) + 0x291C ) = bone_jiggle;
@@ -121,12 +134,12 @@ void CustomEntityListener::OnEntityCreated ( Entity *ent ) {
 				g_hooks.m_NotifyOnLayerChangeCycle = vmt->add< Hooks::NotifyOnLayerChangeCycle_t > ( Player::NOTIFYONLAYERCHANGECYCLE, util::force_cast ( &Hooks::NotifyOnLayerChangeCycle ) );
 				g_hooks.m_NotifyOnLayerChangeWeight = vmt->add< Hooks::NotifyOnLayerChangeWeight_t > ( Player::NOTIFYONLAYERCHANGEWEIGHT, util::force_cast ( &Hooks::NotifyOnLayerChangeWeight ) );
 				//g_hooks.m_AccumulateLayers = vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
+				g_hooks.m_CalcView = vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
 				
 				// local gets special treatment.
 				if ( player->index ( ) == g_csgo.m_engine->GetLocalPlayer ( ) ) {
 					g_hooks.m_GetActiveWeapon = vmt->add< Hooks::GetActiveWeapon_t > ( Player::GETACTIVEWEAPON, util::force_cast ( &Hooks::GetActiveWeapon ) );
 					g_hooks.m_BuildTransformations = vmt->add< Hooks::BuildTransformations_t > ( Player::BUILDTRANSFORMATIONS, util::force_cast ( &Hooks::BuildTransformations ) );
-					g_hooks.m_CalcView = vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
 					g_hooks.m_GetEyeAngles = vmt->add< Hooks::GetEyeAngles_t > ( Player::GETEYEANGLES, util::force_cast ( &Hooks::GetEyeAngles ) );
 				}
 			}

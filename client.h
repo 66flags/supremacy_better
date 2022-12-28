@@ -130,7 +130,7 @@ public:
 	float  m_speed;
 	float  m_anim_time;
 	float  m_anim_frame;
-	bool   m_update_ent;
+	bool   m_update_ent [ 65 ];
 	bool   m_ground;
 	bool   m_lagcomp;
 
