@@ -26,7 +26,7 @@ void Hooks::LevelShutdown ( ) {
 
 	g_cl.m_local = nullptr;
 	g_cl.m_weapon = nullptr;
-	g_cl.m_processing = false;
+	//g_cl.m_processing = false;
 	g_cl.m_weapon_info = nullptr;
 	g_cl.m_round_end = false;
 
@@ -85,6 +85,10 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	//if ( stage == FRAME_NET_UPDATE_END )
 		//g_inputpred.FixViewmodel ( false );
 
+	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_START ) {
+		g_inputpred.FixViewmodel ( false );
+	}
+	
 	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END && ( g_cl.m_local && g_cl.m_local->alive ( ) ) ) {
 		g_inputpred.stored.m_old_velocity_modifier = g_cl.m_local->m_flVelocityModifier ( );
 
@@ -137,7 +141,6 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	else if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_START ) {
 		// restore non-compressed netvars.
 		// g_netdata.apply( );
-
 		g_skins.think ( );
 	}
 

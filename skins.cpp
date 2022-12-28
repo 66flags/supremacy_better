@@ -92,7 +92,7 @@ void Skins::think( ) {
 	if( !g_csgo.m_engine->IsInGame( ) )
 		return;
 
-	if( !g_cl.m_local || !g_cl.m_local->alive( ) )
+	if( !g_cl.m_local->alive( ) )
 		return;
 
 	player_info_t info;

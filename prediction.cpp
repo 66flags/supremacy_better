@@ -48,8 +48,6 @@ void Hooks::RunCommand( Entity* ent, CUserCmd* cmd, IMoveHelper* movehelper ) {
 
 				if ( g_inputpred.stored.m_velocity_modifier < 1.0f )
 					g_inputpred.stored.m_velocity_modifier = std::clamp < float > ( g_inputpred.stored.m_velocity_modifier + ( game::TICKS_TO_TIME ( 1 ) + latency ) * ( 1.0f / 2.5f ), 0.0f, 1.0f );
-
-				old_num = g_cl.m_cmd->m_command_number;
 			}
 
 			if ( !( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) )
@@ -57,21 +55,16 @@ void Hooks::RunCommand( Entity* ent, CUserCmd* cmd, IMoveHelper* movehelper ) {
 		}
 	}
 
-	if ( g_cl.m_cmd->m_command_number > old_num )
-		g_inputpred.FixViewmodel ( false );
+	//if ( g_cl.m_cmd->m_command_number > old_num )
 
 	g_hooks.m_prediction.GetOldMethod< RunCommand_t >( CPrediction::RUNCOMMAND )( this, ent, cmd, movehelper );
-
-	if ( g_cl.m_cmd->m_command_number > old_num )
-		g_inputpred.FixViewmodel ( true );
-
+	g_inputpred.FixViewmodel ( true );
 	g_netdata.store ( );
 
 	if ( ent )
 		*( int* )( std::uintptr_t ( ent ) + 0x3238 ) = 0;
 
-	//if ( g_cl.m_cmd->m_command_number > old_num ) {
-
-	//	old_num = g_cl.m_cmd->m_command_number;
+	if ( g_cl.m_cmd->m_command_number > old_num ) 
+		old_num = g_cl.m_cmd->m_command_number;
 	//}
 }

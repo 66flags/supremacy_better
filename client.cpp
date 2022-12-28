@@ -102,7 +102,7 @@ void Client::OnMapload ( ) {
 	// init knife shit.
 	g_skins.load ( );
 
-	m_sequences.clear ( );
+	//m_sequences.clear ( );
 
 	// if the INetChannelInfo pointer has changed, store it for later.
 	g_csgo.m_net = g_csgo.m_engine->GetNetChannelInfo ( );
@@ -110,8 +110,8 @@ void Client::OnMapload ( ) {
 	if ( g_csgo.m_net ) {
 		g_hooks.m_net_channel.reset ( );
 		g_hooks.m_net_channel.init ( g_csgo.m_net );
-		g_hooks.m_net_channel.add ( INetChannel::PROCESSPACKET, util::force_cast ( &Hooks::ProcessPacket ) );
-		g_hooks.m_net_channel.add ( INetChannel::SENDDATAGRAM, util::force_cast ( &Hooks::SendDatagram ) );
+		//g_hooks.m_net_channel.add ( INetChannel::PROCESSPACKET, util::force_cast ( &Hooks::ProcessPacket ) );
+		//g_hooks.m_net_channel.add ( INetChannel::SENDDATAGRAM, util::force_cast ( &Hooks::SendDatagram ) );
 	}
 }
 
@@ -139,9 +139,7 @@ void Client::StartMove ( CUserCmd *cmd ) {
 	m_arrival_tick = m_server_tick + m_latency_ticks;
 
 	// processing indicates that the localplayer is valid and alive.
-	m_processing = m_local && m_local->alive ( );
-	if ( !m_processing )
-		return;
+	//m_processing = m_local && m_local->alive ( );
 
 	// make sure prediction has ran on all usercommands.
 	// because prediction runs on frames, when we have low fps it might not predict all usercommands.
@@ -260,6 +258,12 @@ void Client::UpdateLocalAnimations ( ) {
 }
 
 void Client::UpdateInformation ( ) {
+	static float backup_frametime = g_csgo.m_globals->m_frametime;
+	static float backup_curtime = g_csgo.m_globals->m_curtime;
+
+	g_csgo.m_globals->m_curtime = game::TICKS_TO_TIME ( m_local->m_nTickBase ( ) );
+	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
+
 	if ( g_cl.m_lag > 0 ) {
 		// force a client animation update.
 		//g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
@@ -327,6 +331,9 @@ void Client::UpdateInformation ( ) {
 	m_rotation = g_cl.m_local->m_angAbsRotation ( );
 	m_speed = state->m_speed;
 	m_ground = state->m_ground;
+
+	g_csgo.m_globals->m_frametime = backup_frametime;
+	g_csgo.m_globals->m_curtime = backup_curtime;
 }
 
 void Client::DoMove ( ) {
@@ -431,8 +438,6 @@ void Client::EndMove ( CUserCmd *cmd ) {
 	//g_aimbot.UpdateLocal ( );
 	//if ( g_cl.m_packet )
 
-	UpdateInformation ( );
-	
 	//if ( g_csgo.m_input->CAM_IsThirdPerson ( ) )
 	//	g_csgo.m_prediction->SetLocalViewAngles ( g_cl.m_angle );
 
@@ -489,13 +494,6 @@ void Client::OnTick ( CUserCmd *cmd ) {
 	// store some data and update prediction.
 	StartMove ( cmd );
 
-	// not much more to do here.
-	if ( !m_processing )
-		return;
-
-	if ( cmd->m_buttons & IN_ATTACK )
-		*g_cl.m_packet = true;
-
 	// save the original state of players.
 	BackupPlayers ( false );
 
@@ -513,28 +511,31 @@ void Client::OnTick ( CUserCmd *cmd ) {
 	// and prediction seed/player.
 	g_inputpred.restore ( );
 
+	if ( cmd->m_buttons & IN_ATTACK )
+		*g_cl.m_packet = true;
+
+	UpdateInformation ( );
 	UpdateLocalAnimations ( );
 
-	if ( !*m_packet ) {
-		auto nc = g_csgo.m_engine->GetNetChannelInfo ( );
+	if ( *m_packet ) {
+		g_cl.m_outgoing_cmd_nums.emplace_front ( cmd->m_command_number );
+	}
+	else {
+		auto nc = g_csgo.m_cl->m_net_channel;
 
-		if ( nc && m_lag > 0 && ( nc->m_choked_packets % 4 ) && ( g_menu.main.aimbot.enable.get ( ) || g_menu.main.antiaim.lag_enable.get ( ) ) && g_csgo.m_engine->IsInGame ( ) ) {
-			const auto backup_packets = nc->m_choked_packets;
-
-			auto out_sequence_nr = *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
+		if ( nc ) {
+			const int backup_choked = nc->m_choked_packets;
 
 			nc->m_choked_packets = 0;
-			nc->SendDatagram ( 0 );
-			nc->m_choked_packets = backup_packets;
-
-			-- *( int * ) ( std::uintptr_t ( nc ) + 0x2C );
+			nc->SendDatagram ( nullptr );
 			-- *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
+			nc->m_choked_packets = backup_choked;
 		}
 	}
 }
 
 void Client::SetAngles ( ) {
-	if ( !g_cl.m_local || !g_cl.m_processing )
+	if ( !g_cl.m_local || !g_cl.m_local->alive ( ) )
 		return;
 
 	//g_cl.m_local->m_angRotation ( ) = m_rotation;
@@ -542,7 +543,7 @@ void Client::SetAngles ( ) {
 }
 
 void Client::UpdateAnimations ( ) {
-	if ( !g_cl.m_local || !g_cl.m_processing )
+	if ( !g_cl.m_local || !g_cl.m_local->alive ( ) )
 		return;
 
 	CCSGOPlayerAnimState *state = g_cl.m_local->m_PlayerAnimState ( );

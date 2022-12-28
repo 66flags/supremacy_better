@@ -151,6 +151,7 @@ public:
 	CEventInfo*     m_events;					// 0x4DEC
 
 	enum indices : size_t {
+		PACKETSTART = 5,
 		PACKETEND = 6,
 		TEMPENTITIES = 36,
 		SVCMSG_VOICEDATA = 24

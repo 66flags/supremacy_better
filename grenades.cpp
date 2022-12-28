@@ -22,7 +22,7 @@ void Grenades::paint( ) {
 		return;
 
 	// we dont want to do this if dead.
-	if( !g_cl.m_processing )
+	if( !g_cl.m_local->alive ( ) )
 		return;
 
 	// aww man...
@@ -123,7 +123,7 @@ void Grenades::think( ) {
 	if( !g_menu.main.visuals.tracers.get( ) )
 		return;
 
-	if( !g_cl.m_processing )
+	if( !g_cl.m_local->alive ( ) )
 		return;
 
 	// validate nade.

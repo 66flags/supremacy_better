@@ -3,6 +3,7 @@
 namespace detours {
 	bool init ( );
 
+	int __fastcall PacketStart ( void *ecx, void *edx, int incoming_sequence, int outgoing_acknowledged );
 	void CL_FireEvents ( );
 	void ProcessInterpolatedList ( );
 	int __fastcall DrawStaticPropArrayFast ( void *ecx, void *edx, void *props, int count, bool shadow_deph );
@@ -22,14 +23,14 @@ namespace detours {
 	bool __fastcall SetupBones ( void *ecx, void *edx, BoneArray *out, int max, int mask, float curtime );
 	void __fastcall Paint ( void *ecx, void *edx, PaintModes_t mode );
 	void __fastcall ModifyEyePosition ( void *ecx, void *edx, vec3_t &eye_pos );
-	void __fastcall PacketEnd ( void *ecx, void *edx );
+	void __fastcall SetChoked ( void *ecx, void *edx );
 	bool __fastcall ShouldSkipAnimationFrame ( void *ecx, void *edx );
 	void __fastcall CheckForSequenceChange ( void *ecx, void *edx, void *hdr, int sequence, bool force_new_sequence, bool interpolate );
 	void __fastcall StandardBlendingRules ( void *ecx, void *edx, void *hdr, void *pos, void *q, float current_time, int bone_mask );
 
 	namespace old {
 		inline decltype ( &detours::Paint ) Paint;
-		inline decltype ( &detours::PacketEnd ) PacketEnd;
+		inline decltype ( &detours::PacketStart ) PacketStart;
 		inline decltype ( &detours::ShouldSkipAnimationFrame ) ShouldSkipAnimationFrame;
 		inline decltype ( &detours::CheckForSequenceChange ) CheckForSequenceChange;
 		inline decltype ( &detours::StandardBlendingRules ) StandardBlendingRules;

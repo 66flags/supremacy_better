@@ -5,7 +5,7 @@ bool detours::init ( ) {
 		throw std::runtime_error ( XOR ( "Unable to initialize minhook!" ) );
 
 	const auto _paint = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 EC 40 53 8B D9 8B 0D ? ? ? ? 89" ) ).as< void * > ( );
-	const auto _packet_end = util::get_method < void * > ( g_csgo.m_cl, CClientState::PACKETEND );
+	//const auto _packet_start = util::get_method < decltype ( &PacketStart ) > ( g_csgo.m_cl, 5 );
 	const auto _should_skip_animation_frame = pattern::find ( g_csgo.m_client_dll, XOR ( "57 8B F9 8B 07 8B ? ? ? ? ? FF D0 84 C0 75 02" ) ).as < void * > ( );
 	const auto _check_for_sequence_change = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 51 53 8B 5D 08 56 8B F1 57 85" ) ).as < void * > ( ); // 55 8B EC 51 53 8B 5D 08 56 8B F1 57 85
 	const auto _standard_blending_rules = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F0 B8 ? ? ? ? E8 ? ? ? ? 56 8B 75 08 57 8B F9 85 F6" ) ).as < void * > ( ); //55 8B EC 83 E4 F0 B8 ? ? ? ? E8 ? ? ? ? 56 8B 75 08 57 8B F9 85 F6
@@ -17,39 +17,58 @@ bool detours::init ( ) {
 	const auto _setup_movement = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 81 EC ? ? ? ? 56 57 8B 3D ? ? ? ? 8B" ) ).as < void * > ( );
 	const auto _update_client_side_animation = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 51 56 8B F1 80 BE ? ? ? ? ? 74" ) ).as < void * > ( );
 	const auto _svcmsg_voicedata = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 E4 F8 A1 ? ? ? ? 81 EC ? ? ? ? 53 56 8B F1 B9 ? ? ? ? 57 FF 50 34 8B 7D 08 85 C0 74 13 8B 47 08 40 50 68 ? ? ? ? FF 15 ? ? ? ? 83 C4 08 8B 47 08 89 44 24 1C 8D 48 01 8B 86 ? ? ? ? 40 89 4C 24 0C 3B C8 75 49" ) ).as < void * > ( );
-	const auto _process_movement = util::get_method < void * > ( g_csgo.m_game_movement, CGameMovement::PROCESSMOVEMENT );
+	const auto _process_movement = util::get_method < void* > ( g_csgo.m_game_movement, CGameMovement::PROCESSMOVEMENT );
 	const auto _maintain_sequence_transitions = pattern::find ( g_csgo.m_client_dll, XOR ( "53 8B DC 83 EC 08 83 E4 F8 83 C4 04 55 8B 6B 04 89 6C 24 04 8B EC 83 EC 18 56 57 8B F9 F3" ) ).as < void * > ( );
 	const auto _computeposeparam_moveyaw = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F0 83 EC 48 56 8B F1 57 8B 46 14 85 C0 74 09 83 F8 01 0F 85 ? ? ? ? E8" ) ).as < void * > ( );
 	const auto _teleported = pattern::find ( g_csgo.m_client_dll, XOR ( "E8 ? ? ? ? 84 C0 75 0D 8B 87 ? ? ? ? C1 E8 03 A8 01 74 2E 8B" ) ).rel32 ( 0x1 ).as < void * > ( );
 	const auto _process_interp_list = pattern::find ( g_csgo.m_client_dll, XOR ( "0F ? ? ? ? ? ? 3D ? ? ? ? 74 3F" ) ).as < void * > ( );
 	const auto _drawstaticproparrayfast = util::get_method < void * > ( g_csgo.m_model_render, IVModelRender::DRAWSTATICPROPARRAYFAST );
 	const auto _cl_fireevents = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 EC 08 53 8B 1D ? ? ? ? 56 57 83 BB ? ? ? ? ? 74" ) ).as < void * > ( );
+	const auto _packet_start = pattern::find ( g_csgo.m_engine_dll, XOR ( "56 8B F1 E8 ? ? ? ? 8B 8E ? ? ? ? 3B" ) ).sub ( 32 ).as < decltype ( &PacketStart ) > ( );
+	
 	// create detours.
-	//MH_CreateHook ( _drawstaticproparrayfast, detours::DrawStaticPropArrayFast, ( void ** ) &old::DrawStaticPropArrayFast );
+	MH_CreateHook ( _packet_start, detours::PacketStart, ( void ** ) &old::PacketStart );
 	MH_CreateHook ( _paint, detours::Paint, ( void ** ) &old::Paint );
-	MH_CreateHook ( _packet_end, detours::PacketEnd, ( void ** ) &old::PacketEnd );
 	MH_CreateHook ( _should_skip_animation_frame, detours::ShouldSkipAnimationFrame, ( void ** ) &old::ShouldSkipAnimationFrame );
 	MH_CreateHook ( _check_for_sequence_change, detours::CheckForSequenceChange, ( void ** ) &old::CheckForSequenceChange );
 	MH_CreateHook ( _standard_blending_rules, detours::StandardBlendingRules, ( void ** ) &old::StandardBlendingRules );
 	MH_CreateHook ( _modify_eye_position, detours::ModifyEyePosition, ( void ** ) &old::ModifyEyePosition );
 	MH_CreateHook ( _base_interpolate_part1, detours::BaseInterpolatePart1, ( void ** ) &old::BaseInterpolatePart1 );
-//	MH_CreateHook ( _animstate_update, detours::UpdateAnimationState, ( void ** ) &old::UpdateAnimationState );
+	//	MH_CreateHook ( _animstate_update, detours::UpdateAnimationState, ( void ** ) &old::UpdateAnimationState );
 	MH_CreateHook ( _do_procedural_footplant, detours::DoProceduralFootPlant, ( void ** ) &old::DoProceduralFootPlant );
 	//MH_CreateHook ( _setup_bones, detours::SetupBones, ( void ** ) &old::SetupBones );
 	MH_CreateHook ( _setup_movement, detours::SetupMovement, ( void ** ) &old::SetupMovement );
 	//MH_CreateHook ( _svcmsg_voicedata, detours::SVCMsg_VoiceData, ( void ** ) &old::SVCMsg_VoiceData );
 	MH_CreateHook ( _process_movement, detours::ProcessMovement, ( void ** ) &old::ProcessMovement );
-//	MH_CreateHook ( _maintain_sequence_transitions, detours::MaintainSequenceTransitions, ( void ** ) &old::MaintainSequenceTransitions );
+	//	MH_CreateHook ( _maintain_sequence_transitions, detours::MaintainSequenceTransitions, ( void ** ) &old::MaintainSequenceTransitions );
 	MH_CreateHook ( _update_client_side_animation, detours::UpdateClientSideAnimation, ( void ** ) &old::UpdateClientSideAnimation );
 	MH_CreateHook ( _process_interp_list, detours::ProcessInterpolatedList, ( void ** ) &old::ProcessInterpolatedList );
 	//MH_CreateHook ( _computeposeparam_moveyaw, detours::ComputePoseParam_MoveYaw, ( void ** ) &old::ComputePoseParam_MoveYaw );
 	MH_CreateHook ( _teleported, detours::Teleported, ( void ** ) &old::Teleported ); // we dont really need to do this since disabling bone interp clears ik targets already lol
 	MH_CreateHook ( _cl_fireevents, detours::CL_FireEvents, ( void ** ) &old::CL_FireEvents );
-	
+
 	// enable all hooks.
 	MH_EnableHook ( MH_ALL_HOOKS );
 
 	return true;
+}
+
+int __fastcall detours::PacketStart ( void* ecx, void* edx, int incoming_sequence, int outgoing_acknowledged ) {
+	for ( const int it : g_cl.m_outgoing_cmd_nums ) {
+		if ( it == outgoing_acknowledged ) {
+			old::PacketStart ( ecx, edx, incoming_sequence, outgoing_acknowledged );
+			break;
+		}
+	}
+
+	for ( auto it = g_cl.m_outgoing_cmd_nums.begin ( ); it != g_cl.m_outgoing_cmd_nums.end ( ); ) {
+		if ( *it < outgoing_acknowledged )
+			it = g_cl.m_outgoing_cmd_nums.erase ( it );
+		else
+			it++;
+	}
+
+	return 0;
 }
 
 void detours::CL_FireEvents ( ) {
@@ -92,7 +111,7 @@ void detours::ProcessInterpolatedList ( ) {
 	old::ProcessInterpolatedList ( );
 }
 
-int __fastcall detours::DrawStaticPropArrayFast ( void* ecx, void* edx, void *props, int count, bool shadow_deph ) {
+int __fastcall detours::DrawStaticPropArrayFast ( void *ecx, void *edx, void *props, int count, bool shadow_deph ) {
 	if ( g_menu.main.visuals.transparent_props.get ( ) )
 		g_csgo.m_studio_render->SetAlphaModulation ( g_menu.main.visuals.transparent_props_opacity.get ( ) / 100.f );
 
@@ -110,7 +129,7 @@ void __fastcall detours::ComputePoseParam_MoveYaw ( void *ecx, void *edx, void *
 	old::ComputePoseParam_MoveYaw ( ecx, edx, hdr );
 }
 
-void __fastcall detours::MaintainSequenceTransitions ( void* ecx, void* edx, void* bone_setup, float cycle, vec3_t pos [ ], quaternion_t q [ ] ) {
+void __fastcall detours::MaintainSequenceTransitions ( void *ecx, void *edx, void *bone_setup, float cycle, vec3_t pos [ ], quaternion_t q [ ] ) {
 	if ( !g_bones.m_running )
 		return old::MaintainSequenceTransitions ( ecx, edx, bone_setup, cycle, pos, q );
 }
@@ -132,7 +151,7 @@ int __fastcall detours::BaseInterpolatePart1 ( void *ecx, void *edx, float &curt
 	return old::BaseInterpolatePart1 ( ecx, edx, curtime, old_origin, old_angs, no_more_changes );
 }
 
-void __fastcall detours::ProcessMovement ( void* ecx, void* edx, Entity *player, CMoveData *data ) {
+void __fastcall detours::ProcessMovement ( void *ecx, void *edx, Entity *player, CMoveData *data ) {
 	data->m_bGameCodeMovedPlayer = false;
 	old::ProcessMovement ( ecx, edx, player, data );
 }
@@ -143,12 +162,12 @@ bool __fastcall detours::SVCMsg_VoiceData ( void *ecx, void *edx, void *a2 ) {
 	return og;
 }
 
-void __fastcall detours::UpdateClientSideAnimation ( void* ecx, void* edx ) {
+void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 	auto player = ( Player * ) ecx;
 
 	if ( !player || game::IsFakePlayer ( player->index ( ) ) )
 		return old::UpdateClientSideAnimation ( ecx, edx );
-	
+
 	if ( player->index ( ) == g_cl.m_local->index ( ) ) {
 		auto state = ( CCSGOGamePlayerAnimState * ) g_cl.m_local->m_PlayerAnimState ( );
 
@@ -178,7 +197,7 @@ void __fastcall detours::UpdateClientSideAnimation ( void* ecx, void* edx ) {
 	}
 	else
 		old::UpdateClientSideAnimation ( ecx, edx );
-	
+
 	if ( g_cl.m_local && player->m_iTeamNum ( ) != g_cl.m_local->m_iTeamNum ( ) ) {
 		player->SetAbsOrigin ( player->m_vecOrigin ( ) );
 
@@ -201,7 +220,7 @@ void __fastcall detours::UpdateClientSideAnimation ( void* ecx, void* edx ) {
 		else
 			old::UpdateClientSideAnimation ( ecx, edx );
 	}
-	
+
 	else
 		old::UpdateClientSideAnimation ( ecx, edx );
 }
@@ -359,7 +378,7 @@ bool __fastcall detours::SetupBones ( void *ecx, void *edx, BoneArray *out, int 
 			else
 				return false;
 		}
-		
+
 		return true;
 	}
 
@@ -390,10 +409,6 @@ void __fastcall detours::ModifyEyePosition ( void *ecx, void *edx, vec3_t &eye_p
 	*( bool * ) ( std::uintptr_t ( state ) + 0x328 ) = false;
 
 	return old::ModifyEyePosition ( ecx, edx, eye_pos );
-}
-
-void __fastcall detours::PacketEnd ( void *ecx, void *edx ) {
-	old::PacketEnd ( ecx, edx );
 }
 
 bool __fastcall detours::ShouldSkipAnimationFrame ( void *ecx, void *edx ) {

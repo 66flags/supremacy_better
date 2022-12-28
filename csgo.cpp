@@ -107,6 +107,7 @@ bool CSGO::init( ) {
     sv_clip_penetration_traces_to_players   = m_cvar->FindVar( HASH( "sv_clip_penetration_traces_to_players" ) );
     weapon_accuracy_shotgun_spread_patterns = m_cvar->FindVar( HASH( "weapon_accuracy_shotgun_spread_patterns" ) );
 	net_showfragments                       = m_cvar->FindVar( HASH( "net_showfragments" ) );
+	net_earliertempents						= m_cvar->FindVar ( HASH ( "net_earliertempents" ) );
 	cl_csm_shadows							= m_cvar->FindVar ( HASH ( "cl_csm_shadows" ) );
 	cl_foot_contact_shadows					= m_cvar->FindVar ( HASH ( "cl_foot_contact_shadows" ) );
 	cl_extrapolate							= m_cvar->FindVar ( HASH ( "cl_extrapolate" ) );
@@ -141,7 +142,7 @@ bool CSGO::init( ) {
 	m_mem_alloc          = PE::GetExport( m_tier0_dll, HASH( "g_pMemAlloc" ) ).get< IMemAlloc* >( );
 	GetGlowObjectManager = pattern::find( m_client_dll, XOR( "A1 ? ? ? ? A8 01 75 4B" ) ).as< GetGlowObjectManager_t >( );
 	m_glow               = GetGlowObjectManager( );
-	//m_hookable_cl        = reinterpret_cast< void * >( *reinterpret_cast< uintptr_t ** >( reinterpret_cast< uintptr_t >( m_cl ) + 0x8 ) );
+	m_hookable_cl        = reinterpret_cast< void * >( *reinterpret_cast< uintptr_t ** >( reinterpret_cast< uintptr_t >( m_cl ) + 0x8 ) );
 
 	// classes by offset from virtual.
 	m_globals     = util::get_method( m_client, CHLClient::INIT ).add( 0x1b ).get< CGlobalVarsBase* >( 2 );

@@ -6,7 +6,7 @@ void NetData::store( ) {
     int          tickbase;
     StoredData_t *data;
 
-	if( !g_cl.m_processing ) {
+	if( !g_cl.m_local->alive ( ) ) {
 		reset( );
 		return;
 	}
@@ -28,7 +28,7 @@ void NetData::apply( ) {
     ang_t        punch_delta, punch_vel_delta;
 	vec3_t       view_delta;
 
-    if( !g_cl.m_processing ) {
+    if( !g_cl.m_local->alive ( ) ) {
 		reset( );
 		return;
 	}

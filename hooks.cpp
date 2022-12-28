@@ -180,7 +180,8 @@ void Hooks::init( ) {
 	m_fire_bullets.init( g_csgo.TEFireBullets );
 	m_fire_bullets.add( 7, util::force_cast( &Hooks::PostDataUpdate ) );
 
-	//m_client_state.init( g_csgo.m_hookable_cl );
+	m_client_state.init( g_csgo.m_hookable_cl );
+	//client_state.add ( CClientState::PACKETSTART, util::force_cast ( &Hooks::PacketStart ) );
 	//m_client_state.add( CClientState::TEMPENTITIES, util::force_cast( &Hooks::TempEntities ) );
 
 	// register our custom entity listener.
@@ -188,8 +189,8 @@ void Hooks::init( ) {
 	g_custom_entity_listener.init( );
 
 	// cvar hooks.
-	m_debug_spread.init( g_csgo.net_showfragments );
-	m_debug_spread.add( ConVar::GETINT, util::force_cast( &Hooks::DebugSpreadGetInt ) );
+	m_net_earlier_temp_ents.init( g_csgo.net_earliertempents ); // 85 C0 74 05 E8 ? ? ? ? 84 DB 0F 84
+	m_net_earlier_temp_ents.add( ConVar::GETBOOL, util::force_cast( &Hooks::NetEarlierTempEntsGetBool ) );
 
 	m_net_show_fragments.init( g_csgo.net_showfragments );
 	m_net_show_fragments.add( ConVar::GETBOOL, util::force_cast( &Hooks::NetShowFragmentsGetBool ) );

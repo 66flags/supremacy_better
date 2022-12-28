@@ -721,7 +721,7 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 
 void AimPlayer::OnNetUpdate ( Player *player ) {
 	bool reset = ( !g_menu.main.aimbot.enable.get ( ) || !player->enemy ( g_cl.m_local ) || player->m_lifeState ( ) == LIFE_DEAD );
-	bool disable = ( !reset && !g_cl.m_processing );
+	bool disable = ( !reset && !g_cl.m_local->alive ( ) );
 
 	if ( reset ) {
 		player->m_bClientSideAnimation ( ) = true;
@@ -990,7 +990,7 @@ void Aimbot::think ( ) {
 
 // ty cbrs
 void Aimbot::Slow ( CUserCmd *ucmd ) {
-	if ( !g_cl.m_local || !g_cl.m_local->alive ( ) || !( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) || !g_cl.m_local->GetActiveWeapon ( ) || !g_cl.m_local->GetActiveWeapon ( )->GetWpnData ( ) )
+	if ( !g_cl.m_local->alive ( ) || !( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) || !g_cl.m_local->GetActiveWeapon ( ) || !g_cl.m_local->GetActiveWeapon ( )->GetWpnData ( ) )
 		return;
 
 	auto quick_stop = [ & ] ( ) {

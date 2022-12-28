@@ -73,6 +73,7 @@ public:
 	bool	         m_shot;
 	bool	         m_old_shot;
 	float            m_abs_yaw;
+	std::deque< int > m_outgoing_cmd_nums = {};
 	float            m_poses [ 24 ];
 
 	// active weapon variables.

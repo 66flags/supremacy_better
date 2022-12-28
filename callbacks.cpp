@@ -237,301 +237,301 @@ bool callbacks::IsConfig6( ) {
 
 // weaponcfgs callbacks.
 bool callbacks::DEAGLE( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::DEAGLE;
 }
 
 bool callbacks::ELITE( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::ELITE;
 }
 
 bool callbacks::FIVESEVEN( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::FIVESEVEN;
 }
 
 bool callbacks::GLOCK( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::GLOCK;
 }
 
 bool callbacks::AK47( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::AK47;
 }
 
 bool callbacks::AUG( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::AUG;
 }
 
 bool callbacks::AWP( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::AWP;
 }
 
 bool callbacks::FAMAS( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::FAMAS;
 }
 
 bool callbacks::G3SG1( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::G3SG1;
 }
 
 bool callbacks::GALIL( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::GALIL;
 }
 
 bool callbacks::M249( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::M249;
 }
 
 bool callbacks::M4A4( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::M4A4;
 }
 
 bool callbacks::MAC10( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::MAC10;
 }
 
 bool callbacks::P90( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::P90;
 }
 
 bool callbacks::UMP45( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::UMP45;
 }
 
 bool callbacks::XM1014( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::XM1014;
 }
 
 bool callbacks::BIZON( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::BIZON;
 }
 
 bool callbacks::MAG7( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::MAG7;
 }
 
 bool callbacks::NEGEV( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::NEGEV;
 }
 
 bool callbacks::SAWEDOFF( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::SAWEDOFF;
 }
 
 bool callbacks::TEC9( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::TEC9;
 }
 
 bool callbacks::P2000( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::P2000;
 }
 
 bool callbacks::MP7( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::MP7;
 }
 
 bool callbacks::MP9( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::MP9;
 }
 
 bool callbacks::NOVA( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::NOVA;
 }
 
 bool callbacks::P250( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::P250;
 }
 
 bool callbacks::SCAR20( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::SCAR20;
 }
 
 bool callbacks::SG553( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::SG553;
 }
 
 bool callbacks::SSG08( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::SSG08;
 }
 
 bool callbacks::M4A1S( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::M4A1S;
 }
 
 bool callbacks::USPS( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::USPS;
 }
 
 bool callbacks::CZ75A( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::CZ75A;
 }
 
 bool callbacks::REVOLVER( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::REVOLVER;
 }
 
 bool callbacks::KNIFE_BAYONET( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_BAYONET;
 }
 
 bool callbacks::KNIFE_FLIP( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_FLIP;
 }
 
 bool callbacks::KNIFE_GUT( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_GUT;
 }
 
 bool callbacks::KNIFE_KARAMBIT( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_KARAMBIT;
 }
 
 bool callbacks::KNIFE_M9_BAYONET( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_M9_BAYONET;
 }
 
 bool callbacks::KNIFE_HUNTSMAN( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_HUNTSMAN;
 }
 
 bool callbacks::KNIFE_FALCHION( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_FALCHION;
 }
 
 bool callbacks::KNIFE_BOWIE( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_BOWIE;
 }
 
 bool callbacks::KNIFE_BUTTERFLY( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_BUTTERFLY;
 }
 
 bool callbacks::KNIFE_SHADOW_DAGGERS( ) {
-	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_processing )
+	if( !g_csgo.m_engine->IsInGame( ) || !g_cl.m_local->alive ( ) )
 		return false;
 
 	return g_cl.m_weapon_id == Weapons_t::KNIFE_SHADOW_DAGGERS;

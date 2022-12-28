@@ -102,7 +102,7 @@ void InputPrediction::FixViewmodel ( bool store ) {
 	static float last_cycle = 0.f;
 	static float last_sequence = 0.f;
 
-	if ( !g_cl.m_local || !g_cl.m_local->alive ( ) )
+	if ( !g_cl.m_local->alive ( ) )
 		return;
 
 	if ( g_cl.m_local->m_hViewModel ( ) == 0xFFFFFFF )

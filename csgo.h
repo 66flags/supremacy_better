@@ -112,6 +112,7 @@ public:
 	ConVar *cl_forwardspeed;
 	ConVar *weapon_debug_spread_show;
 	ConVar *net_showfragments;
+	ConVar *net_earliertempents;
 	ConVar *molotov_throw_detonate_time;
 	ConVar *weapon_molotov_maxdetonateslope;
 	ConVar *weapon_recoil_scale;

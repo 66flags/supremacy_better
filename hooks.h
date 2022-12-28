@@ -52,6 +52,7 @@ public:
 	using OverrideConfig_t             = bool( __thiscall* )( void*, MaterialSystem_Config_t*, bool );
 	using PostDataUpdate_t             = void( __thiscall* )( void*, DataUpdateType_t );
 	using TempEntities_t               = bool( __thiscall* )( void*, void * );
+	using PacketStart_t = int ( __thiscall * )( void *, int, int );
 	using EmitSound_t                  = void( __thiscall* )( void*, IRecipientFilter&, int, int, const char*, unsigned int, const char*, float, float, int, int, int, const vec3_t*, const vec3_t*, void*, bool, float, int );
 	// using PreDataUpdate_t            = void( __thiscall* )( void*, DataUpdateType_t );
 	using CalcView_t				   = void ( __thiscall * ) ( void*, vec3_t &, ang_t &, float &, float &, float & );
@@ -62,6 +63,7 @@ public:
 
 public:
 	bool                     TempEntities( void *msg );
+	int PacketStart ( int incoming_sequence, int outgoing_acknowledged );
 	void                     PaintTraverse( VPANEL panel, bool repaint, bool force );
 	bool                     DoPostScreenSpaceEffects( CViewSetup* setup );
 	bool                     CreateMove( float input_sample_time, CUserCmd* cmd );
@@ -91,6 +93,7 @@ public:
 	void                     DrawModelExecute( uintptr_t ctx, const DrawModelState_t& state, const ModelRenderInfo_t& info, matrix3x4_t* bone );
 	void                     ComputeShadowDepthTextures( const CViewSetup& view, bool unk );
 	int                      DebugSpreadGetInt( );
+	bool NetEarlierTempEntsGetBool ( );
 	bool                     NetShowFragmentsGetBool( );
 	void                     DoExtraBoneProcessing( int a2, int a3, int a4, int a5, int a6, int a7 );
 	void                     BuildTransformations( int a2, int a3, int a4, int a5, int a6, int a7 );
@@ -134,6 +137,7 @@ public:
 
 	// cvars
 	VMT m_debug_spread;
+	VMT m_net_earlier_temp_ents;
 
 	// wndproc old ptr.
 	WNDPROC m_old_wndproc;
