@@ -330,7 +330,7 @@ void Visuals::Spectators( ) {
 
 void Visuals::StatusIndicators( ) {
 	// dont do if dead.
-	if( !g_cl.m_processing )
+	if( !g_cl.m_local || !g_cl.m_local->alive ( ) )
 		return;
 
 	// compute hud size.
@@ -415,7 +415,7 @@ void Visuals::StatusIndicators( ) {
 
 void Visuals::SpreadCrosshair( ) {
 	// dont do if dead.
-	if( !g_cl.m_processing )
+	if( !g_cl.m_local || !g_cl.m_local->alive ( ) )
 		return;
 
 	if( !g_menu.main.visuals.spread_xhair.get( ) )
@@ -456,7 +456,7 @@ void Visuals::PenetrationCrosshair( ) {
 	bool  valid_player_hit;
 	Color final_color;
 
-	if( !g_menu.main.visuals.pen_crosshair.get( ) || !g_cl.m_processing )
+	if( !g_menu.main.visuals.pen_crosshair.get( ) || !g_cl.m_local || !g_cl.m_local->alive ( ) )
 		return;
 
 	x = g_cl.m_width / 2;
@@ -650,7 +650,7 @@ void Visuals::OffScreen( Player* player, int alpha ) {
 	if( !g_menu.main.players.offscreen.get( ) )
 		return;
 
-	if( !g_cl.m_processing || !g_cl.m_local->enemy( player ) )
+	if( !g_cl.m_local || !g_cl.m_local->alive ( ) || !g_cl.m_local->enemy( player ) )
 		return;
 
 	// get the player's center screen position.
@@ -1555,7 +1555,7 @@ void Visuals::DrawBeams( ) {
 	auto vis_impacts = &g_shots.m_vis_impacts;
 
 	// the local player is dead, clear impacts.
-	if( !g_cl.m_processing ) {
+	if( !g_cl.m_local || !g_cl.m_local->alive ( ) ) {
 		if( !vis_impacts->empty( ) )
 			vis_impacts->clear( );
 	}
