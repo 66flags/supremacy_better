@@ -60,7 +60,7 @@ public:
 	using NotifyOnLayerChangeWeight_t = void ( __thiscall * ) ( void *, const C_AnimationLayer *, const float );
 	using GetEyeAngles_t = ang_t & ( __thiscall * ) ( void * );
 	using AccumulateLayers_t = void ( __thiscall * ) ( void *, void *setup, vec3_t &pos, void *q, float time );
-
+	using PhysicsSimulate_t = void ( __thiscall * )( void * );
 public:
 	bool                     TempEntities( void *msg );
 	int PacketStart ( int incoming_sequence, int outgoing_acknowledged );
@@ -96,6 +96,7 @@ public:
 	bool NetEarlierTempEntsGetBool ( );
 	bool                     NetShowFragmentsGetBool( );
 	void                     DoExtraBoneProcessing( int a2, int a3, int a4, int a5, int a6, int a7 );
+	void					 PhysicsSimulate ( );
 	void                     BuildTransformations( int a2, int a3, int a4, int a5, int a6, int a7 );
 	void					 CalcView ( vec3_t &eye_origin, ang_t &eye_angles, float &z_near, float &z_far, float &fov );
 	bool                     IsConnected( );
@@ -152,6 +153,7 @@ public:
 	NotifyOnLayerChangeWeight_t m_NotifyOnLayerChangeWeight;
 	GetEyeAngles_t m_GetEyeAngles;
 	AccumulateLayers_t m_AccumulateLayers;
+	PhysicsSimulate_t m_PhysicsSimulate;
 
 	// netvar proxies.
 	RecvVarProxy_t m_Pitch_original;

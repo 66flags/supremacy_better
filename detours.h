@@ -19,6 +19,7 @@ namespace detours {
 	void __fastcall ProcessMovement ( void *ecx, void *edx, Entity *player, CMoveData *data );
 	bool __fastcall SVCMsg_VoiceData ( void *ecx, void *edx, void* a2 );
 	void __fastcall SetupMovement ( void *ecx, void *edx );
+	int __fastcall RunSimulation ( void *ecx, void *edx, int current_command, float curtime, CUserCmd *cmd, Player *local );
 	void __vectorcall UpdateAnimationState ( void *ecx, void *a1, float a2, float a3, float a4, void *a5 );
 	bool __fastcall SetupBones ( void *ecx, void *edx, BoneArray *out, int max, int mask, float curtime );
 	void __fastcall Paint ( void *ecx, void *edx, PaintModes_t mode );
@@ -51,5 +52,6 @@ namespace detours {
 		inline decltype ( &detours::DrawStaticPropArrayFast ) DrawStaticPropArrayFast;
 		inline decltype ( &detours::Teleported ) Teleported;
 		inline decltype ( &detours::CL_FireEvents ) CL_FireEvents;
+		inline decltype ( &detours::RunSimulation ) RunSimulation;
 	}
 }

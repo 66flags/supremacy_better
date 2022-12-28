@@ -1012,6 +1012,7 @@ public:
 		UPDATECLIENTSIDEANIMATION = 218, // 55 8B EC 51 56 8B F1 80 BE ? ? ? ? ? 74 36
 		GETACTIVEWEAPON = 262,
 		CALCVIEW = 270,
+		PHYSICSSIMULATE = 149,
 		GETEYEPOS = 163,
 		GETFOV = 321,
 		UPDATECOLLISIONBOUNDS = 329, // 56 57 8B F9 8B 0D ? ? ? ? F6 87 ? ? ? ? ?
@@ -1198,7 +1199,7 @@ public:
 	}
 
 	__forceinline bool alive() {
-		return m_lifeState() == LIFE_ALIVE;
+		return this && m_iHealth ( ) > 0 && m_lifeState() == LIFE_ALIVE;
 	}
 
 	__forceinline bool enemy(Player *from) {

@@ -9,6 +9,9 @@ public:
 	CMoveData data;
 	bool m_in_prediction;
 	float m_cycle;
+	float m_weapon_cycle = 0.f;
+	float m_weapon_sequence = 0.f;
+	float m_weapon_anim_time = 0.f;
 
 	struct {
 		float m_old_velocity_modifier;
@@ -18,7 +21,6 @@ public:
 	void update( );
 	void ForceUpdate ( bool error );
 	void run( );
-	void FixViewmodel ( bool store );
 	void restore( );
 };
 

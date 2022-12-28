@@ -17,7 +17,7 @@ bool detours::init ( ) {
 	const auto _setup_movement = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 81 EC ? ? ? ? 56 57 8B 3D ? ? ? ? 8B" ) ).as < void * > ( );
 	const auto _update_client_side_animation = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 51 56 8B F1 80 BE ? ? ? ? ? 74" ) ).as < void * > ( );
 	const auto _svcmsg_voicedata = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 E4 F8 A1 ? ? ? ? 81 EC ? ? ? ? 53 56 8B F1 B9 ? ? ? ? 57 FF 50 34 8B 7D 08 85 C0 74 13 8B 47 08 40 50 68 ? ? ? ? FF 15 ? ? ? ? 83 C4 08 8B 47 08 89 44 24 1C 8D 48 01 8B 86 ? ? ? ? 40 89 4C 24 0C 3B C8 75 49" ) ).as < void * > ( );
-	const auto _process_movement = util::get_method < void* > ( g_csgo.m_game_movement, CGameMovement::PROCESSMOVEMENT );
+	const auto _process_movement = util::get_method < void * > ( g_csgo.m_game_movement, CGameMovement::PROCESSMOVEMENT );
 	const auto _maintain_sequence_transitions = pattern::find ( g_csgo.m_client_dll, XOR ( "53 8B DC 83 EC 08 83 E4 F8 83 C4 04 55 8B 6B 04 89 6C 24 04 8B EC 83 EC 18 56 57 8B F9 F3" ) ).as < void * > ( );
 	const auto _computeposeparam_moveyaw = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F0 83 EC 48 56 8B F1 57 8B 46 14 85 C0 74 09 83 F8 01 0F 85 ? ? ? ? E8" ) ).as < void * > ( );
 	const auto _teleported = pattern::find ( g_csgo.m_client_dll, XOR ( "E8 ? ? ? ? 84 C0 75 0D 8B 87 ? ? ? ? C1 E8 03 A8 01 74 2E 8B" ) ).rel32 ( 0x1 ).as < void * > ( );
@@ -25,7 +25,8 @@ bool detours::init ( ) {
 	const auto _drawstaticproparrayfast = util::get_method < void * > ( g_csgo.m_model_render, IVModelRender::DRAWSTATICPROPARRAYFAST );
 	const auto _cl_fireevents = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 EC 08 53 8B 1D ? ? ? ? 56 57 83 BB ? ? ? ? ? 74" ) ).as < void * > ( );
 	const auto _packet_start = pattern::find ( g_csgo.m_engine_dll, XOR ( "56 8B F1 E8 ? ? ? ? 8B 8E ? ? ? ? 3B" ) ).sub ( 32 ).as < decltype ( &PacketStart ) > ( );
-	
+	const auto _run_simulation = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 08 53 8B 5D 10 56 57 FF 75 0C 8B F1 F3 0F 11 55 ? 8D" ) ).as < void * > ( );
+
 	// create detours.
 	MH_CreateHook ( _packet_start, detours::PacketStart, ( void ** ) &old::PacketStart );
 	MH_CreateHook ( _paint, detours::Paint, ( void ** ) &old::Paint );
@@ -46,6 +47,7 @@ bool detours::init ( ) {
 	//MH_CreateHook ( _computeposeparam_moveyaw, detours::ComputePoseParam_MoveYaw, ( void ** ) &old::ComputePoseParam_MoveYaw );
 	MH_CreateHook ( _teleported, detours::Teleported, ( void ** ) &old::Teleported ); // we dont really need to do this since disabling bone interp clears ik targets already lol
 	MH_CreateHook ( _cl_fireevents, detours::CL_FireEvents, ( void ** ) &old::CL_FireEvents );
+	//MH_CreateHook ( _run_simulation, detours::RunSimulation, ( void ** ) &old::RunSimulation );
 
 	// enable all hooks.
 	MH_EnableHook ( MH_ALL_HOOKS );
@@ -53,7 +55,7 @@ bool detours::init ( ) {
 	return true;
 }
 
-int __fastcall detours::PacketStart ( void* ecx, void* edx, int incoming_sequence, int outgoing_acknowledged ) {
+int __fastcall detours::PacketStart ( void *ecx, void *edx, int incoming_sequence, int outgoing_acknowledged ) {
 	for ( const int it : g_cl.m_outgoing_cmd_nums ) {
 		if ( it == outgoing_acknowledged ) {
 			old::PacketStart ( ecx, edx, incoming_sequence, outgoing_acknowledged );
@@ -179,17 +181,16 @@ void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 			old::UpdateClientSideAnimation ( g_cl.m_local, 0 );
 			g_cl.m_local->m_PlayerAnimState ( )->m_player = g_cl.m_local;
 
-			// restore data.
-			g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
-			g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
-			state->m_flFootYaw = g_cl.anim_data.m_rotation.y;
-
-			// restore layers lol.
-			memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * 13 );
-
 			// this will update the attachments origin.
 			static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
 			SetupBones_AttachmentHelper ( g_cl.m_local, g_cl.m_local->GetModelPtr ( ) );
+
+			// restore data.
+			memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * g_cl.m_local->m_iNumOverlays ( ) );
+
+			g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
+			g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
+			state->m_flFootYaw = g_cl.m_rotation.y;
 
 			// force setupbones rebuild.
 			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
@@ -257,12 +258,12 @@ void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 		rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_JUMP ) );
 	}
 
-	if ( !( g_inputpred.data.m_nOldButtons & FL_ONGROUND ) ) {
-		rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_FALL ) );
-		m_bJumping = true;
-	}
-	else
-		rebuild_modifiers ( state );
+	//if ( !( g_inputpred.data.m_nOldButtons & FL_ONGROUND ) ) {
+	//	rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_FALL ) );
+	//	m_bJumping = true;
+	//}
+	//else
+	//	rebuild_modifiers ( state );
 
 	old::SetupMovement ( ecx, edx );
 

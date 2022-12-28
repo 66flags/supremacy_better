@@ -10,6 +10,55 @@ void Hooks::DoExtraBoneProcessing ( int a2, int a3, int a4, int a5, int a6, int 
 	state->m_ground = backup_on_ground;
 }
 
+int last_command_num = 0;
+
+void Hooks::PhysicsSimulate ( ) {
+	auto player = ( Player * ) this;
+
+	if ( !player || ( ( *( int * ) ( std::uintptr_t ( player ) + 0x2A8 ) == g_csgo.m_globals->m_tick_count ) || !( *( bool * ) ( std::uintptr_t ( player ) + 0x34D0 ) ) ) )
+		return g_hooks.m_PhysicsSimulate ( this );
+
+	const auto backup_velocity_modifier = g_cl.m_local->m_flVelocityModifier ( );
+
+	if ( player == g_cl.m_local ) {
+		//if ( g_cl.m_cmd->m_command_number > last_command_num ) {
+		auto nci = g_csgo.m_engine->GetNetChannelInfo ( );
+
+		// don't do this if our choke cycle resets.
+		if ( nci ) {
+			const auto latency = game::TIME_TO_TICKS ( g_cl.m_latency );
+
+			// recalculate velocity modifier.
+			if ( g_inputpred.stored.m_velocity_modifier < 1.0f )
+				g_inputpred.stored.m_velocity_modifier = std::clamp < float > ( g_inputpred.stored.m_velocity_modifier + ( game::TICKS_TO_TIME ( 1 ) + latency ) * ( 1.0f / 2.5f ), 0.0f, 1.0f );
+
+			if ( g_cl.m_lag == 0 )
+				player->m_flVelocityModifier ( ) = g_inputpred.stored.m_old_velocity_modifier; // set to value received from server.
+		}
+
+		//last_command_num = g_cl.m_cmd->m_command_number;
+
+		*( int * ) ( std::uintptr_t ( player ) + 0x3238 ) = 0;
+	}
+
+	g_hooks.m_PhysicsSimulate ( this );
+
+	if ( player == g_cl.m_local ) {
+		auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( player->m_hViewModel ( ) );
+
+		// fix the game from overriding the predicted viewmodel by storing it during simulation
+		if ( player->m_hViewModel ( ) != 0xFFFFFFF ) {
+			g_inputpred.m_weapon_cycle = viewmodel->m_flCycle ( );
+			g_inputpred.m_weapon_sequence = viewmodel->m_nSequence ( );
+			g_inputpred.m_weapon_anim_time = viewmodel->m_flAnimTime ( );
+		}
+
+		// restore velocity modifier once we updated prediction.
+		//if ( g_inputpred.m_has_error )
+		player->m_flVelocityModifier ( ) = backup_velocity_modifier;
+	}
+}
+
 void Hooks::BuildTransformations ( int a2, int a3, int a4, int a5, int a6, int a7 ) {
 	// cast thisptr to player ptr.
 	Player *player = ( Player * ) this;
@@ -30,7 +79,7 @@ void Hooks::BuildTransformations ( int a2, int a3, int a4, int a5, int a6, int a
 		if ( bone )
 			bone->m_flags &= ~0x04;
 	}
-	
+
 	// call og.
 	g_hooks.m_BuildTransformations ( this, a2, a3, a4, a5, a6, a7 );
 
@@ -130,12 +179,13 @@ void CustomEntityListener::OnEntityCreated ( Entity *ent ) {
 
 				// hook this on every player.
 				g_hooks.m_DoExtraBoneProcessing = vmt->add< Hooks::DoExtraBoneProcessing_t > ( Player::DOEXTRABONEPROCESSING, util::force_cast ( &Hooks::DoExtraBoneProcessing ) );
-				//	g_hooks.m_UpdateClientSideAnimation = vmt->add< Hooks::UpdateClientSideAnimation_t > ( Player::UPDATECLIENTSIDEANIMATION, util::force_cast ( &Hooks::UpdateClientSideAnimation ) );		
+				//	g_hooks.m_UpdateClientSideAnimation = vmt->add< Hooks::UpdateClientSideAnimation_t > ( Player::UPDATECLIENTSIDEANIMATION, util::force_cast ( &Hooks::UpdateClientSideAnimation ) );
 				g_hooks.m_NotifyOnLayerChangeCycle = vmt->add< Hooks::NotifyOnLayerChangeCycle_t > ( Player::NOTIFYONLAYERCHANGECYCLE, util::force_cast ( &Hooks::NotifyOnLayerChangeCycle ) );
 				g_hooks.m_NotifyOnLayerChangeWeight = vmt->add< Hooks::NotifyOnLayerChangeWeight_t > ( Player::NOTIFYONLAYERCHANGEWEIGHT, util::force_cast ( &Hooks::NotifyOnLayerChangeWeight ) );
 				//g_hooks.m_AccumulateLayers = vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
 				g_hooks.m_CalcView = vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
-				
+				g_hooks.m_PhysicsSimulate = vmt->add< Hooks::PhysicsSimulate_t > ( Player::PHYSICSSIMULATE, util::force_cast ( &Hooks::PhysicsSimulate ) );
+
 				// local gets special treatment.
 				if ( player->index ( ) == g_csgo.m_engine->GetLocalPlayer ( ) ) {
 					g_hooks.m_GetActiveWeapon = vmt->add< Hooks::GetActiveWeapon_t > ( Player::GETACTIVEWEAPON, util::force_cast ( &Hooks::GetActiveWeapon ) );
@@ -149,15 +199,15 @@ void CustomEntityListener::OnEntityCreated ( Entity *ent ) {
 		// note - dex; sadly, it seems like m_hPlayer (GetRagdollPlayer) is null here... probably has to be done somewhere else.
 		// if( ent->is( HASH( "CCSRagdoll" ) ) ) {
 		//     Player *ragdoll_player{ ent->GetRagdollPlayer( ) };
-		// 
+		//
 		//     // note - dex;  ragdoll ents (DT_CSRagdoll) seem to contain some new netvars now, m_flDeathYaw and m_flAbsYaw.
 		//     //              didnt test much but making a bot with bot_mimic look at yaws:
 		//     //
 		//     //              -107.98 gave me m_flDeathYaw=-16.919 and m_flAbsYaw=268.962
 		//     //              46.05 gave me m_flDeathYaw=-21.685 and m_flAbsYaw=67.742
-		//     //             
+		//     //
 		//     //              these angles don't seem consistent... but i didn't test much.
-		// 
+		//
 		//     g_cl.print( "ragdoll 0x%p created on client at time %f, from player 0x%p\n", ent, g_csgo.m_globals->m_curtime, ragdoll_player );
 		// }
 	}

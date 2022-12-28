@@ -107,12 +107,12 @@ void Client::OnMapload ( ) {
 	// if the INetChannelInfo pointer has changed, store it for later.
 	g_csgo.m_net = g_csgo.m_engine->GetNetChannelInfo ( );
 
-	if ( g_csgo.m_net ) {
-		g_hooks.m_net_channel.reset ( );
-		g_hooks.m_net_channel.init ( g_csgo.m_net );
-		//g_hooks.m_net_channel.add ( INetChannel::PROCESSPACKET, util::force_cast ( &Hooks::ProcessPacket ) );
-		//g_hooks.m_net_channel.add ( INetChannel::SENDDATAGRAM, util::force_cast ( &Hooks::SendDatagram ) );
-	}
+	//if ( g_csgo.m_net ) {
+	//	g_hooks.m_net_channel.reset ( );
+	//	g_hooks.m_net_channel.init ( g_csgo.m_net );
+	//	g_hooks.m_net_channel.add ( INetChannel::PROCESSPACKET, util::force_cast ( &Hooks::ProcessPacket ) );
+	//	g_hooks.m_net_channel.add ( INetChannel::SENDDATAGRAM, util::force_cast ( &Hooks::SendDatagram ) );
+	//}
 }
 
 void Client::StartMove ( CUserCmd *cmd ) {
@@ -219,14 +219,16 @@ void Client::UpdateLocalAnimations ( ) {
 	game_state->m_nStrafeSequence = backup_anim_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
 	game_state->m_flAccelerationWeight = backup_anim_layers [ ANIMATION_LAYER_LEAN ].m_weight;
 
-	g_cl.m_activity_modifiers.add_modifier ( game_state->GetWeaponPrefix ( ) );
+	{
+		g_cl.m_activity_modifiers.add_modifier ( game_state->GetWeaponPrefix ( ) );
 
-	// update modifiers.
-	if ( game_state->m_flSpeedAsPortionOfWalkTopSpeed > 0.25f )
-		g_cl.m_activity_modifiers.add_modifier ( "moving" );
+		// update modifiers.
+		if ( game_state->m_flSpeedAsPortionOfWalkTopSpeed > 0.25f )
+			g_cl.m_activity_modifiers.add_modifier ( "moving" );
 
-	if ( game_state->m_flAnimDuckAmount > 0.55f )
-		g_cl.m_activity_modifiers.add_modifier ( "crouch" );
+		if ( game_state->m_flAnimDuckAmount > 0.55f )
+			g_cl.m_activity_modifiers.add_modifier ( "crouch" );
+	}
 
 	//m_local->m_iEFlags ( ) &= ~0x1000;
 
@@ -245,10 +247,9 @@ void Client::UpdateLocalAnimations ( ) {
 	}
 
 	if ( *m_packet ) {
+		m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
 		m_local->GetPoseParameters ( anim_data.m_poses );
 		backup_anim_layers [ 12 ].m_weight = 0.f;
-		m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
-
 		memcpy ( anim_data.m_last_layers, anim_data.m_last_queued_layers, sizeof ( anim_data.m_last_layers ) );
 		anim_data.m_rotation.y = state->m_goal_feet_yaw;
 	}
@@ -514,9 +515,6 @@ void Client::OnTick ( CUserCmd *cmd ) {
 	if ( cmd->m_buttons & IN_ATTACK )
 		*g_cl.m_packet = true;
 
-	UpdateInformation ( );
-	UpdateLocalAnimations ( );
-
 	if ( *m_packet ) {
 		g_cl.m_outgoing_cmd_nums.emplace_front ( cmd->m_command_number );
 	}
@@ -532,6 +530,9 @@ void Client::OnTick ( CUserCmd *cmd ) {
 			nc->m_choked_packets = backup_choked;
 		}
 	}
+
+	UpdateLocalAnimations ( );
+	UpdateInformation ( );
 }
 
 void Client::SetAngles ( ) {

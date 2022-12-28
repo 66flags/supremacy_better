@@ -82,18 +82,24 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 		g_visuals.DrawBeams ( );
 	}
 
-	//if ( stage == FRAME_NET_UPDATE_END )
-		//g_inputpred.FixViewmodel ( false );
+	if ( stage == FRAME_NET_UPDATE_END ) {
+		auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
 
-	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_START ) {
-		g_inputpred.FixViewmodel ( false );
+		if ( g_cl.m_local || g_cl.m_local->m_hViewModel ( ) != 0xFFFFFFF ) {
+			// restore viewmodel when model renders a scene
+			viewmodel->m_flCycle ( ) = g_inputpred.m_weapon_cycle;
+			viewmodel->m_nSequence ( ) = g_inputpred.m_weapon_sequence;
+			viewmodel->m_flAnimTime ( ) = g_inputpred.m_weapon_anim_time;
+		}
 	}
-	
-	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END && ( g_cl.m_local && g_cl.m_local->alive ( ) ) ) {
+		
+	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END && ( g_cl.m_local || g_cl.m_local->alive ( ) ) ) {
 		g_inputpred.stored.m_old_velocity_modifier = g_cl.m_local->m_flVelocityModifier ( );
 
 		if ( g_cl.m_local->m_flVelocityModifier ( ) < g_inputpred.stored.m_old_velocity_modifier ) {
 			g_inputpred.stored.m_velocity_modifier = g_inputpred.stored.m_old_velocity_modifier;
+
+			// force games prediction to update
 			g_inputpred.ForceUpdate ( true );
 		}
 	}
@@ -135,9 +141,6 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 //#endif
 	}
 
-	//else if ( stage == FRAME_NET_UPDATE_END )
-		//g_inputpred.FixViewmodel ( false );
-
 	else if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_START ) {
 		// restore non-compressed netvars.
 		// g_netdata.apply( );
@@ -146,7 +149,6 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 
 	else if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END ) {
 		g_visuals.NoSmoke ( );
-		//g_inputpred.FixViewmodel ( false );
 	}
 
 	else if ( stage == FRAME_NET_UPDATE_END ) {
