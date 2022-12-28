@@ -512,6 +512,9 @@ void Client::OnTick ( CUserCmd *cmd ) {
 	// and prediction seed/player.
 	g_inputpred.restore ( );
 
+	UpdateLocalAnimations ( );
+	UpdateInformation ( );
+	
 	if ( cmd->m_buttons & IN_ATTACK )
 		*g_cl.m_packet = true;
 
@@ -530,9 +533,6 @@ void Client::OnTick ( CUserCmd *cmd ) {
 			nc->m_choked_packets = backup_choked;
 		}
 	}
-
-	UpdateLocalAnimations ( );
-	UpdateInformation ( );
 }
 
 void Client::SetAngles ( ) {

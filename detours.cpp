@@ -190,7 +190,7 @@ void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 
 			g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
 			g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
-			state->m_flFootYaw = g_cl.m_rotation.y;
+			state->m_flFootYaw = g_cl.anim_data.m_rotation.y;
 
 			// force setupbones rebuild.
 			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );

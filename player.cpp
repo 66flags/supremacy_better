@@ -129,8 +129,8 @@ ang_t &Hooks::GetEyeAngles ( ) {
 void Hooks::AccumulateLayers ( void *setup, vec3_t &pos, void *q, float time ) {
 	auto player = ( Player * ) this;
 
-	if ( !g_bones.m_running )
-		return g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
+	//if ( !g_bones.m_running )
+	//	return g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
 
 	static auto accumulate_pose = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? 83 BF ? ? ? ? ? 0F 84 ? ? ? ? 8D" ) ).rel32 ( 0x1 ).as<void ( __thiscall * )( void *, vec3_t &, void *, int, float, float, float, void * )> ( );
 
@@ -182,7 +182,7 @@ void CustomEntityListener::OnEntityCreated ( Entity *ent ) {
 				//	g_hooks.m_UpdateClientSideAnimation = vmt->add< Hooks::UpdateClientSideAnimation_t > ( Player::UPDATECLIENTSIDEANIMATION, util::force_cast ( &Hooks::UpdateClientSideAnimation ) );
 				g_hooks.m_NotifyOnLayerChangeCycle = vmt->add< Hooks::NotifyOnLayerChangeCycle_t > ( Player::NOTIFYONLAYERCHANGECYCLE, util::force_cast ( &Hooks::NotifyOnLayerChangeCycle ) );
 				g_hooks.m_NotifyOnLayerChangeWeight = vmt->add< Hooks::NotifyOnLayerChangeWeight_t > ( Player::NOTIFYONLAYERCHANGEWEIGHT, util::force_cast ( &Hooks::NotifyOnLayerChangeWeight ) );
-				//g_hooks.m_AccumulateLayers = vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
+				g_hooks.m_AccumulateLayers = vmt->add< Hooks::AccumulateLayers_t > ( Player::ACCUMULATELAYERS, util::force_cast ( &Hooks::AccumulateLayers ) );
 				g_hooks.m_CalcView = vmt->add< Hooks::CalcView_t > ( Player::CALCVIEW, util::force_cast ( &Hooks::CalcView ) );
 				g_hooks.m_PhysicsSimulate = vmt->add< Hooks::PhysicsSimulate_t > ( Player::PHYSICSSIMULATE, util::force_cast ( &Hooks::PhysicsSimulate ) );
 
