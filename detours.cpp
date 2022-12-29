@@ -35,9 +35,9 @@ bool detours::init ( ) {
 	MH_CreateHook ( _standard_blending_rules, detours::StandardBlendingRules, ( void ** ) &old::StandardBlendingRules );
 	MH_CreateHook ( _modify_eye_position, detours::ModifyEyePosition, ( void ** ) &old::ModifyEyePosition );
 	MH_CreateHook ( _base_interpolate_part1, detours::BaseInterpolatePart1, ( void ** ) &old::BaseInterpolatePart1 );
-	//	MH_CreateHook ( _animstate_update, detours::UpdateAnimationState, ( void ** ) &old::UpdateAnimationState );
+	MH_CreateHook ( _animstate_update, detours::UpdateAnimationState, ( void ** ) &old::UpdateAnimationState );
 	MH_CreateHook ( _do_procedural_footplant, detours::DoProceduralFootPlant, ( void ** ) &old::DoProceduralFootPlant );
-	//MH_CreateHook ( _setup_bones, detours::SetupBones, ( void ** ) &old::SetupBones );
+	MH_CreateHook ( _setup_bones, detours::SetupBones, ( void ** ) &old::SetupBones );
 	MH_CreateHook ( _setup_movement, detours::SetupMovement, ( void ** ) &old::SetupMovement );
 	//MH_CreateHook ( _svcmsg_voicedata, detours::SVCMsg_VoiceData, ( void ** ) &old::SVCMsg_VoiceData );
 	MH_CreateHook ( _process_movement, detours::ProcessMovement, ( void ** ) &old::ProcessMovement );
@@ -71,6 +71,15 @@ int __fastcall detours::PacketStart ( void *ecx, void *edx, int incoming_sequenc
 	}
 
 	return 0;
+}
+
+void __vectorcall detours::UpdateAnimationState ( void *ecx, void *a1, float a2, float a3, float a4, void *a5 ) {
+	const auto state = ( CCSGOPlayerAnimState * ) ecx;
+
+	if ( state->m_frame == g_csgo.m_globals->m_frame )
+		state->m_frame -= 1;
+
+	return old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
 }
 
 void detours::CL_FireEvents ( ) {
@@ -170,7 +179,7 @@ void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 	if ( !player || game::IsFakePlayer ( player->index ( ) ) )
 		return old::UpdateClientSideAnimation ( ecx, edx );
 
-	if ( player->index ( ) == g_cl.m_local->index ( ) ) {
+	if ( player->index ( ) == g_cl.m_local->index ( ) && g_cl.m_local == player ) {
 		auto state = ( CCSGOGamePlayerAnimState * ) g_cl.m_local->m_PlayerAnimState ( );
 
 		if ( g_cl.m_animate )
@@ -184,6 +193,14 @@ void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 			// this will update the attachments origin.
 			static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
 			SetupBones_AttachmentHelper ( g_cl.m_local, g_cl.m_local->GetModelPtr ( ) );
+
+			// set animstate members tied to layers.
+			state->m_flMoveWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_weight;
+			state->m_flPrimaryCycle = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_cycle;
+			state->m_flStrafeChangeWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_weight;
+			state->m_flStrafeChangeCycle = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_cycle;
+			state->m_nStrafeSequence = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
+			state->m_flAccelerationWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_LEAN ].m_weight;
 
 			// restore data.
 			memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * g_cl.m_local->m_iNumOverlays ( ) );
@@ -226,143 +243,16 @@ void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 		old::UpdateClientSideAnimation ( ecx, edx );
 }
 
-CUtlVector <uint16_t> __forceinline rebuild_modifiers ( CCSGOGamePlayerAnimState *state ) {
-	activity_modifiers_wrapper modifier_wrapper {};
-
-	modifier_wrapper.add_modifier ( state->GetWeaponPrefix ( ) );
-
-	if ( state->m_flSpeedAsPortionOfWalkTopSpeed > .25f )
-		modifier_wrapper.add_modifier ( "moving" );
-
-	if ( state->m_flAnimDuckAmount > .55f )
-		modifier_wrapper.add_modifier ( "crouch" );
-
-	return modifier_wrapper.get ( );
-}
-
 void __fastcall detours::SetupMovement ( void *ecx, void *edx ) {
 	auto state = ( CCSGOGamePlayerAnimState * ) ecx;
-
-	if ( !state )
-		return old::SetupMovement ( ecx, edx );
-
-	if ( !state->m_pPlayer || state->m_pPlayer != g_cl.m_local )
-		return old::SetupMovement ( ecx, edx );
-
-	bool &m_bJumping = state->m_bFlashed;
-
-	if ( !( state->m_pPlayer->m_fFlags ( ) & FL_ONGROUND )
-		&& state->m_bOnGround
-		&& state->m_pPlayer->m_vecVelocity ( ).z > 0.0f ) {
-		m_bJumping = true;
-		rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_JUMP ) );
-	}
-
-	//if ( !( g_inputpred.data.m_nOldButtons & FL_ONGROUND ) ) {
-	//	rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_FALL ) );
-	//	m_bJumping = true;
-	//}
-	//else
-	//	rebuild_modifiers ( state );
-
 	old::SetupMovement ( ecx, edx );
-
-	bool bPreviouslyOnLadder = state->m_bOnLadder;
-	state->m_bOnLadder = !state->m_bOnGround && state->m_pPlayer->m_MoveType ( ) == MOVETYPE_LADDER;
-	bool bStartedLadderingThisFrame = ( !bPreviouslyOnLadder && state->m_bOnLadder );
-	bool bStoppedLadderingThisFrame = ( bPreviouslyOnLadder && !state->m_bOnLadder );
-
-	if ( state->m_bOnGround ) {
-		bool next_landing = false;
-
-		if ( !state->m_bLanding && ( state->m_bLandedOnGroundThisFrame || bStoppedLadderingThisFrame ) ) {
-			rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, rebuilt::SelectWeightedSequence ( state, ( state->m_flDurationInAir > 1 ) ? ACT_CSGO_LAND_HEAVY : ACT_CSGO_LAND_LIGHT ) );
-			//rebuilt::SetCycle ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
-			next_landing = true;
-		}
-
-		state->m_flDurationInAir = 0;
-
-		if ( next_landing && rebuilt::GetLayerActivity ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) != ACT_CSGO_CLIMB_LADDER ) {
-			m_bJumping = false;
-
-			rebuilt::IncrementLayerCycle ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, false );
-			rebuilt::IncrementLayerCycle ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, false );
-
-			state->m_pPlayer->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 0.f;
-
-			if ( rebuilt::IsLayerSequenceCompleted ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) ) {
-				state->m_bLanding = false;
-				rebuilt::SetWeight ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
-				rebuilt::SetWeight ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, 0 );
-				state->m_flLandAnimMultiplier = 1.0f;
-			}
-			else {
-				float flLandWeight = rebuilt::GetLayerIdealWeightFromSequenceCycle ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) * state->m_flLandAnimMultiplier;
-				flLandWeight *= std::clamp< float > ( ( 1.0f - state->m_flAnimDuckAmount ), 0.2f, 1.0f );
-
-				rebuilt::SetWeight ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, flLandWeight );
-
-				float flCurrentJumpFallWeight = state->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ].m_weight;
-				if ( flCurrentJumpFallWeight > 0 ) {
-					flCurrentJumpFallWeight = valve_math::Approach ( 0, flCurrentJumpFallWeight, state->m_flLastUpdateIncrement * 10.0f );
-					rebuilt::SetWeight ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, flCurrentJumpFallWeight );
-				}
-			}
-		}
-
-		if ( !state->m_bLanding && !m_bJumping && state->m_flLadderWeight <= 0 ) {
-			rebuilt::SetWeight ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
-		}
-	}
-	else if ( !state->m_bOnLadder ) {
-		state->m_bLanding = false;
-
-		// we're in the air
-		if ( state->m_bLeftTheGroundThisFrame || bStoppedLadderingThisFrame ) {
-			// If entered the air by jumping, then we already set the jump activity.
-			// But if we're in the air because we strolled off a ledge or the floor collapsed or something,
-			// we need to set the fall activity here.
-			if ( !m_bJumping ) {
-				rebuilt::SetSequence ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( state, ACT_CSGO_FALL ) );
-			}
-
-			state->m_flDurationInAir = 0;
-		}
-
-		state->m_flDurationInAir += state->m_flLastUpdateIncrement;
-
-		rebuilt::IncrementLayerCycle ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, false );
-
-		// increase jump weight
-		float flJumpWeight = state->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ].m_weight;
-		float flNextJumpWeight = rebuilt::GetLayerIdealWeightFromSequenceCycle ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL );
-
-		if ( flNextJumpWeight > flJumpWeight )
-			rebuilt::SetWeight ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, flNextJumpWeight );
-
-		auto smoothstep_bounds = [ ] ( float edge0, float edge1, float x ) {
-			x = std::clamp< float > ( ( x - edge0 ) / ( edge1 - edge0 ), 0, 1 );
-			return x * x * ( 3 - 2 * x );
-		};
-
-		float flLingeringLandWeight = state->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ].m_weight;
-
-		if ( flLingeringLandWeight > 0 ) {
-			flLingeringLandWeight *= smoothstep_bounds ( 0.2f, 0.0f, state->m_flDurationInAir );
-			rebuilt::SetWeight ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, flLingeringLandWeight );
-		}
-
-		// blend jump into fall. This is a no-op if we're playing a fall anim.
-		state->m_pPlayer->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = std::clamp ( smoothstep_bounds ( 0.72f, 1.52f, state->m_flDurationInAir ), 0.0f, 1.0f );
-	}
 }
 
 void __fastcall detours::DoProceduralFootPlant ( void *ecx, void *edx, int a1, int a2, int a3, int a4 ) {
 	return;
 }
 
-bool __fastcall detours::SetupBones ( void *ecx, void *edx, BoneArray *out, int max, int mask, float curtime ) {
+bool __fastcall detours::SetupBones ( void *ecx, void *edx, matrix3x4_t *out, int max, int mask, float curtime ) {
 	static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
 
 	auto player = ( Player * ) ecx - 4;
@@ -370,12 +260,10 @@ bool __fastcall detours::SetupBones ( void *ecx, void *edx, BoneArray *out, int 
 	if ( g_bones.m_running )
 		return old::SetupBones ( ecx, edx, out, max, mask, curtime );
 
-	if ( player && player->alive ( ) && player == g_cl.m_local && player->IsPlayer ( ) ) {
-		//SetupBones_AttachmentHelper ( player, *( void ** ) ( std::uintptr_t ( player ) + 0x2938 ) ); // fix attachments on local
-
+	if ( player && player->alive ( ) && player->IsPlayer ( ) ) {
 		if ( out ) {
 			if ( max >= player->m_iBoneCount ( ) )
-				memcpy ( out, player->m_pBoneCache ( ), sizeof ( BoneArray ) * player->m_iBoneCount ( ) );
+				memcpy ( out, player->m_BoneCache ( ).m_pCachedBones, sizeof ( matrix3x4_t ) * player->m_iBoneCount ( ) );
 			else
 				return false;
 		}

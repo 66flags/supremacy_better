@@ -135,6 +135,7 @@ void Hooks::init( ) {
 	m_engine.init( g_csgo.m_engine );
 	m_engine.add( IVEngineClient::ISCONNECTED, util::force_cast( &Hooks::IsConnected ) );
 	m_engine.add( IVEngineClient::ISHLTV, util::force_cast( &Hooks::IsHLTV ) );
+	m_engine.add ( IVEngineClient::GETSCREENASPECTRATIO, util::force_cast ( &Hooks::GetScreenAspectRatio ) );
 
 	//m_engine_sound.init( g_csgo.m_sound );
 	//m_engine_sound.add( IEngineSound::EMITSOUND, util::force_cast( &Hooks::EmitSound ) );

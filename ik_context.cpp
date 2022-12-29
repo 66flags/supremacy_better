@@ -23,14 +23,14 @@ void CIKContext::Init ( const CStudioHdr *hdr, const ang_t &local_angles, const 
     Init ( this, hdr, local_angles, local_origin, current_time, frame_count, bone_mask );
 }
 
-void CIKContext::UpdateTargets ( vec3_t *pos, quaternion_t *q, matrix3x4_t *bone_cache, void *computed ) {
-    using UpdateTargetsFn = void ( __thiscall * )( void *, vec3_t *, quaternion_t *, matrix3x4_t *, void * );
+void CIKContext::UpdateTargets ( vec3_t *pos, quaternion_t *q, matrix3x4_t *bone_cache, uint8_t *computed ) {
+    using UpdateTargetsFn = void ( __thiscall * )( void *, vec3_t *, quaternion_t *, matrix3x4_t *, uint8_t * );
     static auto UpdateTargets = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F0 81 ? ? ? ? ? 33 D2 89" ) ).as < UpdateTargetsFn > ( );
     UpdateTargets ( this, pos, q, bone_cache, computed );
 }
 
-void CIKContext::SolveDependencies ( vec3_t *pos, quaternion_t *q, matrix3x4_t *bone_cache, void *computed ) {
-    using SolveDependenciesFn = void ( __thiscall * )( void *, vec3_t *, quaternion_t *, matrix3x4_t *, void * );
+void CIKContext::SolveDependencies ( vec3_t *pos, quaternion_t *q, matrix3x4_t *bone_cache, uint8_t *computed ) {
+    using SolveDependenciesFn = void ( __thiscall * )( void *, vec3_t *, quaternion_t *, matrix3x4_t *, uint8_t * );
 	static auto SolveDependencies = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 81 EC ? ? ? ? 53 56 57 8B F9 0F 28 CB F3 0F 11 4D ? 8B 8F ? ? ? ? 8B 01 83 B8" ) ).as < SolveDependenciesFn > ( );
     SolveDependencies ( this, pos, q, bone_cache, computed );
 }
@@ -43,11 +43,15 @@ private:
 };
 
 void CIKContext::ClearTargets ( ) {
-    int m_iTargetCount = *( int * ) ( ( uintptr_t ) this + 0xFF0 );
-    auto m_pIkTarget = ( CIKTarget * ) ( ( uintptr_t ) this + 0xD0 );
-    for ( int i = 0; i < m_iTargetCount; i++ ) {
-        m_pIkTarget->m_iFrameCount = -9999;
-        m_pIkTarget++;
+    int v49 = 0;
+	
+    if ( *( int * )( std::uintptr_t ( this ) + 4080 ) > 0 ) {
+       int* iFramecounter = ( int * ) ( std::uintptr_t ( this ) + 0xD0 );
+        do {
+            *iFramecounter = -9999;
+            iFramecounter += 85;
+            ++v49;
+        } while ( v49 < *( int * ) ( std::uintptr_t ( this ) + 0xFF0 ) );
     }
 }
 

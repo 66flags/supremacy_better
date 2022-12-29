@@ -5,6 +5,8 @@ public:
     float x, y, z, w;
 };
 
+class matrix3x4a_t;
+
 namespace math {
     // pi constants.
     constexpr float pi   = 3.1415926535897932384f; // pi
@@ -43,6 +45,7 @@ namespace math {
     }
 
     void AngleMatrix( const ang_t& ang, const vec3_t& pos, matrix3x4_t& out );
+    //void AngleMatrix ( const ang_t &ang, const vec3_t &pos, matrix3x4a_t &out );
 
     // normalizes an angle.
     void NormalizeAngle( float &angle );

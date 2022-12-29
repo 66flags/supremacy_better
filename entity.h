@@ -513,8 +513,8 @@ public:
 		return util::get_method< const ang_t &(__thiscall *)(void *) >(this, 11)(this);
 	}
 
-	__forceinline CIKContext *&m_pIK ( ) {
-		return get < CIKContext * > ( 0x2660 );
+	__forceinline CIKContext *m_pIK ( ) {
+		return *( CIKContext ** ) ( std::uintptr_t ( this ) + 0x265C );
 	}
 
 	__forceinline bool IsPlayer() {
@@ -542,14 +542,14 @@ public:
 	}
 
 	__forceinline void CalculateIKLocks ( float time ) {
-		using CalculateIKLocks_t = void ( __thiscall * ) ( decltype ( this ), float );
-		
-#if 1
-		static auto CalculateIKLocks = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 81 ? ? ? ? ? 56 57 8B F9 89 7C 24 18" ) ).as < CalculateIKLocks_t > ( );
-#else
-		static auto CalculateIKLocks = pattern::find ( g_csgo.m_server_dll, XOR ( "55 8B EC 83 E4 F8 81 ? ? ? ? ? 56 57 8B F9 89 7C 24 18" ) ).as < CalculateIKLocks_t > ( );
-#endif
-		CalculateIKLocks ( this, time );
+//		using CalculateIKLocks_t = void ( __thiscall * ) ( decltype ( this ), float );
+//		
+//#if 1
+//		static auto CalculateIKLocks = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 81 ? ? ? ? ? 56 57 8B F9 89 7C 24 18" ) ).as < CalculateIKLocks_t > ( );
+//#else
+//		static auto CalculateIKLocks = pattern::find ( g_csgo.m_server_dll, XOR ( "55 8B EC 83 E4 F8 81 ? ? ? ? ? 56 57 8B F9 89 7C 24 18" ) ).as < CalculateIKLocks_t > ( );
+//#endif
+//		CalculateIKLocks ( this, time );
 	}
 	
 	__forceinline void SetAbsAngles(const ang_t &angles) {
@@ -1035,13 +1035,13 @@ public:
 		return util::get_method< UpdateDispatchLayer_t > ( this, UPDATEDISPATCHLAYER )( this, pLayer, pWeaponStudioHdr, iSequence );
 	}
 
-	__forceinline void BuildTransformations(CStudioHdr *hdr, vec3_t *pos, quaternion_t *q, const matrix3x4_t &transform, int mask, uint8_t *computed) {
-		using BuildTransformations_t = void(__thiscall *)(decltype(this), CStudioHdr *, vec3_t *, quaternion_t *, matrix3x4_t const &, int, uint8_t *);
+	__forceinline void BuildTransformations(CStudioHdr *hdr, vec3_t *pos, void *q, const matrix3x4a_t &transform, int mask, uint8_t *computed) {
+		using BuildTransformations_t = void(__thiscall *)(decltype(this), CStudioHdr *, vec3_t *, void *, matrix3x4a_t const &, int, uint8_t *);
 		return util::get_method< BuildTransformations_t >(this, BUILDTRANSFORMATIONS)(this, hdr, pos, q, transform, mask, computed);
 	}
 
-	__forceinline void StandardBlendingRules(CStudioHdr *hdr, vec3_t *pos, quaternion_t *q, float time, int mask) {
-		using StandardBlendingRules_t = void(__thiscall *)(decltype(this), CStudioHdr *, vec3_t *, quaternion_t *, float, int);
+	__forceinline void StandardBlendingRules(CStudioHdr *hdr, vec3_t *pos, void *q, float time, int mask) {
+		using StandardBlendingRules_t = void(__thiscall *)(decltype(this), CStudioHdr *, vec3_t *, void *, float, int);
 		return util::get_method< StandardBlendingRules_t >(this, STANDARDBLENDINGRULES)(this, hdr, pos, q, time, mask);
 	}
 

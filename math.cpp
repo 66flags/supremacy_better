@@ -1,8 +1,8 @@
 #include "includes.h"
 
-void math::AngleMatrix( const ang_t& ang, const vec3_t& pos, matrix3x4_t& out ) {
-    g_csgo.AngleMatrix( ang, out );
-    out.SetOrigin( pos );
+void math::AngleMatrix ( const ang_t &ang, const vec3_t &pos, matrix3x4_t &out ) {
+    g_csgo.AngleMatrix ( ang, out );
+    out.SetOrigin ( pos );
 }
 
 void math::NormalizeAngle( float &angle ) {

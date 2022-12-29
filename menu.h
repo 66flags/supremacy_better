@@ -636,6 +636,8 @@ public:
 	Keybind       thirdperson;
 	Slider        thirdperson_distance;
 	Checkbox      thirdperson_transition;
+	Checkbox      override_aspect_ratio;
+	Slider        aspect_ratio_value;
 public:
 	void init( ) {
 		SetTitle( XOR( "visuals" ) );
@@ -752,8 +754,14 @@ public:
 		thirdperson.SetToggleCallback( callbacks::ToggleThirdPerson );
 		RegisterElement( &thirdperson, 1 );
 
-		thirdperson_distance.setup ( "thirdperson distance", XOR ( "thirdperson_dist" ), 50.f, 160.f, true, 0, 150.f, 1.f, XOR ( L"°" ) );
+		thirdperson_distance.setup ( "thirdperson distance", XOR ( "thirdperson_dist" ), 50.f, 160.f, false, 0, 150.f, 1.f, XOR ( L"°" ) );
 		RegisterElement ( &thirdperson_distance, 1 );
+
+		override_aspect_ratio.setup ( XOR ( "override aspect ratio" ), XOR ( "override_aspect_ratio" ) );
+		RegisterElement ( &override_aspect_ratio, 1 );
+
+		aspect_ratio_value.setup ( "thirdperson distance", XOR ( "aspect_ratio_value" ), 0.f, 2.f, false, 0.f, 2.f, .1f, XOR ( L"%" ) );
+		RegisterElement ( &aspect_ratio_value, 1 );
 
 		//thirdperson_transition.setup ( XOR ( "thirdperson transition" ), XOR ( "thirdperson_transition" ) );
 		//RegisterElement ( &thirdperson_transition, 1 );

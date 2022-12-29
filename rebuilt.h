@@ -1575,7 +1575,7 @@ namespace rebuilt {
 	void SetCycle ( CCSGOGamePlayerAnimState *state, int layer_idx, float cycle );
 	void SetWeightDeltaRate ( CCSGOGamePlayerAnimState *state, int layer_idx, float old_weight );
 	void IncrementLayerCycleWeightRateGeneric ( CCSGOGamePlayerAnimState *state, int layer_idx );
-	void Update ( CCSGOGamePlayerAnimState *animstate, const ang_t &angles, int tick );
+	void Update ( CCSGOPlayerAnimState *animstate, const ang_t &angles );
 	void InvalidatePhysicsRecursive ( void *player, int change_flags );
 	void SetWeight ( CCSGOGamePlayerAnimState *state, int layer_idx, float weight );
 	float GetLayerIdealWeightFromSequenceCycle ( CCSGOGamePlayerAnimState *state, int layer_idx );

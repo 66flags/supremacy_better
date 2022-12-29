@@ -952,8 +952,14 @@ void Visuals::DrawPlayer( Player* player ) {
 				if ( data && data->m_records.size ( ) ) {
 					LagRecord *current = data->m_records.front ( ).get ( );
 
-					if ( current->m_shifting )
-						flags.push_back ( { XOR ( "SHIFT" ), { 255, 255, 255, low_alpha } } );
+					if ( current && data->m_records.size ( ) > 2 ) {
+						// do this outside our anim system.
+						if ( ( current->m_lag >= 2 && player->m_flSimulationTime ( ) < player->m_flOldSimulationTime ( ) ) && !player->dormant ( ) )
+							current->m_shifting = true;
+
+						if ( current->m_shifting )
+							flags.push_back ( { XOR ( "SHIFT" ), { 255, 255, 255, low_alpha } } );
+					}
 				}
 			}	
 		}

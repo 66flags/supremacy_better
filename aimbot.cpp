@@ -583,7 +583,7 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	const auto dword_44732EBC = g_csgo.m_globals->m_tick_count;
 	const auto v4 = dword_44732EA8 / g_csgo.m_globals->m_interval;
 
-	g_csgo.m_globals->m_curtime = record->m_anim_time;
+	g_csgo.m_globals->m_curtime = ( !record->m_shifting && ( record->m_did_predict || record->m_broke_lc ) ) ? record->m_pred_time : record->m_anim_time;
 	g_csgo.m_globals->m_realtime = g_csgo.m_globals->m_curtime;
 	//g_csgo.m_globals->m_curtime = v1;
 	const auto sim_ticks = ( v4 + 0.5f );
@@ -682,21 +682,18 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	m_player->m_vecOrigin ( ) = record->m_origin;
 	m_player->m_vecVelocity ( ) = m_player->m_vecAbsVelocity ( ) = record->m_anim_velocity;
 	m_player->m_iEFlags ( ) &= ~0x1000;
+	m_player->m_angEyeAngles ( ) = record->m_eye_angles;
+	m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
 
-	if ( state->m_frame == g_csgo.m_globals->m_frame )
-		state->m_frame -= 1;
+	
+	//if ( state->m_frame == g_csgo.m_globals->m_frame )
+	//	state->m_frame -= 1;
+
+	if ( fake )
+		g_resolver.ResolveAngles ( m_player, record );
 
 	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent [ m_player->index ( ) ] = true;
-
-	if ( fake ) {
-		g_resolver.ResolveAngles ( m_player, record );
-		state->m_eye_pitch = record->m_eye_angles.x;
-		state->m_eye_yaw = record->m_eye_angles.y;
-		m_player->m_angEyeAngles ( ) = record->m_eye_angles;
-		m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
-	}
-
-	m_player->UpdateClientSideAnimation ( );
+	rebuilt::Update ( state, record->m_eye_angles );
 	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent [ m_player->index ( ) ] = false;
 
 	if ( fake )
@@ -759,7 +756,37 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 	}
 
 	bool update = ( m_records.empty ( ) || player->m_flSimulationTime ( ) > m_records.front ( ).get ( )->m_sim_time );
-	//bool shift = ( player->m_flSimulationTime ( ) <= player->m_flOldSimulationTime ( ) );
+
+	if ( m_records.size ( ) >= 2 ) {
+		LagRecord *previous = m_records [ 1 ].get ( );
+		
+		if ( previous ) {
+			const float curtime = player->m_flSimulationTime ( );
+			const int tick = game::TIME_TO_TICKS ( curtime );
+			const int tick_count = static_cast< int >( curtime / g_csgo.m_globals->m_interval + 0.5f );
+			const int ticks_ago_hit_ground = static_cast< int >( ( player->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ].m_cycle * player->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ].m_playback_rate ) / g_csgo.m_globals->m_interval + 0.5f );
+			const int tick_hit_ground = tick_count - ticks_ago_hit_ground;
+			const bool twice_in_air = !( previous->m_flags & FL_ONGROUND ) && !( m_records.front ( ).get ( )->m_flags & FL_ONGROUND );
+			const bool jumped = ( previous->m_flags & FL_ONGROUND ) && !( m_records.front ( ).get ( )->m_flags & FL_ONGROUND );
+			const bool landed = !( previous->m_flags & FL_ONGROUND ) && ( m_records.front ( ).get ( )->m_flags & FL_ONGROUND );
+			const bool on_ground = ( previous->m_flags & FL_ONGROUND ) && ( m_records.front ( ).get ( )->m_flags & FL_ONGROUND );
+
+			int flags_int = 0;
+
+			if ( ( landed && tick >= tick_hit_ground )
+				|| ( jumped && tick <= tick_hit_ground )
+				|| ( twice_in_air && tick == tick_hit_ground )
+				|| on_ground ) {
+				player->m_fFlags ( ) |= FL_ONGROUND;
+
+				/* jumped, set velocity to upwards dir  */
+				if ( ( jumped && flags_int == tick ) || twice_in_air ) {
+					player->m_vecVelocity ( ).z = g_csgo.sv_jump_impulse->GetFloat ( );
+					g_cl.print ( "testing\n" );
+				}
+			}
+		}
+	}
 
 	if ( update ) {
 		m_records.emplace_front ( std::make_shared< LagRecord > ( player ) );
@@ -777,8 +804,6 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 			const auto backup_simtime = player->m_flSimulationTime ( );
 			const auto backup_old_simtime = current->m_old_sim_time;
 
-			current->m_shifting = false;
-
 			UpdateAnimations ( current );
 		}
 
@@ -786,6 +811,8 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 
 		g_bones.Build ( m_player, m, g_csgo.m_globals->m_curtime );
 		memcpy ( current->m_bones, m, sizeof ( BoneArray ) * 128 );
+
+		current->m_shifting = false;
 	}
 
 	//// ghetto fix

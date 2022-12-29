@@ -21,22 +21,23 @@ void Hooks::PhysicsSimulate ( ) {
 	const auto backup_velocity_modifier = g_cl.m_local->m_flVelocityModifier ( );
 
 	if ( player == g_cl.m_local ) {
-		//if ( g_cl.m_cmd->m_command_number > last_command_num ) {
-		auto nci = g_csgo.m_engine->GetNetChannelInfo ( );
+		if ( g_cl.m_cmd->m_command_number > last_command_num ) {
+			auto nci = g_csgo.m_engine->GetNetChannelInfo ( );
 
-		// don't do this if our choke cycle resets.
-		if ( nci ) {
-			const auto latency = game::TIME_TO_TICKS ( g_cl.m_latency );
+			// don't do this if our choke cycle resets.
+			if ( nci ) {
+				const auto latency = game::TIME_TO_TICKS ( g_cl.m_latency );
 
-			// recalculate velocity modifier.
-			if ( g_inputpred.stored.m_velocity_modifier < 1.0f )
-				g_inputpred.stored.m_velocity_modifier = std::clamp < float > ( g_inputpred.stored.m_velocity_modifier + ( game::TICKS_TO_TIME ( 1 ) + latency ) * ( 1.0f / 2.5f ), 0.0f, 1.0f );
+				// recalculate velocity modifier.
+				if ( g_inputpred.stored.m_velocity_modifier < 1.0f )
+					g_inputpred.stored.m_velocity_modifier = std::clamp < float > ( g_inputpred.stored.m_velocity_modifier + ( game::TICKS_TO_TIME ( 1 ) + latency ) * ( 1.0f / 2.5f ), 0.0f, 1.0f );
 
-			if ( g_cl.m_lag == 0 )
-				player->m_flVelocityModifier ( ) = g_inputpred.stored.m_old_velocity_modifier; // set to value received from server.
+				if ( g_cl.m_lag == 0 )
+					player->m_flVelocityModifier ( ) = g_inputpred.stored.m_old_velocity_modifier; // set to value received from server.
+			}
+
+			last_command_num = g_cl.m_cmd->m_command_number;
 		}
-
-		//last_command_num = g_cl.m_cmd->m_command_number;
 
 		*( int * ) ( std::uintptr_t ( player ) + 0x3238 ) = 0;
 	}
@@ -62,6 +63,9 @@ void Hooks::PhysicsSimulate ( ) {
 void Hooks::BuildTransformations ( int a2, int a3, int a4, int a5, int a6, int a7 ) {
 	// cast thisptr to player ptr.
 	Player *player = ( Player * ) this;
+	
+	if ( !player )
+		return g_hooks.m_BuildTransformations ( this, a2, a3, a4, a5, a6, a7 );
 
 	// get bone jiggle.
 	int bone_jiggle = *reinterpret_cast< int * >( uintptr_t ( player ) + 0x291C );
@@ -70,6 +74,9 @@ void Hooks::BuildTransformations ( int a2, int a3, int a4, int a5, int a6, int a
 	*reinterpret_cast< int * >( uintptr_t ( player ) + 0x291C ) = 0;
 
 	auto hdr = ( ( CStudioHdr * ) a2 )->m_pStudioHdr;
+
+	if ( !hdr )
+		return g_hooks.m_BuildTransformations ( this, a2, a3, a4, a5, a6, a7 );
 
 	const auto backup_bone_flags = hdr->m_flags;
 
@@ -134,7 +141,7 @@ void Hooks::AccumulateLayers ( void *setup, vec3_t &pos, void *q, float time ) {
 
 	static auto accumulate_pose = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? 83 BF ? ? ? ? ? 0F 84 ? ? ? ? 8D" ) ).rel32 ( 0x1 ).as<void ( __thiscall * )( void *, vec3_t &, void *, int, float, float, float, void * )> ( );
 
-	if ( !player || !player->IsPlayer ( ) || player->m_iHealth ( ) <= 0 || !player->m_AnimOverlay ( ) || !player->m_pIK ( ) )
+	if ( !player || !player->IsPlayer ( ) || player->m_iHealth ( ) <= 0 || player == g_cl.m_local || !player->m_AnimOverlay ( ) || !player->m_pIK ( ) )
 		return g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
 
 	for ( auto animLayerIndex = 0; animLayerIndex < 13; animLayerIndex++ ) {

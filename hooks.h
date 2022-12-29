@@ -61,6 +61,7 @@ public:
 	using GetEyeAngles_t = ang_t & ( __thiscall * ) ( void * );
 	using AccumulateLayers_t = void ( __thiscall * ) ( void *, void *setup, vec3_t &pos, void *q, float time );
 	using PhysicsSimulate_t = void ( __thiscall * )( void * );
+	using GetScreenAspectRatio_t = float ( __thiscall * )( void *, int, int );
 public:
 	bool                     TempEntities( void *msg );
 	int PacketStart ( int incoming_sequence, int outgoing_acknowledged );
@@ -101,6 +102,7 @@ public:
 	void					 CalcView ( vec3_t &eye_origin, ang_t &eye_angles, float &z_near, float &z_far, float &fov );
 	bool                     IsConnected( );
 	bool                     IsHLTV( );
+	float					 GetScreenAspectRatio ( int viewportWidth, int viewportHeight );
 	void                     EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char* pSoundEntry, unsigned int nSoundEntryHash, const char* pSample, float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, const vec3_t* pOrigin, const vec3_t* pDirection, void* pUtlVecOrigins, bool bUpdatePositions, float soundtime, int speakerentity );
 	void                     RenderSmokeOverlay( bool unk );
 	void                     OnRenderStart( );

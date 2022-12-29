@@ -193,188 +193,129 @@ void rebuilt::IncrementLayerCycleWeightRateGeneric ( CCSGOGamePlayerAnimState *s
 	SetWeightDeltaRate ( state, layer_idx, prev_weight );
 }
 
-// ty ses ^-^
-void rebuilt::Update ( CCSGOGamePlayerAnimState *animstate, const ang_t &angles, int tick ) {
-	const float backup_cur_time = g_csgo.m_globals->m_curtime;
-	const float backup_frametime = g_csgo.m_globals->m_frametime;
-	const int backup_framecount = g_csgo.m_globals->m_frame;
+CUtlVector <uint16_t> __forceinline rebuild_modifiers ( CCSGOGamePlayerAnimState *state ) {
+	activity_modifiers_wrapper modifier_wrapper {};
 
-	/* update with "correct" information */
-	g_csgo.m_globals->m_curtime = static_cast< float >( tick ) * g_csgo.m_globals->m_interval;
-	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
-	g_csgo.m_globals->m_frame = tick;
+	modifier_wrapper.add_modifier ( state->GetWeaponPrefix ( ) );
 
-	/* force game to use non-abs velocity */
-	animstate->m_pPlayer->m_iEFlags ( ) |= 0x1000;
-	animstate->m_pPlayer->m_vecAbsVelocity ( ) = animstate->m_pPlayer->m_vecVelocity ( );
+	if ( state->m_flSpeedAsPortionOfWalkTopSpeed > .25f )
+		modifier_wrapper.add_modifier ( "moving" );
 
-	auto animlayers = animstate->m_pPlayer->m_AnimOverlay ( );
-	const auto backup_animlayers = *animlayers;
-	const CCSGOGamePlayerAnimState backup_animstate = *animstate;
+	if ( state->m_flAnimDuckAmount > .55f )
+		modifier_wrapper.add_modifier ( "crouch" );
 
-	const bool on_ground = ( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) != 0;
-	const bool landed_on_ground_this_frame = on_ground && !animstate->m_bOnGround;
+	return modifier_wrapper.get ( );
+}
 
-	/*
-	*	LMAO f*k it, we will use flashed as a place to hold the jumping var (that only exists on the server)
-	*	I dont want to have to create a separate structure to hold just a few server-specific animstate members
-	*	This doesnt get used in client anim code anyways (afaik)...
-	*/
-	bool &m_bJumping = animstate->m_bFlashed;
+void rebuilt::Update ( CCSGOPlayerAnimState *animstate, const ang_t &angles ) {
+	auto game_state = ( CCSGOGamePlayerAnimState * ) animstate;
+	bool &m_bJumping = game_state->m_bFlashed;
 
-	/*
-	case PLAYERANIMEVENT_JUMP: // 6
-		{
-			// note: this event means a jump is definitely happening, not just that a jump is desired
-			m_bJumping = true;
-			SetLayerSequence( ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, SelectSequenceFromActMods( ACT_CSGO_JUMP ) );
-			break;
-		}
-	*	Very ghetto fix:
-	*/
-	if ( !on_ground
-		&& animstate->m_bOnGround
-		/* make sure we are moving UP and not DOWN (so change in flags doesnt trigger PLAYERANIMEVENT_JUMP when just falling off a platform) */
-		&& animstate->m_pPlayer->m_vecVelocity ( ).z > 0.0f ) {
+	if ( !( game_state->m_pPlayer->m_fFlags ( ) & FL_ONGROUND )
+		&& game_state->m_bOnGround
+		&& game_state->m_pPlayer->m_vecVelocity ( ).z > 0.0f ) {
 		m_bJumping = true;
-		SetSequence ( animstate, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL,SelectWeightedSequence ( animstate, ACT_CSGO_JUMP ) );
+		rebuilt::SetSequence ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( game_state, ACT_CSGO_JUMP ) );
 	}
 
-	/* rebuild some missing anim code */
-	const bool stopped_moving_this_frame = animstate->m_flVelocityLengthXY <= 0.0f && animstate->m_flDurationStill <= 0.0f;
-
-	const bool previously_on_ladder = animstate->m_bOnLadder;
-	const bool on_ladder = animstate->m_pPlayer->m_MoveType ( ) == MOVETYPE_LADDER;
-	const bool started_laddering_this_frame = ( !previously_on_ladder && on_ladder );
-	const bool stopped_laddering_this_frame = ( previously_on_ladder && !on_ladder );
-
-	/* CCSGOPlayerAnimState::SetupVelocity() ANIMATION_LAYER_ADJUST calculations */
-	if ( !animstate->m_bAdjustStarted && stopped_moving_this_frame && on_ground && !on_ladder && !animstate->m_bLanding && animstate->m_flStutterStep < 50.0f ) {
-		SetSequence ( animstate, ANIMATION_LAYER_ADJUST, SelectWeightedSequence ( animstate, 980 ) );
-		animstate->m_bAdjustStarted = true;
+	if ( !( g_inputpred.data.m_nOldButtons & FL_ONGROUND ) ) {
+		rebuilt::SetSequence ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( game_state, ACT_CSGO_FALL ) );
+		m_bJumping = true;
 	}
+	else
+		rebuild_modifiers ( game_state );
 
-	const int adjust_activity = GetLayerActivity ( animstate, ANIMATION_LAYER_ADJUST );
+	bool bPreviouslyOnLadder = game_state->m_bOnLadder;
+	game_state->m_bOnLadder = !game_state->m_bOnGround && game_state->m_pPlayer->m_MoveType ( ) == MOVETYPE_LADDER;
+	bool bStartedLadderingThisFrame = ( !bPreviouslyOnLadder && game_state->m_bOnLadder );
+	bool bStoppedLadderingThisFrame = ( bPreviouslyOnLadder && !game_state->m_bOnLadder );
 
-	if ( adjust_activity == 980 || adjust_activity == 979 ) {
-		if ( animstate->m_bAdjustStarted && animstate->m_flSpeedAsPortionOfCrouchTopSpeed  <= 0.25f ) {
-			IncrementLayerCycleWeightRateGeneric ( animstate, ANIMATION_LAYER_ADJUST );
-			animstate->m_bAdjustStarted = !IsLayerSequenceCompleted ( animstate, ANIMATION_LAYER_ADJUST );
-		}
-		else {
-			animstate->m_bAdjustStarted = false;
-
-			auto &layer = animstate->m_pPlayer->m_AnimOverlay( ) [ ANIMATION_LAYER_ADJUST ];
-			const float weight = layer.m_weight;
-			layer.m_weight = valve_math::Approach ( 0.0f, weight, animstate->m_flLastUpdateIncrement * 5.0f );
-			SetWeightDeltaRate ( animstate, ANIMATION_LAYER_ADJUST, weight );
-		}
-	}
-
-	Weapon *weapon = animstate->m_pPlayer->GetActiveWeapon ( );
-
-	const float max_speed_run = weapon ? std::max ( weapon->GetWpnData ( )->m_max_player_speed, 0.001f ) : CS_PLAYER_SPEED_RUN;
-	const vec3_t velocity = animstate->m_pPlayer->m_vecVelocity ( );
-
-	animstate->m_flVelocityLengthXY = std::min ( velocity.length ( ), CS_PLAYER_SPEED_RUN );
-
-	if ( animstate->m_flVelocityLengthXY > 0.0f )
-		animstate->m_vecVelocityNormalizedNonZero = velocity.normalized ( );
-
-	animstate->m_flSpeedAsPortionOfWalkTopSpeed  = animstate->m_flVelocityLengthXY / ( max_speed_run * CS_PLAYER_SPEED_WALK_MODIFIER );
-
-	/* only for localplayer (we dont have enemy usercmds) */
-	if ( g_cl.m_local && animstate->m_pPlayer == g_cl.m_local ) {
-		/* FROM src/game/prediction.cpp */
-		const uint32_t buttons = *reinterpret_cast< uint32_t * >( reinterpret_cast< uintptr_t >( animstate->m_pPlayer ) + 0x3208 );
-
-		bool move_right = ( buttons & ( IN_MOVERIGHT ) ) != 0;
-		bool move_left = ( buttons & ( IN_MOVELEFT ) ) != 0;
-		bool move_forward = ( buttons & ( IN_FORWARD ) ) != 0;
-		bool move_backward = ( buttons & ( IN_BACK ) ) != 0;
-		
-		vec3_t forward, right;
-		math::AngleVectors ( ang_t ( 0, animstate->m_flFootYaw, 0 ), &forward, &right );
-		right.normalize ( );
-
-		const float vel_to_right_dot = animstate->m_vecVelocityNormalizedNonZero.dot ( right );
-		const float vel_to_forward_dot = animstate->m_vecVelocityNormalizedNonZero.dot ( forward );
-
-		const bool strafe_right = ( animstate->m_flSpeedAsPortionOfWalkTopSpeed  >= 0.73f && move_right && !move_left && vel_to_right_dot < -0.63f );
-		const bool strafe_left = ( animstate->m_flSpeedAsPortionOfWalkTopSpeed  >= 0.73f && move_left && !move_right && vel_to_right_dot > 0.63f );
-		const bool strafe_forward = ( animstate->m_flSpeedAsPortionOfWalkTopSpeed  >= 0.65f && move_forward && !move_backward && vel_to_forward_dot < -0.55f );
-		const bool strafe_back = ( animstate->m_flSpeedAsPortionOfWalkTopSpeed  >= 0.65f && move_backward && !move_forward && vel_to_forward_dot > 0.55f );
-
-		*reinterpret_cast< bool * >( reinterpret_cast< uintptr_t >( animstate->m_pPlayer ) + 0x39E0 ) = ( strafe_right || strafe_left || strafe_forward || strafe_back );
-	}
-
-	if ( ( animstate->m_flLadderWeight > 0.0f || on_ladder ) && started_laddering_this_frame )
-		SetSequence ( animstate, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, SelectWeightedSequence ( animstate, 987 ) );
-
-	if ( on_ground ) {
+	if ( game_state->m_bOnGround ) {
 		bool next_landing = false;
-		if ( !animstate->m_bLanding && ( landed_on_ground_this_frame || stopped_laddering_this_frame ) ) {
-			SetSequence ( animstate, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, SelectWeightedSequence ( animstate, ( animstate->m_flDurationInAir > 1.0f ) ? 989 : 988 ) );
+
+		if ( !game_state->m_bLanding && ( game_state->m_bLandedOnGroundThisFrame || bStoppedLadderingThisFrame ) ) {
+			rebuilt::SetSequence ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, rebuilt::SelectWeightedSequence ( game_state, ( game_state->m_flDurationInAir > 1 ) ? ACT_CSGO_LAND_HEAVY : ACT_CSGO_LAND_LIGHT ) );
+			//rebuilt::SetCycle ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
 			next_landing = true;
 		}
 
-		if ( next_landing && GetLayerActivity ( animstate, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) != 987 ) {
+		game_state->m_flDurationInAir = 0;
+
+		if ( next_landing && rebuilt::GetLayerActivity ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) != ACT_CSGO_CLIMB_LADDER ) {
 			m_bJumping = false;
 
-			/* some client code here */
+			rebuilt::IncrementLayerCycle ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, false );
+			rebuilt::IncrementLayerCycle ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, false );
 
-			auto &layer = animstate->m_pPlayer->m_AnimOverlay ( )[ ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ];
-			/* dont actually mess up the value */
-			const float backup_cycle = layer.m_cycle;
-			/* run this calculation ahead of time so we dont get 1-tick-late landing */
-			IncrementLayerCycle ( animstate, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, false );
+			game_state->m_pPlayer->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 0.f;
 
-			if ( IsLayerSequenceCompleted ( animstate, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) )
-				next_landing = false;
+			if ( rebuilt::IsLayerSequenceCompleted ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) ) {
+				game_state->m_bLanding = false;
+				rebuilt::SetWeight ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
+				rebuilt::SetWeight ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, 0 );
+				game_state->m_flLandAnimMultiplier = 1.0f;
+			}
+			else {
+				float flLandWeight = rebuilt::GetLayerIdealWeightFromSequenceCycle ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) * game_state->m_flLandAnimMultiplier;
+				flLandWeight *= std::clamp< float > ( ( 1.0f - game_state->m_flAnimDuckAmount ), 0.2f, 1.0f );
 
-			layer.m_cycle = backup_cycle;
-		}
+				rebuilt::SetWeight ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, flLandWeight );
 
-		if ( !next_landing && !m_bJumping && animstate->m_flLadderWeight <= 0.0f ) {
-			auto &layer = animstate->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ];
-			layer.m_weight = 0.0f;
-		}
-	}
-	else if ( !on_ladder ) {
-		if ( animstate->m_bOnGround || stopped_laddering_this_frame ) {
-			if ( !m_bJumping ) {
-				//play_animation ( animstate, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, 986 );
-				SetSequence ( animstate, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, SelectWeightedSequence ( animstate, ACT_CSGO_FALL ) );
+				float flCurrentJumpFallWeight = game_state->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ].m_weight;
+				if ( flCurrentJumpFallWeight > 0 ) {
+					flCurrentJumpFallWeight = valve_math::Approach ( 0, flCurrentJumpFallWeight, game_state->m_flLastUpdateIncrement * 10.0f );
+					rebuilt::SetWeight ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, flCurrentJumpFallWeight );
+				}
 			}
 		}
+
+		if ( !game_state->m_bLanding && !m_bJumping && game_state->m_flLadderWeight <= 0 ) {
+			rebuilt::SetWeight ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, 0 );
+		}
+	}
+	else if ( !game_state->m_bOnLadder ) {
+		game_state->m_bLanding = false;
+
+		// we're in the air
+		if ( game_state->m_bLeftTheGroundThisFrame || bStoppedLadderingThisFrame ) {
+			// If entered the air by jumping, then we already set the jump activity.
+			// But if we're in the air because we strolled off a ledge or the floor collapsed or something,
+			// we need to set the fall activity here.
+			if ( !m_bJumping ) {
+				rebuilt::SetSequence ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, rebuilt::SelectWeightedSequence ( game_state, ACT_CSGO_FALL ) );
+			}
+
+			game_state->m_flDurationInAir = 0;
+		}
+
+		game_state->m_flDurationInAir += game_state->m_flLastUpdateIncrement;
+
+		rebuilt::IncrementLayerCycle ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, false );
+
+		// increase jump weight
+		float flJumpWeight = game_state->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL ].m_weight;
+		float flNextJumpWeight = rebuilt::GetLayerIdealWeightFromSequenceCycle ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL );
+
+		if ( flNextJumpWeight > flJumpWeight )
+			rebuilt::SetWeight ( game_state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, flNextJumpWeight );
+
+		auto smoothstep_bounds = [ ] ( float edge0, float edge1, float x ) {
+			x = std::clamp< float > ( ( x - edge0 ) / ( edge1 - edge0 ), 0, 1 );
+			return x * x * ( 3 - 2 * x );
+		};
+
+		float flLingeringLandWeight = game_state->m_pPlayer->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ].m_weight;
+
+		if ( flLingeringLandWeight > 0 ) {
+			flLingeringLandWeight *= smoothstep_bounds ( 0.2f, 0.0f, game_state->m_flDurationInAir );
+			rebuilt::SetWeight ( game_state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, flLingeringLandWeight );
+		}
+
+		// blend jump into fall. This is a no-op if we're playing a fall anim.
+		game_state->m_pPlayer->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = std::clamp ( smoothstep_bounds ( 0.72f, 1.52f, game_state->m_flDurationInAir ), 0.0f, 1.0f );
 	}
 
-	/* update animation */
-	animstate->m_pPlayer->UpdateAnimState ( ( CCSGOPlayerAnimState* )animstate, angles );
-
-	/* undo bad clientsided adjust layer calculation */
-	auto &adjust_layer = animlayers [ ANIMATION_LAYER_ADJUST ];
-
-	if ( adjust_layer.m_weight > 0.0f ) {
-		adjust_layer.m_cycle = std::clamp ( adjust_layer.m_cycle - animstate->m_flLastUpdateIncrement * adjust_layer.m_playback_rate, 0.0f, 0.999f );
-		adjust_layer.m_weight = std::clamp ( adjust_layer.m_weight - animstate->m_flLastUpdateIncrement *adjust_layer.m_weight_delta_rate, 0.0f, 1.0f );
-	}
-
-	/* rebuild some more animation code */
-	if ( animstate->m_flVelocityLengthXY <= CS_PLAYER_SPEED_STOPPED
-		&& animstate->m_bOnGround
-		&& !animstate->m_bOnLadder
-		&& !animstate->m_bLanding
-		&& animstate->m_flLastUpdateIncrement > 0.0f
-		&& abs ( valve_math::AngleDiff ( animstate->m_flFootYawLast, animstate->m_flFootYaw ) / animstate->m_flLastUpdateIncrement > CSGO_ANIM_READJUST_THRESHOLD ) ) {
-		SetSequence ( animstate, ANIMATION_LAYER_ADJUST, SelectWeightedSequence ( animstate, ACT_CSGO_IDLE_TURN_BALANCEADJUST ) );
-		animstate->m_bAdjustStarted = true;
-	}
-
-	/* restore client vars */
-	g_csgo.m_globals->m_curtime = backup_cur_time;
-	g_csgo.m_globals->m_frametime = backup_frametime;
-	g_csgo.m_globals->m_frame = backup_framecount;
+	game::UpdateAnimationState ( animstate, angles );
 }
 
 void rebuilt::InvalidatePhysicsRecursive ( void *player, int change_flags ) {

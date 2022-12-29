@@ -21,7 +21,7 @@ namespace detours {
 	void __fastcall SetupMovement ( void *ecx, void *edx );
 	int __fastcall RunSimulation ( void *ecx, void *edx, int current_command, float curtime, CUserCmd *cmd, Player *local );
 	void __vectorcall UpdateAnimationState ( void *ecx, void *a1, float a2, float a3, float a4, void *a5 );
-	bool __fastcall SetupBones ( void *ecx, void *edx, BoneArray *out, int max, int mask, float curtime );
+	bool __fastcall SetupBones ( void *ecx, void *edx, matrix3x4_t *out, int max, int mask, float curtime );
 	void __fastcall Paint ( void *ecx, void *edx, PaintModes_t mode );
 	void __fastcall ModifyEyePosition ( void *ecx, void *edx, vec3_t &eye_pos );
 	void __fastcall SetChoked ( void *ecx, void *edx );

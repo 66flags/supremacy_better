@@ -93,6 +93,7 @@ public:
 	vec3_t m_pred_velocity;
 	float  m_pred_time;
 	int    m_pred_flags;
+	bool   m_did_predict;
 
 	// resolver stuff.
 	size_t m_mode;
@@ -189,6 +190,7 @@ public:
 		m_pred_velocity = m_velocity;
 		m_pred_time     = m_sim_time;
 		m_pred_flags    = m_flags;
+		m_did_predict = false;
 		m_shifting = false;
 	}
 

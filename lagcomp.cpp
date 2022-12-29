@@ -186,6 +186,8 @@ bool LagCompensation::StartPrediction( AimPlayer* data ) {
 		if ( trace.m_fraction != 1.0f && trace.m_plane.m_normal.z > 0.7f )
 			record->m_flags |= FL_ONGROUND;
 
+		record->m_pred_time += g_csgo.m_globals->m_interval;
+		record->m_did_predict = true;
 		pred++;
 	}
 
@@ -421,7 +423,7 @@ void LagCompensation::PredictAnimations( CCSGOPlayerAnimState* state, LagRecord*
 		g_resolver.ResolveAngles( player, record );
 
 	// update animations.
-	game::UpdateAnimationState( state, record->m_eye_angles );
+	rebuilt::Update ( state, record->m_eye_angles );
 
 	// rerun the pose correction cuz we are re-setupping them.
 	if( fake )

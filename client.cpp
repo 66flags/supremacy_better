@@ -212,30 +212,10 @@ void Client::UpdateLocalAnimations ( ) {
 	C_AnimationLayer backup_anim_layers [ 13 ];
 	memcpy ( backup_anim_layers, m_local->m_AnimOverlay ( ), sizeof ( backup_anim_layers ) );
 
-	game_state->m_flMoveWeight = backup_anim_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_weight;
-	game_state->m_flPrimaryCycle = backup_anim_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_cycle;
-	game_state->m_flStrafeChangeWeight = backup_anim_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_weight;
-	game_state->m_flStrafeChangeCycle = backup_anim_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_cycle;
-	game_state->m_nStrafeSequence = backup_anim_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
-	game_state->m_flAccelerationWeight = backup_anim_layers [ ANIMATION_LAYER_LEAN ].m_weight;
-
-	{
-		g_cl.m_activity_modifiers.add_modifier ( game_state->GetWeaponPrefix ( ) );
-
-		// update modifiers.
-		if ( game_state->m_flSpeedAsPortionOfWalkTopSpeed > 0.25f )
-			g_cl.m_activity_modifiers.add_modifier ( "moving" );
-
-		if ( game_state->m_flAnimDuckAmount > 0.55f )
-			g_cl.m_activity_modifiers.add_modifier ( "crouch" );
-	}
-
-	//m_local->m_iEFlags ( ) &= ~0x1000;
-
-	state->m_frame = g_csgo.m_globals->m_curtime - game::TICKS_TO_TIME ( 1 );
+	backup_anim_layers [ 12 ].m_weight = 0.f;
 
 	m_animate = true;
-	game::UpdateAnimationState ( state, m_angle );
+	rebuilt::Update ( state, m_angle );
 	m_animate = false;
 
 	g_csgo.m_globals->m_frametime = backup_frametime;
@@ -247,13 +227,15 @@ void Client::UpdateLocalAnimations ( ) {
 	}
 
 	if ( *m_packet ) {
-		m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
-		m_local->GetPoseParameters ( anim_data.m_poses );
-		backup_anim_layers [ 12 ].m_weight = 0.f;
+		memcpy ( anim_data.m_poses, m_local->m_flPoseParameter ( ), sizeof ( anim_data.m_poses ) );
+
+		if ( !( m_local->m_fFlags ( ) & FL_ONGROUND ) )
+			anim_data.m_poses [ POSE_JUMP_FALL ] = 1.f;
+		
 		memcpy ( anim_data.m_last_layers, anim_data.m_last_queued_layers, sizeof ( anim_data.m_last_layers ) );
 		anim_data.m_rotation.y = state->m_goal_feet_yaw;
 	}
-
+		
 	//m_animate = false; // force the player to restore data.
 	//m_local->m_bClientSideAnimation ( ) = false;
 }
@@ -512,9 +494,9 @@ void Client::OnTick ( CUserCmd *cmd ) {
 	// and prediction seed/player.
 	g_inputpred.restore ( );
 
-	UpdateLocalAnimations ( );
 	UpdateInformation ( );
-	
+	UpdateLocalAnimations ( );
+
 	if ( cmd->m_buttons & IN_ATTACK )
 		*g_cl.m_packet = true;
 
