@@ -176,7 +176,7 @@ bool __fastcall detours::SVCMsg_VoiceData ( void *ecx, void *edx, void *a2 ) {
 void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 	auto player = ( Player * ) ecx;
 
-	if ( !player || game::IsFakePlayer ( player->index ( ) ) )
+	if ( !player || !player->alive ( ) )
 		return old::UpdateClientSideAnimation ( ecx, edx );
 
 	if ( player->index ( ) == g_cl.m_local->index ( ) && g_cl.m_local == player ) {
