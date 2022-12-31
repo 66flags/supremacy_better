@@ -52,6 +52,7 @@ public:
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_nHitboxSet;
 	XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flTimeOfLastInjury;
 	XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_LastHitGroup;
+	XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_vecLadderNormal;
 	XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_nRelativeDirectionOfLastInjury;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_angAbsRotation;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_angRotation;
@@ -151,6 +152,7 @@ public:
         INIT_XOREDNETVAR( m_flCycle,                    HASH( "DT_BaseAnimating" ),        HASH( "m_flCycle" ) );
 		INIT_XOREDNETVAR ( m_flAnimTime, HASH ( "DT_BaseEntity" ), HASH ( "m_flAnimTime" ) );
         INIT_XOREDNETVAR( m_flC4Blow,                   HASH( "DT_PlantedC4" ),            HASH( "m_flC4Blow" ) );
+		INIT_XOREDNETVAR ( m_vecLadderNormal, HASH ( "DT_BasePlayer" ), HASH ( "m_vecLadderNormal" ) );
         INIT_XOREDNETVAR( m_bBombTicking,               HASH( "DT_PlantedC4" ),            HASH( "m_bBombTicking" ) );
         INIT_XOREDNETVAR( m_nModelIndex,                HASH( "DT_BasePlayer" ),           HASH( "m_nModelIndex" ) );
         INIT_XOREDNETVAR( m_lifeState,                  HASH( "DT_BasePlayer" ),           HASH( "m_lifeState" ) );

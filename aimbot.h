@@ -12,6 +12,7 @@ struct AnimationBackup_t {
 	vec3_t           m_velocity, m_abs_velocity;
 	int              m_flags, m_eflags;
 	float            m_duck, m_body;
+	vec3_t			 m_mins, m_maxs;
 	C_AnimationLayer m_layers[ 13 ];
 };
 
@@ -69,6 +70,7 @@ public:
 public:
 	VelocityDetail_t FixVelocity ( C_AnimationLayer *animlayers, LagRecord *previous, Player *player );
 	void UpdateAnimations( LagRecord* record );
+	void UpdatePlayer ( AnimationBackup_t backup, LagRecord *record );
 	void OnNetUpdate( Player* player );
 	void OnRoundStart( Player* player );
 	void SetupHitboxes( LagRecord* record, bool history );

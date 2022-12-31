@@ -1572,6 +1572,10 @@ namespace valve_math {
 namespace rebuilt {
 	void SetSequence ( CCSGOGamePlayerAnimState *state, int layer_idx, int sequence );
 	int SelectWeightedSequence ( CCSGOGamePlayerAnimState *state, int act );
+	void UpdateAnimationState ( CCSGOGamePlayerAnimState *state, float eyeYaw, float eyePitch, bool bForce );
+	void IncrementLayerWeight ( CCSGOGamePlayerAnimState *state, int layer_idx );
+	void SetupWholeBodyAction ( CCSGOGamePlayerAnimState *state );
+	void SetupLean ( CCSGOGamePlayerAnimState *state );
 	void SetCycle ( CCSGOGamePlayerAnimState *state, int layer_idx, float cycle );
 	void SetWeightDeltaRate ( CCSGOGamePlayerAnimState *state, int layer_idx, float old_weight );
 	void IncrementLayerCycleWeightRateGeneric ( CCSGOGamePlayerAnimState *state, int layer_idx );
@@ -1583,4 +1587,13 @@ namespace rebuilt {
 	void IncrementLayerCycle ( CCSGOGamePlayerAnimState *state, int layer_idx, bool allow_loop );
 	int GetLayerActivity ( CCSGOGamePlayerAnimState *state, AnimationLayer_t layer_idx );
 	void CalculatePoses ( CCSGOPlayerAnimState *state, Player *player, float *poses, float feet_yaw );
+	void DoAnimationEvent ( CCSGOGamePlayerAnimState *state, int event, int data );
+	void SetupVelocity ( CCSGOGamePlayerAnimState *state );
+	void UpdateAnimLayer ( CCSGOGamePlayerAnimState *state, int layer_idx, int seq, float playback_rate, float weight, float cycle );
+	void SetupMovement ( CCSGOGamePlayerAnimState *state );
+	void SetupAliveLoop ( CCSGOGamePlayerAnimState *state );
+	void SetupFlashedReaction ( CCSGOGamePlayerAnimState *state );
+	void SetupFlinch ( CCSGOGamePlayerAnimState *state );
+	void SetupAimMatrix ( CCSGOGamePlayerAnimState *state );
+	void SetupWeaponAction ( CCSGOGamePlayerAnimState *state );
 }

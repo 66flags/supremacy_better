@@ -38,7 +38,7 @@ public:
 		player->m_vecMins( )   = m_mins;
 		player->m_vecMaxs( )   = m_maxs;
 		player->SetAbsAngles( m_abs_ang );
-		player->SetAbsOrigin( m_origin );
+	//	player->SetAbsOrigin( m_origin );
 	}
 };
 
@@ -207,7 +207,7 @@ public:
 		m_player->m_vecMaxs( )   = m_maxs;
 
 		m_player->SetAbsAngles( m_abs_ang );
-		m_player->SetAbsOrigin( m_origin );
+	//	m_player->SetAbsOrigin( m_origin );
 	}
 
 	__forceinline bool dormant( ) {

@@ -66,17 +66,10 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	g_cl.m_local = g_csgo.m_entlist->GetClientEntity< Player * > ( g_csgo.m_engine->GetLocalPlayer ( ) );
 
 	if ( stage == FRAME_RENDER_START ) {
-		// apply local player animated angles.
-		//if ( g_csgo.m_input->CAM_IsThirdPerson ( ) )
-		//	g_csgo.m_prediction->SetLocalViewAngles ( g_cl.m_radar );
-
-		//if ( g_cl.m_local && g_cl.m_local->alive ( ) ) {
-		//	g_cl.m_local->m_angRotation ( ) = g_cl.m_rotation;
-		//	g_cl.m_local->m_angNetworkAngles ( ) = g_cl.m_rotation;
-		//}
-
-		// apply local player animation fix.
-		//g_cl.UpdateAnimations( );
+		if ( g_cl.m_local && g_cl.m_local->alive ( ) ) {
+			g_cl.OnRenderStart ( );
+			//g_cl.m_local->m_flLowerBodyYawTarget ( ) = g_cl.anim_data.m_rotation.y;
+		}
 
 		// draw our custom beams.
 		g_visuals.DrawBeams ( );
@@ -85,7 +78,7 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	if ( stage == FRAME_NET_UPDATE_END ) {
 		auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
 
-		if ( g_cl.m_local || g_cl.m_local->m_hViewModel ( ) != 0xFFFFFFF ) {
+		if ( g_cl.m_local && g_cl.m_local->m_hViewModel ( ) != 0xFFFFFFF ) {
 			// restore viewmodel when model renders a scene
 			viewmodel->m_flCycle ( ) = g_inputpred.m_weapon_cycle;
 			viewmodel->m_nSequence ( ) = g_inputpred.m_weapon_sequence;
@@ -93,7 +86,7 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 		}
 	}
 		
-	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END && ( g_cl.m_local || g_cl.m_local->alive ( ) ) ) {
+	if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_END && ( g_cl.m_local && g_cl.m_local->alive ( ) ) ) {
 		g_inputpred.stored.m_old_velocity_modifier = g_cl.m_local->m_flVelocityModifier ( );
 
 		if ( g_cl.m_local->m_flVelocityModifier ( ) < g_inputpred.stored.m_old_velocity_modifier ) {

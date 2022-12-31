@@ -76,9 +76,6 @@ int __fastcall detours::PacketStart ( void *ecx, void *edx, int incoming_sequenc
 void __vectorcall detours::UpdateAnimationState ( void *ecx, void *a1, float a2, float a3, float a4, void *a5 ) {
 	const auto state = ( CCSGOPlayerAnimState * ) ecx;
 
-	if ( state->m_frame == g_csgo.m_globals->m_frame )
-		state->m_frame -= 1;
-
 	return old::UpdateAnimationState ( ecx, a1, a2, a3, a4, a5 );
 }
 
@@ -189,37 +186,23 @@ void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 			g_cl.m_local->m_PlayerAnimState ( )->m_player = nullptr;
 			old::UpdateClientSideAnimation ( g_cl.m_local, 0 );
 			g_cl.m_local->m_PlayerAnimState ( )->m_player = g_cl.m_local;
+			//g_cl.OnRenderStart ( );
+
+			// force setupbones rebuild.
+			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
 
 			// this will update the attachments origin.
 			static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
 			SetupBones_AttachmentHelper ( g_cl.m_local, g_cl.m_local->GetModelPtr ( ) );
-
-			// set animstate members tied to layers.
-			state->m_flMoveWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_weight;
-			state->m_flPrimaryCycle = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_cycle;
-			state->m_flStrafeChangeWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_weight;
-			state->m_flStrafeChangeCycle = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_cycle;
-			state->m_nStrafeSequence = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
-			state->m_flAccelerationWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_LEAN ].m_weight;
-
-			// restore data.
-			memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * g_cl.m_local->m_iNumOverlays ( ) );
-
-			g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
-			g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
-			state->m_flFootYaw = g_cl.anim_data.m_rotation.y;
-
-			// force setupbones rebuild.
-			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
 		}
 	}
 	else
 		old::UpdateClientSideAnimation ( ecx, edx );
 
-	if ( g_cl.m_local && player->m_iTeamNum ( ) != g_cl.m_local->m_iTeamNum ( ) ) {
+	if ( player && player->m_iTeamNum ( ) != g_cl.m_local->m_iTeamNum ( ) ) {
 		player->SetAbsOrigin ( player->m_vecOrigin ( ) );
 
-		if ( g_cl.m_update_ent [ player->index ( ) ] ) {
+		if ( g_cl.m_update_ent ) {
 			// @onetap
 			if ( player->m_AnimOverlay ( ) ) {
 				for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ ) {
@@ -253,22 +236,44 @@ void __fastcall detours::DoProceduralFootPlant ( void *ecx, void *edx, int a1, i
 }
 
 bool __fastcall detours::SetupBones ( void *ecx, void *edx, matrix3x4_t *out, int max, int mask, float curtime ) {
-	static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
-
 	auto player = ( Player * ) ecx - 4;
 
-	if ( g_bones.m_running )
-		return old::SetupBones ( ecx, edx, out, max, mask, curtime );
+	static auto &g_iModelBoneCounter = *pattern::find ( g_csgo.m_client_dll, XOR ( "3B 05 ? ? ? ? 0F 84 ? ? ? ? 8B 47" ) ).add ( 2 ).to ( ).as< int * > ( );
 
-	if ( player && player->alive ( ) && player->IsPlayer ( ) ) {
-		if ( out ) {
-			if ( max >= player->m_iBoneCount ( ) )
-				memcpy ( out, player->m_BoneCache ( ).m_pCachedBones, sizeof ( matrix3x4_t ) * player->m_iBoneCount ( ) );
-			else
-				return false;
+	if ( player && player != g_cl.m_local && player->alive ( ) && player->IsPlayer ( ) ) {
+		AimPlayer *data = &g_aimbot.m_players [ player->index ( ) - 1 ];
+
+		if ( data && data->m_records.size ( ) ) {
+			auto cache = &player->m_BoneCache ( );
+
+			if ( cache ) {
+				LagRecord *current = data->m_records.front ( ).get ( );
+
+				if ( current && current->m_setup ) {
+					if ( *( int * ) ( std::uintptr_t ( player ) + 0x267C ) != g_iModelBoneCounter ) {
+						auto cache = &player->m_BoneCache ( );
+
+						memcpy ( cache->m_pCachedBones, current->m_bones, sizeof ( BoneArray ) * cache->m_CachedBoneCount );
+
+						for ( auto i = 0; i < cache->m_CachedBoneCount; i++ )
+							cache->m_pCachedBones [ i ].SetOrigin ( cache->m_pCachedBones [ i ].GetOrigin ( ) - current->m_origin + player->GetRenderOrigin ( ) );
+
+						static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
+						SetupBones_AttachmentHelper ( player, player->GetModelPtr ( ) );
+						*( int * ) ( std::uintptr_t ( player ) + 0x267C ) = g_iModelBoneCounter;
+					}
+
+					if ( out ) {
+						if ( max >= cache->m_CachedBoneCount )
+							memcpy ( out, cache->m_pCachedBones, sizeof ( BoneArray ) * cache->m_CachedBoneCount );
+						else
+							return false;
+					}
+
+					return true;
+				}
+			}	
 		}
-
-		return true;
 	}
 
 	return old::SetupBones ( ecx, edx, out, max, mask, curtime );

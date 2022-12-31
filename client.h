@@ -30,6 +30,7 @@ public:
 	void EndMove ( CUserCmd *cmd );
 	void BackupPlayers ( bool restore );
 	void UnlockHiddenConvars ( );
+	void OnRenderStart ( );
 	void CalculatePoses ( CCSGOPlayerAnimState *state, Player *player, float *poses, float feet_yaw );
 	void UpdateLocalAnimations ( );
 	void DoMove ( );
@@ -131,7 +132,7 @@ public:
 	float  m_speed;
 	float  m_anim_time;
 	float  m_anim_frame;
-	bool   m_update_ent [ 65 ];
+	bool   m_update_ent;
 	bool   m_ground;
 	bool   m_lagcomp;
 

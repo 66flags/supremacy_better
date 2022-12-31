@@ -540,7 +540,6 @@ void Aimbot::Stop ( CUserCmd *cmd, float target_speed, vec3_t &cur_velocity, vec
 				if ( addspeed > 0.0 )
 					zero = fminf ( addspeed, acceleration_amount );
 				if ( zero > ( delta_target_speed + 0.5 ) ) {
-
 					auto move_length = speed_dot_dir + delta_target_speed;
 
 					if ( g_cl.m_local->m_flDuckAmount ( ) + speed == 1.0f )
@@ -571,30 +570,20 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 
 	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
 
+	// player respawned.
+	if ( m_player->m_flSpawnTime ( ) != m_spawn ) {
+		// reset animation state.
+		game::ResetAnimationState ( state );
+
+		// note new spawn time.
+		m_spawn = m_player->m_flSpawnTime ( );
+	}
+
 	float curtime = g_csgo.m_globals->m_curtime;
 	float frametime = g_csgo.m_globals->m_frametime;
 
-	const auto dword_44732EA4 = g_csgo.m_globals->m_realtime;
-	const auto dword_44732EA8 = g_csgo.m_globals->m_curtime;
-	const auto dword_44732EAC = g_csgo.m_globals->m_frametime;
-	const auto dword_44732EB0 = g_csgo.m_globals->m_abs_frametime;
-	const auto dword_44732EB4 = g_csgo.m_globals->m_interp_amt;
-	const auto dword_44732EB8 = g_csgo.m_globals->m_frame;
-	const auto dword_44732EBC = g_csgo.m_globals->m_tick_count;
-	const auto v4 = dword_44732EA8 / g_csgo.m_globals->m_interval;
-
-	g_csgo.m_globals->m_curtime = ( !record->m_shifting && ( record->m_did_predict || record->m_broke_lc ) ) ? record->m_pred_time : record->m_anim_time;
-	g_csgo.m_globals->m_realtime = g_csgo.m_globals->m_curtime;
-	//g_csgo.m_globals->m_curtime = v1;
-	const auto sim_ticks = ( v4 + 0.5f );
-
+	g_csgo.m_globals->m_curtime = m_player->m_flSimulationTime ( );
 	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
-	g_csgo.m_globals->m_abs_frametime = g_csgo.m_globals->m_interval;
-	g_csgo.m_globals->m_frame = sim_ticks;
-	g_csgo.m_globals->m_tick_count = sim_ticks;
-	g_csgo.m_globals->m_interp_amt = 0.0;
-
-	game_state->m_flLastUpdateTime = m_player->m_flSimulationTime ( );
 
 	AnimationBackup_t backup;
 
@@ -606,15 +595,13 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	backup.m_eflags = m_player->m_iEFlags ( );
 	backup.m_duck = m_player->m_flDuckAmount ( );
 	backup.m_body = m_player->m_flLowerBodyYawTarget ( );
-	m_player->GetAnimLayers ( backup.m_layers );
+	backup.m_mins = m_player->m_vecMins ( );
+	backup.m_maxs = m_player->m_vecMaxs ( );
 
-	g_csgo.m_globals->m_realtime = dword_44732EA4;
-	g_csgo.m_globals->m_curtime = dword_44732EA8;
-	g_csgo.m_globals->m_frametime = dword_44732EAC;
-	g_csgo.m_globals->m_abs_frametime = dword_44732EB0;
-	g_csgo.m_globals->m_interp_amt = dword_44732EB4;
-	g_csgo.m_globals->m_frame = dword_44732EB8;
-	g_csgo.m_globals->m_tick_count = dword_44732EBC;
+	m_player->GetAnimLayers ( backup.m_layers );
+	
+	g_csgo.m_globals->m_curtime = curtime;
+	g_csgo.m_globals->m_frametime = frametime;
 
 	bool bot = game::IsFakePlayer ( m_player->index ( ) );
 
@@ -632,10 +619,33 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 
 	record->m_anim_velocity = record->m_velocity;
 
+	if ( record->m_anim_velocity.length_2d ( ) <= 1.0f ) {
+		if ( !game_state->m_flDurationMoving && !game_state->m_vecPositionLast.z ) {
+			float lastUpdateIncrement = game_state->m_flLastUpdateIncrement;
+			if ( lastUpdateIncrement > 0.0 ) {
+				float currentFeetYaw = game_state->m_flFootYawLast;
+				float goalFeetYaw = game_state->m_flFootYaw;
+				float feetDelta = currentFeetYaw - game_state->m_flFootYaw;
+				if ( goalFeetYaw < currentFeetYaw ) {
+					if ( feetDelta >= 180.0 )
+						feetDelta = feetDelta - 360.0;
+				}
+				else if ( feetDelta <= -180.0 ) {
+					feetDelta = feetDelta + 360.0;
+				}
+				if ( ( feetDelta / lastUpdateIncrement ) > 120.0 ) {
+					m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_cycle = 0.0;
+					m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_weight = 0.0;
+					m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_sequence = m_player->GetSequenceActivity ( 979 );
+				}
+			}
+		}
+	}
+
 	if ( record->m_lag > 1 && !bot ) {
 		float speed = m_player->m_vecVelocity ( ).length_2d ( );
 
-		if ( record->m_flags & FL_ONGROUND && record->m_layers [ 6 ].m_weight == 0.f && ( speed > 0.1f && speed < 100.f ) || record->m_has_vel )
+		if ( record->m_flags & FL_ONGROUND && record->m_layers [ 6 ].m_weight == 0.f && ( speed > 0.1f && speed < 100.f ) || record->m_velocity_detail == DETAIL_PERFECT )
 			record->m_fake_walk = true;
 
 		if ( record->m_fake_walk )
@@ -645,26 +655,10 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 			LagRecord *previous = m_records [ 1 ].get ( );
 
 			if ( previous && !previous->dormant ( ) ) {
-				//m_player->m_fFlags ( ) = previous->m_flags;
-
-				//m_player->m_fFlags ( ) &= ~FL_ONGROUND;
-
-				//if ( record->m_flags & FL_ONGROUND && previous->m_flags & FL_ONGROUND )
-				//	m_player->m_fFlags ( ) |= FL_ONGROUND;
-
-				//if ( record->m_layers [ 4 ].m_weight != 1.f && previous->m_layers [ 4 ].m_weight == 1.f && record->m_layers [ 5 ].m_weight != 0.f )
-				//	m_player->m_fFlags ( ) |= FL_ONGROUND;
-
-				//if ( record->m_flags & FL_ONGROUND && !( previous->m_flags & FL_ONGROUND ) )
-				//	m_player->m_fFlags ( ) &= ~FL_ONGROUND;
-
-				//float duck = record->m_duck - previous->m_duck;
 				float time = record->m_sim_time - previous->m_sim_time;
 
 				const auto crouch_amount = m_player->m_flDuckAmount ( );
 				const auto crouch_speed = std::max ( 1.5f, m_player->m_flDuckSpeed ( ) );
-
-				//	m_player->m_flDuckAmount ( ) = record->m_flags & FL_DUCKING ? valve_math::Approach ( 1.0f, m_player->m_flDuckAmount ( ), game::TICKS_TO_TIME ( m_player->m_nTickBase ( ) ) * crouch_speed ) : crouch_amount;
 
 				if ( !record->m_fake_walk ) {
 					vec3_t velo = record->m_velocity - previous->m_velocity;
@@ -677,43 +671,90 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 		}
 	}
 
-	bool fake = !bot && g_menu.main.aimbot.correct.get ( );
-
 	m_player->m_vecOrigin ( ) = record->m_origin;
 	m_player->m_vecVelocity ( ) = m_player->m_vecAbsVelocity ( ) = record->m_anim_velocity;
 	m_player->m_iEFlags ( ) &= ~0x1000;
 	m_player->m_angEyeAngles ( ) = record->m_eye_angles;
 	m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
+	game_state->m_flLastUpdateTime = m_player->m_flSimulationTime ( );
 
+	UpdatePlayer ( backup, record );
+
+	//m_player->m_flSimulationTime ( ) = backup_simtime;
 	
-	//if ( state->m_frame == g_csgo.m_globals->m_frame )
-	//	state->m_frame -= 1;
+
+	m_player->m_flDuckAmount ( ) = backup.m_duck;
+
+	g_csgo.m_globals->m_curtime = curtime;
+	g_csgo.m_globals->m_frametime = frametime;
+}
+
+void AimPlayer::UpdatePlayer ( AnimationBackup_t backup, LagRecord *record ) {
+	CCSGOPlayerAnimState *state = m_player->m_PlayerAnimState ( );
+	if ( !state )
+		return;
+
+	const auto backup_curtime = g_csgo.m_globals->m_curtime;
+	const auto backup_frametime = g_csgo.m_globals->m_frametime;
+
+	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
+	g_csgo.m_globals->m_curtime = record->m_sim_time;
+	//g_csgo.m_globals->m_abs_frametime = g_csgo.m_globals->m_interval;
+	//g_csgo.m_globals->m_frame = sim_ticks;
+	//g_csgo.m_globals->m_tick_count = sim_ticks;
+	//g_csgo.m_globals->m_interp_amt = 0.0;
+
+	backup.m_origin = m_player->m_vecOrigin ( );
+	backup.m_abs_origin = m_player->GetAbsOrigin ( );
+	backup.m_velocity = m_player->m_vecVelocity ( );
+	backup.m_abs_velocity = m_player->m_vecAbsVelocity ( );
+	backup.m_flags = m_player->m_fFlags ( );
+	backup.m_eflags = m_player->m_iEFlags ( );
+	backup.m_duck = m_player->m_flDuckAmount ( );
+	backup.m_mins = m_player->m_vecMins ( );
+	backup.m_maxs = m_player->m_vecMaxs ( );
+	backup.m_body = m_player->m_flLowerBodyYawTarget ( );
+
+	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
+	bool bot = game::IsFakePlayer ( m_player->index ( ) );
+	bool fake = !bot && g_menu.main.aimbot.correct.get ( );
 
 	if ( fake )
 		g_resolver.ResolveAngles ( m_player, record );
 
-	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent [ m_player->index ( ) ] = true;
-	rebuilt::Update ( state, record->m_eye_angles );
-	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent [ m_player->index ( ) ] = false;
+	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent = true;
+
+	if ( state->m_frame == g_csgo.m_globals->m_frame )
+		state->m_frame -= 1;
+
+	rebuilt::UpdateAnimationState ( ( CCSGOGamePlayerAnimState* )state, record->m_eye_angles.y, record->m_eye_angles.x, false );
+	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent = false;
+
+	m_player->GetPoseParameters ( record->m_poses );
 
 	if ( fake )
 		g_resolver.ResolvePoses ( m_player, record );
 
-	m_player->GetPoseParameters ( record->m_poses );
 	record->m_abs_ang = m_player->GetAbsAngles ( );
 
 	m_player->m_vecOrigin ( ) = backup.m_origin;
 	m_player->m_vecVelocity ( ) = backup.m_velocity;
 	m_player->m_vecAbsVelocity ( ) = backup.m_abs_velocity;
 	m_player->m_fFlags ( ) = backup.m_flags;
+	m_player->m_vecMins ( ) = backup.m_mins;
+	m_player->m_vecMaxs ( ) = backup.m_maxs;
 	m_player->m_iEFlags ( ) = backup.m_eflags;
-	m_player->m_flDuckAmount ( ) = backup.m_duck;
 	m_player->m_flLowerBodyYawTarget ( ) = backup.m_body;
 	m_player->SetAbsOrigin ( backup.m_origin );
 	m_player->SetAnimLayers ( backup.m_layers );
 
-	g_csgo.m_globals->m_curtime = curtime;
-	g_csgo.m_globals->m_frametime = frametime;
+//	g_csgo.m_globals->m_realtime = dword_44732EA4;
+	g_csgo.m_globals->m_curtime = backup_curtime;
+	g_csgo.m_globals->m_frametime = backup_frametime;
+	//g_csgo.m_globals->m_abs_frametime = dword_44732EB0;
+	//g_csgo.m_globals->m_interp_amt = dword_44732EB4;
+	//g_csgo.m_globals->m_frame = dword_44732EB8;
+	//g_csgo.m_globals->m_tick_count = dword_44732EBC;
 }
 
 void AimPlayer::OnNetUpdate ( Player *player ) {
@@ -759,7 +800,7 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 
 	if ( m_records.size ( ) >= 2 ) {
 		LagRecord *previous = m_records [ 1 ].get ( );
-		
+
 		if ( previous ) {
 			const float curtime = player->m_flSimulationTime ( );
 			const int tick = game::TIME_TO_TICKS ( curtime );
@@ -792,24 +833,12 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 		m_records.emplace_front ( std::make_shared< LagRecord > ( player ) );
 
 		LagRecord *current = m_records.front ( ).get ( );
-
 		current->m_dormant = false;
 
-		int lag = game::TIME_TO_TICKS ( player->m_flSimulationTime ( ) - player->m_flOldSimulationTime ( ) );
-		math::clamp ( lag, 1, 17 );
-
-		for ( int i = 0; i < lag; i++ ) {
-			const auto time = game::TICKS_TO_TIME ( i + 1 );
-
-			const auto backup_simtime = player->m_flSimulationTime ( );
-			const auto backup_old_simtime = current->m_old_sim_time;
-
-			UpdateAnimations ( current );
-		}
+		UpdateAnimations ( current );
 
 		BoneArray m [ 128 ];
-
-		g_bones.Build ( m_player, m, g_csgo.m_globals->m_curtime );
+		g_bones.Build ( m_player, current, m, g_csgo.m_globals->m_curtime );
 		memcpy ( current->m_bones, m, sizeof ( BoneArray ) * 128 );
 
 		current->m_shifting = false;
@@ -1035,7 +1064,6 @@ void Aimbot::Slow ( CUserCmd *ucmd ) {
 
 		ucmd->m_forward_move = std::clamp <float> ( ucmd->m_forward_move, -g_csgo.cl_forwardspeed->GetFloat ( ), g_csgo.cl_forwardspeed->GetFloat ( ) );
 		ucmd->m_side_move = std::clamp <float> ( ucmd->m_side_move, -g_csgo.cl_forwardspeed->GetFloat ( ), g_csgo.cl_sidespeed->GetFloat ( ) );
-				
 
 		ucmd->m_buttons &= ~IN_WALK;
 		ucmd->m_buttons |= IN_SPEED;
@@ -1043,8 +1071,7 @@ void Aimbot::Slow ( CUserCmd *ucmd ) {
 
 	const auto speed = g_cl.m_local->m_vecVelocity ( ).length_2d ( );
 
-	//    we are slow
-	if ( speed <= 5.0f )
+	if ( speed <= 4.0f )
 		return;
 
 	auto max_speed = 260.0f;
@@ -1149,7 +1176,7 @@ void Aimbot::find ( ) {
 
 	if ( m_stop && ( best.damage && best.player ) )
 		Slow ( g_cl.m_cmd );
-		//Stop ( g_cl.m_cmd, g_cl.m_local->m_vecVelocity ( ).length_2d ( ), g_cl.m_local->m_vecVelocity ( ), a8, true );
+	//Stop ( g_cl.m_cmd, g_cl.m_local->m_vecVelocity ( ).length_2d ( ), g_cl.m_local->m_vecVelocity ( ), a8, true );
 
 	if ( best.player && best.record ) {
 		math::VectorAngles ( best.pos - g_cl.m_shoot_pos, m_angle );
@@ -1546,11 +1573,11 @@ void Aimbot::apply ( ) {
 			if ( g_menu.main.aimbot.show_capsules.get ( ) ) {
 				g_visuals.DrawHitboxMatrix ( m_record, { 255, 255, 255, 150 }, sv_showlagcompensation_duration->GetFloat ( ) );
 
-//#ifdef _DEBUG
-//				BoneArray server_bones [ 128 ];
-//				g_bones.BuildServer ( m_record->m_player, server_bones, g_csgo.m_globals->m_curtime, false );
-//				g_visuals.DrawHitboxMatrix ( m_record->m_player, server_bones, { 255, 0, 0, 150 }, sv_showlagcompensation_duration->GetFloat ( ) );
-//#endif
+				//#ifdef _DEBUG
+				//				BoneArray server_bones [ 128 ];
+				//				g_bones.BuildServer ( m_record->m_player, server_bones, g_csgo.m_globals->m_curtime, false );
+				//				g_visuals.DrawHitboxMatrix ( m_record->m_player, server_bones, { 255, 0, 0, 150 }, sv_showlagcompensation_duration->GetFloat ( ) );
+				//#endif
 			}
 		}
 

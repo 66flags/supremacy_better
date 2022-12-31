@@ -356,6 +356,9 @@ bool penetration::run( PenetrationInput_t* in, PenetrationOutput_t* out ) {
 		trace_len += trace.m_fraction * remaining;
 		damage    *= std::pow( weapon_info->m_range_modifier, trace_len / 500.f );
 
+		if ( damage < in->m_damage || damage < in->m_damage_pen )
+			break;
+
 		// if a target was passed.
 		if( in->m_target ) {
 

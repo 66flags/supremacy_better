@@ -431,6 +431,10 @@ public:
 		return get< int > ( g_entoffsets.m_LastHitGroup );
 	}
 
+	__forceinline vec3_t &m_vecLadderNormal ( ) {
+		return get < vec3_t > ( g_entoffsets.m_vecLadderNormal );
+	}
+
 public:
 	// virtual indices
 	enum indices : size_t {
@@ -575,6 +579,31 @@ public:
 		ClientClass *cc{ GetClientClass() };
 
 		return (cc) ? cc->m_ClassID : -1;
+	}
+
+	__forceinline void GetSequenceLinearMotion ( void *hdr, int seq, const float poses [ ], vec3_t *vec ) {
+		static auto addr = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 0C 56 8B F1 57 8B FA 85 F6 75 14" ) ).as < void ( __thiscall * )( void *, void *, int, const float [ ], vec3_t * ) > ( );
+
+		__asm {
+			mov edx, seq
+			mov ecx, hdr
+			push vec
+			push poses
+			call addr
+			add esp, 8
+		}
+	}
+
+	// E8 ? ? ? ? F3 0F 11 86 ? ? ? ? 0F 57 DB E9 + 0x1 relative
+	__forceinline float GetFirstSequenceAnimTag ( int sequence, int desired_tag, float start, float end ) {
+		static auto GetFirstSequenceAnimTag = pattern::find ( g_csgo.m_client_dll, XOR ( " E8 ? ? ? ? F3 0F 11 86 ? ? ? ? 0F 57 DB E9" ) ).rel32 ( 0x1 ).as < float ( __thiscall * )( void *, int, int, float, float ) > ( );
+		return GetFirstSequenceAnimTag ( this, sequence, desired_tag, start, end );
+	}
+
+	__forceinline float GetSequenceMoveDist ( void *hdr, int seq ) {
+		vec3_t ret { };
+		GetSequenceLinearMotion ( hdr, seq, this->m_flPoseParameter ( ), &ret );
+		return ret.length ( );
 	}
 
 	__forceinline bool is(hash32_t hash) {

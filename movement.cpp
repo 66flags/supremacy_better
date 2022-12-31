@@ -135,7 +135,7 @@ void Movement::DirectionalStrafe ( CUserCmd *cmd, const ang_t &old_angs ) {
 
 void Movement::Strafe( CUserCmd *cmd, const ang_t &old_angs ) {
 	// don't strafe while noclipping or on ladders..
-	if( g_cl.m_local->m_MoveType( ) == MOVETYPE_NOCLIP || g_cl.m_local->m_MoveType( ) == MOVETYPE_LADDER )
+	if( !g_cl.m_local || g_cl.m_local->m_MoveType( ) == MOVETYPE_NOCLIP || g_cl.m_local->m_MoveType( ) == MOVETYPE_LADDER )
 		return;
 
 	// disable strafing while pressing shift.
@@ -376,6 +376,9 @@ LABEL_18:
 }
 
 void Movement::FixMove( CUserCmd *cmd, const ang_t &wish_angles ) {
+	if ( !g_cl.m_local || g_cl.m_local->m_MoveType ( ) == MOVETYPE_LADDER || g_cl.m_local->m_MoveType ( ) == MOVETYPE_NOCLIP )
+		return;
+
 	vec3_t  move, dir;
 	float   delta, len;
 	ang_t   move_angle;

@@ -127,6 +127,9 @@ void Client::StartMove ( CUserCmd *cmd ) {
 	if ( !m_local )
 		return;
 
+	if ( g_csgo.m_cl->m_delta_tick < 0 )
+		g_inputpred.ForceUpdate ( false );
+
 	// store max choke
 	// TODO; 11 -> m_bIsValveDS
 	m_max_lag = ( m_local->m_fFlags ( ) & FL_ONGROUND ) ? 16 : 15;
@@ -192,6 +195,34 @@ void Client::UnlockHiddenConvars ( ) {
 	}
 }
 
+void Client::OnRenderStart ( ) {
+	if ( !m_local || !m_local->alive ( ) )
+		return;
+
+	auto state = m_local->m_PlayerAnimState ( );
+
+	if ( !state )
+		return;
+
+	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
+
+	// set animstate members tied to layers.
+	game_state->m_flMoveWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_weight;
+	game_state->m_flPrimaryCycle = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_MOVE ].m_cycle;
+	game_state->m_flStrafeChangeWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_weight;
+	game_state->m_flStrafeChangeCycle = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_cycle;
+	game_state->m_nStrafeSequence = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_MOVEMENT_STRAFECHANGE ].m_sequence;
+	game_state->m_flAccelerationWeight = g_cl.anim_data.m_last_layers [ ANIMATION_LAYER_LEAN ].m_weight;
+
+	// restore data.
+	memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * g_cl.m_local->m_iNumOverlays ( ) );
+
+	g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
+	g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
+	game_state->m_flFootYaw = g_cl.anim_data.m_rotation.y;
+	g_cl.m_local->m_flLowerBodyYawTarget ( ) = g_cl.m_body;
+}
+
 void Client::UpdateLocalAnimations ( ) {
 	if ( !m_local || !m_local->alive ( ) )
 		return;
@@ -206,16 +237,19 @@ void Client::UpdateLocalAnimations ( ) {
 	static float backup_frametime = g_csgo.m_globals->m_frametime;
 	static float backup_curtime = g_csgo.m_globals->m_curtime;
 
-	g_csgo.m_globals->m_curtime = game::TICKS_TO_TIME ( m_local->m_nTickBase ( ) );
-	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
-
 	C_AnimationLayer backup_anim_layers [ 13 ];
 	memcpy ( backup_anim_layers, m_local->m_AnimOverlay ( ), sizeof ( backup_anim_layers ) );
 
-	backup_anim_layers [ 12 ].m_weight = 0.f;
+	g_csgo.m_globals->m_curtime = game::TICKS_TO_TIME ( m_local->m_nTickBase ( ) );
+	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
 
 	m_animate = true;
-	rebuilt::Update ( state, m_angle );
+
+	if ( state->m_frame == g_csgo.m_globals->m_frame )
+		state->m_frame -= 1;
+
+	rebuilt::UpdateAnimationState ( ( CCSGOGamePlayerAnimState * ) state, m_angle.y, m_angle.x, false );
+
 	m_animate = false;
 
 	g_csgo.m_globals->m_frametime = backup_frametime;
@@ -227,12 +261,13 @@ void Client::UpdateLocalAnimations ( ) {
 	}
 
 	if ( *m_packet ) {
-		memcpy ( anim_data.m_poses, m_local->m_flPoseParameter ( ), sizeof ( anim_data.m_poses ) );
-
 		if ( !( m_local->m_fFlags ( ) & FL_ONGROUND ) )
-			anim_data.m_poses [ POSE_JUMP_FALL ] = 1.f;
+			m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
 		
+		backup_anim_layers [ 12 ].m_weight = 0.f;
+		memcpy ( anim_data.m_poses, m_local->m_flPoseParameter ( ), sizeof ( anim_data.m_poses ) );
 		memcpy ( anim_data.m_last_layers, anim_data.m_last_queued_layers, sizeof ( anim_data.m_last_layers ) );
+
 		anim_data.m_rotation.y = state->m_goal_feet_yaw;
 	}
 		
@@ -241,17 +276,14 @@ void Client::UpdateLocalAnimations ( ) {
 }
 
 void Client::UpdateInformation ( ) {
+	if ( g_cl.m_lag > 0 )
+		return;
+
 	static float backup_frametime = g_csgo.m_globals->m_frametime;
 	static float backup_curtime = g_csgo.m_globals->m_curtime;
 
 	g_csgo.m_globals->m_curtime = game::TICKS_TO_TIME ( m_local->m_nTickBase ( ) );
 	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
-
-	if ( g_cl.m_lag > 0 ) {
-		// force a client animation update.
-		//g_hooks.m_UpdateClientSideAnimation ( g_cl.m_local );
-		return;
-	}
 
 	CCSGOPlayerAnimState *state = g_cl.m_local->m_PlayerAnimState ( );
 	if ( !state )
@@ -271,11 +303,8 @@ void Client::UpdateInformation ( ) {
 	math::clamp ( m_angle.x, -90.f, 90.f );
 	m_angle.normalize ( );
 
-	// write angles to model.
-	//g_csgo.m_prediction->SetLocalViewAngles ( m_angle );
-
 	// set lby to predicted value.
-	g_cl.m_local->m_flLowerBodyYawTarget ( ) = m_body;
+	//g_cl.m_local->m_flLowerBodyYawTarget ( ) = m_body;
 
 	// CCSGOPlayerAnimState::Update, bypass already animated checks.
 	//if ( state->m_frame == g_csgo.m_globals->m_frame )
@@ -494,11 +523,8 @@ void Client::OnTick ( CUserCmd *cmd ) {
 	// and prediction seed/player.
 	g_inputpred.restore ( );
 
-	UpdateInformation ( );
-	UpdateLocalAnimations ( );
-
-	if ( cmd->m_buttons & IN_ATTACK )
-		*g_cl.m_packet = true;
+	//if ( cmd->m_buttons & IN_ATTACK )
+	//	*g_cl.m_packet = true;
 
 	if ( *m_packet ) {
 		g_cl.m_outgoing_cmd_nums.emplace_front ( cmd->m_command_number );
@@ -512,9 +538,13 @@ void Client::OnTick ( CUserCmd *cmd ) {
 			nc->m_choked_packets = 0;
 			nc->SendDatagram ( nullptr );
 			-- *( int * ) ( std::uintptr_t ( nc ) + 0x18 );
+			-- *( int * ) ( std::uintptr_t ( nc ) + 0x2C );
 			nc->m_choked_packets = backup_choked;
 		}
 	}
+
+	UpdateInformation ( );
+	UpdateLocalAnimations ( );
 }
 
 void Client::SetAngles ( ) {

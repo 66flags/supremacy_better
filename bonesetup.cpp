@@ -61,6 +61,14 @@
 
 Bones g_bones {};;
 
+bool Bones::Build ( Player *player, LagRecord *record, BoneArray *out, float curtime ) {
+	bool setup = Build ( record->m_player, out, curtime );
+	
+	record->m_setup = setup;
+
+	return record->m_setup;
+}
+
 // TODO - rebuild client setupbones (optimization)
 bool Bones::Build ( Player *player, BoneArray *out, float curtime ) {
 #if 1
@@ -85,8 +93,8 @@ bool Bones::Build ( Player *player, BoneArray *out, float curtime ) {
 	*( bool * ) ( std::uintptr_t ( player ) + 0x9F0 ) = false; // skip call to MaintainSequenceTransitions
 	player->m_fEffects ( ) |= EF_NOINTERP;
 	//	player->SetAbsOrigin ( player->m_vecOrigin ( ) );
-	player->m_flLastBoneSetupTime ( ) = 0;
 	player->InvalidateBoneCache ( );
+	player->m_flLastBoneSetupTime ( ) = 0;
 
 	m_running = true;
 	bool setup = player->SetupBones ( out, 128, 0x7FF00, curtime );

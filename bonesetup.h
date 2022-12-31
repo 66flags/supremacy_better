@@ -7,6 +7,7 @@ public:
 public:
 	bool setup( Player* player, BoneArray* out, float curtime, LagRecord *record );
     void BuildServer ( Player *player, BoneArray *out, float curtime, bool debug );
+    bool Build ( Player *player, LagRecord *record, BoneArray *out, float curtime );
     bool Build ( Player *player, BoneArray *out, float curtime );
     bool SetupBonesClient ( Player *player, BoneArray *out, int max, int mask, float time );
     void Studio_BuildMatrices ( const CStudioHdr *pStudioHdr, const ang_t &angles, const vec3_t &origin, const vec3_t pos [ ], const quaternion_t q [ ], int iBone, float flScale, BoneArray bonetoworld [ 128 ], int boneMask );
