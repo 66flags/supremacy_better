@@ -67,8 +67,8 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 
 	if ( stage == FRAME_RENDER_START ) {
 		if ( g_cl.m_local && g_cl.m_local->alive ( ) ) {
+			//g_cl.m_local->m_flLowerBodyYawTarget ( ) = g_cl.m_rotation.y;
 			g_cl.OnRenderStart ( );
-			//g_cl.m_local->m_flLowerBodyYawTarget ( ) = g_cl.anim_data.m_rotation.y;
 		}
 
 		// draw our custom beams.
@@ -76,7 +76,7 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	}
 
 	if ( stage == FRAME_NET_UPDATE_END ) {
-		auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
+		const auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
 
 		if ( g_cl.m_local && g_cl.m_local->m_hViewModel ( ) != 0xFFFFFFF ) {
 			// restore viewmodel when model renders a scene
@@ -101,37 +101,36 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	g_hooks.m_client.GetOldMethod< FrameStageNotify_t > ( CHLClient::FRAMESTAGENOTIFY )( this, stage );
 
 	if ( stage == FRAME_RENDER_START ) {
-//#ifdef _DEBUG
-//		// server hitboxes.
-//		if ( g_menu.main.players.show_server_boxes.get ( ) ) {
-//			float fDuration = -1.f;
-//
-//			static auto DrawServerHitboxes = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? F6 83 ? ? ? ? ? 0F 84 ? ? ? ? 33 FF 39 BB" ) ).rel32 ( 0x1 ).as < void * > ( );
-//			static auto UTIL_PlayerByIndex = pattern::find ( g_csgo.m_client_dll, XOR ( "83 F9 ? 7C ? A1 ? ? ? ? 3B 48 ? 7F ? C1 E1 ? 56 8B 89 ? ? ? ? 85 C9 74 ? 8B 01 FF 50 ? 8B F0 85 F6 74 ? 8B 06" ) ).as < void *( __fastcall* ) ( int ) > ( );
-//
-//			for ( int i = 1; i < g_csgo.m_globals->m_max_clients; i++ ) {
-//				auto e = g_csgo.m_entlist->GetClientEntity ( i );
-//
-//				if ( !e )
-//					continue;
-//
-//				auto ent = ( Player * ) UTIL_PlayerByIndex ( e->index ( ) );
-//
-//				if ( !ent )
-//					continue;
-//
-//				__asm
-//				{
-//					pushad
-//					movss xmm1, fDuration
-//					push 0 //bool monoColor
-//					mov ecx, ent
-//					call DrawServerHitboxes
-//					popad
-//				}
-//			}
-//		}
-//#endif
+#ifdef _DEBUG
+		// server hitboxes.
+		if ( g_menu.main.players.show_server_boxes.get ( ) ) {
+			float fDuration = -1.f;
+
+			static auto DrawServerHitboxes = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? F6 83 ? ? ? ? ? 0F 84 ? ? ? ? 33 FF 39 BB" ) ).rel32 ( 0x1 ).as < void * > ( );
+			static auto UTIL_PlayerByIndex = pattern::find ( g_csgo.m_server_dll, XOR ( "85 C9 7E 2A A1" ) ).as < void *( __fastcall* ) ( int ) > ( );
+
+			for ( int i = 1; i < g_csgo.m_globals->m_max_clients; i++ ) {
+				auto e = g_csgo.m_entlist->GetClientEntity ( i );
+
+				if ( !e )
+					continue;
+
+				auto ent = ( Player * ) UTIL_PlayerByIndex ( e->index ( ) );
+
+				if ( !ent )
+					continue;
+
+				__asm {
+					pushad
+					movss xmm1, fDuration
+					push 1 //bool monoColor
+					mov ecx, ent
+					call DrawServerHitboxes
+					popad
+				}
+			}
+		}
+#endif
 	}
 
 	else if ( stage == FRAME_NET_UPDATE_POSTDATAUPDATE_START ) {

@@ -218,9 +218,9 @@ void Client::OnRenderStart ( ) {
 	memcpy ( g_cl.m_local->m_AnimOverlay ( ), g_cl.anim_data.m_last_layers, sizeof ( C_AnimationLayer ) * g_cl.m_local->m_iNumOverlays ( ) );
 
 	g_cl.m_local->SetPoseParameters ( g_cl.anim_data.m_poses );
+	//game_state->m_flFootYaw = g_cl.anim_data.m_rotation.y;
 	g_cl.m_local->SetAbsAngles ( ang_t ( 0.0f, g_cl.anim_data.m_rotation.y, 0.0f ) );
-	game_state->m_flFootYaw = g_cl.anim_data.m_rotation.y;
-	g_cl.m_local->m_flLowerBodyYawTarget ( ) = g_cl.m_body;
+	//g_cl.m_local->m_flLowerBodyYawTarget ( ) = g_cl.m_body;
 }
 
 void Client::UpdateLocalAnimations ( ) {
@@ -234,23 +234,36 @@ void Client::UpdateLocalAnimations ( ) {
 
 	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
 
-	static float backup_frametime = g_csgo.m_globals->m_frametime;
-	static float backup_curtime = g_csgo.m_globals->m_curtime;
-
 	C_AnimationLayer backup_anim_layers [ 13 ];
 	memcpy ( backup_anim_layers, m_local->m_AnimOverlay ( ), sizeof ( backup_anim_layers ) );
+
+	m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
+
+	backup_anim_layers [ 12 ].m_weight = 0.f;
+
+	static float backup_frametime = g_csgo.m_globals->m_frametime;
+	static float backup_curtime = g_csgo.m_globals->m_curtime;
 
 	g_csgo.m_globals->m_curtime = game::TICKS_TO_TIME ( m_local->m_nTickBase ( ) );
 	g_csgo.m_globals->m_frametime = g_csgo.m_globals->m_interval;
 
-	m_animate = true;
+	if ( *m_packet ) {
+		m_animate = true;
 
-	if ( state->m_frame == g_csgo.m_globals->m_frame )
-		state->m_frame -= 1;
+		if ( state->m_frame == g_csgo.m_globals->m_frame )
+			state->m_frame -= 1;
 
-	rebuilt::UpdateAnimationState ( ( CCSGOGamePlayerAnimState * ) state, m_angle.y, m_angle.x, false );
+		//rebuilt::UpdateAnimationState ( ( CCSGOGamePlayerAnimState * ) state, m_angle.y, m_angle.x, false );
+		game::UpdateAnimationState ( state, m_angle );
+		anim_data.m_rotation.y = state->m_goal_feet_yaw;
 
-	m_animate = false;
+		m_animate = false;
+	}
+
+	for ( auto &event : m_events )
+		rebuilt::DoAnimationEvent ( game_state, event, 0 );
+
+	m_events.clear ( );
 
 	g_csgo.m_globals->m_frametime = backup_frametime;
 	g_csgo.m_globals->m_curtime = backup_curtime;
@@ -261,14 +274,8 @@ void Client::UpdateLocalAnimations ( ) {
 	}
 
 	if ( *m_packet ) {
-		if ( !( m_local->m_fFlags ( ) & FL_ONGROUND ) )
-			m_local->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 1.f;
-		
-		backup_anim_layers [ 12 ].m_weight = 0.f;
 		memcpy ( anim_data.m_poses, m_local->m_flPoseParameter ( ), sizeof ( anim_data.m_poses ) );
 		memcpy ( anim_data.m_last_layers, anim_data.m_last_queued_layers, sizeof ( anim_data.m_last_layers ) );
-
-		anim_data.m_rotation.y = state->m_goal_feet_yaw;
 	}
 		
 	//m_animate = false; // force the player to restore data.
@@ -571,6 +578,33 @@ void Client::UpdateAnimations ( ) {
 
 	// update abs yaw with last networked abs yaw.
 	g_cl.m_local->SetAbsAngles ( ang_t ( 0.f, g_cl.m_abs_yaw, 0.f ) );
+}
+
+void Client::print_debug ( const std::string text, ... ) {
+	va_list     list;
+	int         size;
+	std::string buf;
+
+	if ( text.empty ( ) )
+		return;
+
+	va_start ( list, text );
+
+	// count needed size.
+	size = std::vsnprintf ( 0, 0, text.c_str ( ), list );
+
+	// allocate.
+	buf.resize ( size );
+
+	// print to buffer.
+	std::vsnprintf ( buf.data ( ), size + 1, text.c_str ( ), list );
+
+	va_end ( list );
+
+	// print to console.
+	g_csgo.m_cvar->ConsoleColorPrintf ( colors::burgundy, XOR ( "[ hypnotic ] " ) );
+	g_csgo.m_cvar->ConsoleColorPrintf ( { 1150, 255, 208 }, XOR ( "[ debug ] " ) );
+	g_csgo.m_cvar->ConsoleColorPrintf ( { 190, 190, 190 }, buf.c_str ( ) );
 }
 
 void Client::print ( const std::string text, ... ) {

@@ -26,6 +26,7 @@ bool detours::init ( ) {
 	const auto _cl_fireevents = pattern::find ( g_csgo.m_engine_dll, XOR ( "55 8B EC 83 EC 08 53 8B 1D ? ? ? ? 56 57 83 BB ? ? ? ? ? 74" ) ).as < void * > ( );
 	const auto _packet_start = pattern::find ( g_csgo.m_engine_dll, XOR ( "56 8B F1 E8 ? ? ? ? 8B 8E ? ? ? ? 3B" ) ).sub ( 32 ).as < decltype ( &PacketStart ) > ( );
 	const auto _run_simulation = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 08 53 8B 5D 10 56 57 FF 75 0C 8B F1 F3 0F 11 55 ? 8D" ) ).as < void * > ( );
+	const auto _do_animation_event = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 08 53 56 57 8B F9 8B 8F ? ? ? ? 8B 01 FF 10 8B CF 8B D8 E8" ) ).as < void * > ( );
 
 	// create detours.
 	MH_CreateHook ( _packet_start, detours::PacketStart, ( void ** ) &old::PacketStart );
@@ -35,24 +36,36 @@ bool detours::init ( ) {
 	MH_CreateHook ( _standard_blending_rules, detours::StandardBlendingRules, ( void ** ) &old::StandardBlendingRules );
 	MH_CreateHook ( _modify_eye_position, detours::ModifyEyePosition, ( void ** ) &old::ModifyEyePosition );
 	MH_CreateHook ( _base_interpolate_part1, detours::BaseInterpolatePart1, ( void ** ) &old::BaseInterpolatePart1 );
-	MH_CreateHook ( _animstate_update, detours::UpdateAnimationState, ( void ** ) &old::UpdateAnimationState );
+//	MH_CreateHook ( _animstate_update, detours::UpdateAnimationState, ( void ** ) &old::UpdateAnimationState );
 	MH_CreateHook ( _do_procedural_footplant, detours::DoProceduralFootPlant, ( void ** ) &old::DoProceduralFootPlant );
 	MH_CreateHook ( _setup_bones, detours::SetupBones, ( void ** ) &old::SetupBones );
-	MH_CreateHook ( _setup_movement, detours::SetupMovement, ( void ** ) &old::SetupMovement );
+	//MH_CreateHook ( _setup_movement, detours::SetupMovement, ( void ** ) &old::SetupMovement );
 	//MH_CreateHook ( _svcmsg_voicedata, detours::SVCMsg_VoiceData, ( void ** ) &old::SVCMsg_VoiceData );
 	MH_CreateHook ( _process_movement, detours::ProcessMovement, ( void ** ) &old::ProcessMovement );
 	//	MH_CreateHook ( _maintain_sequence_transitions, detours::MaintainSequenceTransitions, ( void ** ) &old::MaintainSequenceTransitions );
 	MH_CreateHook ( _update_client_side_animation, detours::UpdateClientSideAnimation, ( void ** ) &old::UpdateClientSideAnimation );
 	MH_CreateHook ( _process_interp_list, detours::ProcessInterpolatedList, ( void ** ) &old::ProcessInterpolatedList );
-	//MH_CreateHook ( _computeposeparam_moveyaw, detours::ComputePoseParam_MoveYaw, ( void ** ) &old::ComputePoseParam_MoveYaw );
+	MH_CreateHook ( _computeposeparam_moveyaw, detours::ComputePoseParam_MoveYaw, ( void ** ) &old::ComputePoseParam_MoveYaw );
 	MH_CreateHook ( _teleported, detours::Teleported, ( void ** ) &old::Teleported ); // we dont really need to do this since disabling bone interp clears ik targets already lol
 	MH_CreateHook ( _cl_fireevents, detours::CL_FireEvents, ( void ** ) &old::CL_FireEvents );
+	auto status = MH_CreateHook ( _do_animation_event, detours::DoAnimationEvent, ( void ** ) &old::DoAnimationEvent );
+	//g_cl.print_debug ( XOR ( "DoAnimationEvent: %s\n" ), MH_StatusToString ( status ) );
 	//MH_CreateHook ( _run_simulation, detours::RunSimulation, ( void ** ) &old::RunSimulation );
 
 	// enable all hooks.
 	MH_EnableHook ( MH_ALL_HOOKS );
 
 	return true;
+}
+
+void __fastcall detours::DoAnimationEvent ( void* ecx, void* edx, int animEvent, int data ) {
+	auto player = *( Player ** ) ( std::uintptr_t ( ecx ) + 328 );
+
+	if ( player == g_cl.m_local )
+		g_cl.m_events.push_back ( animEvent );
+
+	old::DoAnimationEvent ( ecx, edx, animEvent, data );
+	g_cl.print_debug ( "animevent: %d\n", animEvent );
 }
 
 int __fastcall detours::PacketStart ( void *ecx, void *edx, int incoming_sequence, int outgoing_acknowledged ) {
@@ -173,10 +186,10 @@ bool __fastcall detours::SVCMsg_VoiceData ( void *ecx, void *edx, void *a2 ) {
 void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 	auto player = ( Player * ) ecx;
 
-	if ( !player || !player->alive ( ) )
+	if ( !player )
 		return old::UpdateClientSideAnimation ( ecx, edx );
 
-	if ( player->index ( ) == g_cl.m_local->index ( ) && g_cl.m_local == player ) {
+	if ( player->index ( ) == g_cl.m_local->index ( ) || g_cl.m_local == player ) {
 		auto state = ( CCSGOGamePlayerAnimState * ) g_cl.m_local->m_PlayerAnimState ( );
 
 		if ( g_cl.m_animate )
@@ -186,20 +199,19 @@ void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 			g_cl.m_local->m_PlayerAnimState ( )->m_player = nullptr;
 			old::UpdateClientSideAnimation ( g_cl.m_local, 0 );
 			g_cl.m_local->m_PlayerAnimState ( )->m_player = g_cl.m_local;
-			//g_cl.OnRenderStart ( );
-
-			// force setupbones rebuild.
-			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
 
 			// this will update the attachments origin.
 			static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
 			SetupBones_AttachmentHelper ( g_cl.m_local, g_cl.m_local->GetModelPtr ( ) );
+
+			// force setupbones rebuild.
+			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
 		}
 	}
 	else
 		old::UpdateClientSideAnimation ( ecx, edx );
 
-	if ( player && player->m_iTeamNum ( ) != g_cl.m_local->m_iTeamNum ( ) ) {
+	if ( player->m_iTeamNum ( ) != g_cl.m_local->m_iTeamNum ( ) ) {
 		player->SetAbsOrigin ( player->m_vecOrigin ( ) );
 
 		if ( g_cl.m_update_ent ) {

@@ -45,7 +45,7 @@ void Hooks::PhysicsSimulate ( ) {
 	g_hooks.m_PhysicsSimulate ( this );
 
 	if ( player == g_cl.m_local ) {
-		auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( player->m_hViewModel ( ) );
+		const auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( player->m_hViewModel ( ) );
 
 		// fix the game from overriding the predicted viewmodel by storing it during simulation
 		if ( player->m_hViewModel ( ) != 0xFFFFFFF ) {
@@ -134,22 +134,24 @@ ang_t &Hooks::GetEyeAngles ( ) {
 }
 
 void Hooks::AccumulateLayers ( void *setup, vec3_t &pos, void *q, float time ) {
-	auto player = ( Player * ) this;
+	//auto player = ( Player * ) this;
 
-	//if ( !g_bones.m_running )
+	////if ( !g_bones.m_running )
+	////	return g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
+
+	//static auto accumulate_pose = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? 83 BF ? ? ? ? ? 0F 84 ? ? ? ? 8D" ) ).rel32 ( 0x1 ).as<void ( __thiscall * )( void *, vec3_t &, void *, int, float, float, float, void * )> ( );
+
+	//if ( !player || !player->IsPlayer ( ) || player->m_iHealth ( ) <= 0 || player == g_cl.m_local || !player->m_AnimOverlay ( ) || !player->m_pIK ( ) )
 	//	return g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
 
-	static auto accumulate_pose = pattern::find ( g_csgo.m_server_dll, XOR ( "E8 ? ? ? ? 83 BF ? ? ? ? ? 0F 84 ? ? ? ? 8D" ) ).rel32 ( 0x1 ).as<void ( __thiscall * )( void *, vec3_t &, void *, int, float, float, float, void * )> ( );
+	//for ( auto animLayerIndex = 0; animLayerIndex < 13; animLayerIndex++ ) {
+	//	auto &layer = player->m_AnimOverlay ( ) [ animLayerIndex ];
 
-	if ( !player || !player->IsPlayer ( ) || player->m_iHealth ( ) <= 0 || player == g_cl.m_local || !player->m_AnimOverlay ( ) || !player->m_pIK ( ) )
-		return g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
+	//	if ( layer.m_weight > 0.0f && layer.m_order >= 0 && layer.m_order < 13 )
+	//		accumulate_pose ( *reinterpret_cast< void ** >( setup ), pos, q, layer.m_sequence, layer.m_cycle, layer.m_weight, time, player->m_pIK ( ) );
+	//}
 
-	for ( auto animLayerIndex = 0; animLayerIndex < 13; animLayerIndex++ ) {
-		auto &layer = player->m_AnimOverlay ( ) [ animLayerIndex ];
-
-		if ( layer.m_weight > 0.0f && layer.m_order >= 0 && layer.m_order < 13 )
-			accumulate_pose ( *reinterpret_cast< void ** >( setup ), pos, q, layer.m_sequence, layer.m_cycle, layer.m_weight, time, player->m_pIK ( ) );
-	}
+	g_hooks.m_AccumulateLayers ( this, setup, pos, q, time );
 }
 
 Weapon *Hooks::GetActiveWeapon ( ) {

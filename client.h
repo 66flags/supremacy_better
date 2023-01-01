@@ -38,6 +38,7 @@ public:
 	void UpdateInformation ( );
 	void SetAngles ( );
 	void UpdateAnimations ( );
+	void print_debug ( const std::string text, ... );
 	void KillFeed ( );
 
 	void OnPaint ( );
@@ -105,6 +106,7 @@ public:
 	int      m_server_tick;
 	int      m_arrival_tick;
 	int      m_width, m_height;
+	std::deque < int > m_events;
 
 	// usercommand variables.
 	CUserCmd *m_cmd;

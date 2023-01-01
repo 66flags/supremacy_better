@@ -3,6 +3,7 @@
 namespace detours {
 	bool init ( );
 
+	void __fastcall DoAnimationEvent ( void *ecx, void *edx, int animEvent, int data );
 	int __fastcall PacketStart ( void *ecx, void *edx, int incoming_sequence, int outgoing_acknowledged );
 	void CL_FireEvents ( );
 	void ProcessInterpolatedList ( );
@@ -36,6 +37,7 @@ namespace detours {
 		inline decltype ( &detours::CheckForSequenceChange ) CheckForSequenceChange;
 		inline decltype ( &detours::StandardBlendingRules ) StandardBlendingRules;
 		inline decltype ( &detours::ProcessMovement ) ProcessMovement;
+		inline decltype ( &detours::DoAnimationEvent ) DoAnimationEvent;
 		inline decltype ( &detours::ModifyEyePosition ) ModifyEyePosition;
 		inline decltype ( &detours::UpdateAnimationState ) UpdateAnimationState;
 		inline decltype ( &detours::BaseInterpolatePart1 ) BaseInterpolatePart1;

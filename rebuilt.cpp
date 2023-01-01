@@ -66,7 +66,7 @@ void rebuilt::SetSequence ( CCSGOGamePlayerAnimState *state, int layer_idx, int 
 	if ( !player || !state )
 		return;
 
-	static auto CCSGOPlayerAnimState__UpdateLayerOrderPreset = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 51 53 56 57 8B F9 83 7F 60 00 0F 84 ? ? ? ? 83" ) ).as< void ( __thiscall * )( CCSGOGamePlayerAnimState *, int, int ) > ( );
+	static auto CCSGOPlayerAnimState_UpdateLayerOrderPreset = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 51 53 56 57 8B F9 83 7F 60 00 0F 84 ? ? ? ? 83" ) ).as< void ( __thiscall * )( CCSGOGamePlayerAnimState *, int, int ) > ( );
 
 	if ( sequence > 1 ) {
 		g_csgo.m_model_cache->BeginLock ( );
@@ -85,7 +85,7 @@ void rebuilt::SetSequence ( CCSGOGamePlayerAnimState *state, int layer_idx, int 
 		SetCycle ( state, layer_idx, 0 );
 		SetWeight ( state, layer_idx, 0 );
 
-		CCSGOPlayerAnimState__UpdateLayerOrderPreset ( state, layer_idx, sequence );
+		CCSGOPlayerAnimState_UpdateLayerOrderPreset( state, layer_idx, sequence );
 
 		g_csgo.m_model_cache->EndLock ( );
 	}
@@ -150,8 +150,40 @@ int rebuilt::SelectWeightedSequence ( CCSGOGamePlayerAnimState *state, int act )
 	return seq;
 }
 
+bool rebuilt::CacheSequences ( CCSGOGamePlayerAnimState* state ) {
+	static auto CacheSequences = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 83 EC 34 53 56 8B F1 57 8B 46 60" ) ).as< bool ( __thiscall * )( void * ) > ( );
+
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_LEAN_YAW ].Init ( state->m_pPlayer, "lean_yaw" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_SPEED ].Init ( state->m_pPlayer, "speed" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_LADDER_SPEED ].Init ( state->m_pPlayer, "ladder_speed" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_LADDER_YAW ].Init ( state->m_pPlayer, "ladder_yaw" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_MOVE_YAW ].Init ( state->m_pPlayer, "move_yaw" );
+
+	if ( state->m_nAnimstateModelVersion < 2 )
+		state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_RUN ].Init ( state->m_pPlayer, "run" );
+
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_BODY_YAW ].Init ( state->m_pPlayer, "body_yaw" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_BODY_PITCH ].Init ( state->m_pPlayer, "body_pitch" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_DEATH_YAW ].Init ( state->m_pPlayer, "death_yaw" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_STAND ].Init ( state->m_pPlayer, "stand" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_JUMP_FALL ].Init ( state->m_pPlayer, "jump_fall" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_AIM_BLEND_STAND_IDLE ].Init ( state->m_pPlayer, "aim_blend_stand_idle" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_IDLE ].Init ( state->m_pPlayer, "aim_blend_crouch_idle" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_STRAFE_DIR ].Init ( state->m_pPlayer, "strafe_yaw" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_AIM_BLEND_STAND_WALK ].Init ( state->m_pPlayer, "aim_blend_stand_walk" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_AIM_BLEND_STAND_RUN ].Init ( state->m_pPlayer, "aim_blend_stand_run" );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_WALK ].Init ( state->m_pPlayer, "aim_blend_crouch_walk" );
+
+	if ( state->m_nAnimstateModelVersion > 0 ) {
+		state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_MOVE_BLEND_WALK ].Init ( state->m_pPlayer, "move_blend_walk" );
+		state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_MOVE_BLEND_RUN ].Init ( state->m_pPlayer, "move_blend_run" );
+		state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_MOVE_BLEND_CROUCH_WALK ].Init ( state->m_pPlayer, "move_blend_crouch" );
+	}
+
+	return CacheSequences ( state );
+}
+
 void rebuilt::UpdateAnimationState ( CCSGOGamePlayerAnimState *state, float eyeYaw, float eyePitch, bool bForce ) {
-	static auto cache_sequences = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 83 EC 34 53 56 8B F1 57 8B 46 60" ) ).as< bool ( __thiscall * )( void * ) > ( );
 	static auto *enable_invalidate_bone_cache = pattern::find ( g_csgo.m_client_dll, XOR ( "C6 05 ? ? ? ? ? F3 0F 5F 05 ? ? ? ? F3 0F 11 47 ? F3 0F" ) ).add ( 0x2 ).to ( ).as < bool * > ( );
 
 	if ( !state )
@@ -159,7 +191,7 @@ void rebuilt::UpdateAnimationState ( CCSGOGamePlayerAnimState *state, float eyeY
 
 	const auto player = state->m_pPlayer;
 
-	if ( !player || !player->alive ( ) || !cache_sequences ( state ) )
+	if ( !player || !player->alive ( ) || !CacheSequences ( state ) )
 		return;
 
 	{
@@ -265,15 +297,184 @@ void rebuilt::SetupWholeBodyAction ( CCSGOGamePlayerAnimState *state ) {
 	}
 }
 
+bool m_bJumping;
+
+void rebuilt::UpdateActivityModifiers ( CCSGOGamePlayerAnimState *state ) {
+	activity_modifiers_wrapper modifiers {};
+
+	modifiers.add_modifier ( state->GetWeaponPrefix ( ) );
+
+	g_csgo.m_model_cache->BeginLock ( );
+
+	if ( state->m_flSpeedAsPortionOfWalkTopSpeed > 0.25f ) {
+		//decrypts(0)
+		modifiers.add_modifier ( "moving" );
+		//encrypts(0)
+	}
+	if ( state->m_flAnimDuckAmount > 0.55f ) {
+		//decrypts(0)
+		modifiers.add_modifier ( "crouch" );
+		//encrypts(0)
+	}
+	g_csgo.m_model_cache->EndLock ( );
+}
+
 void rebuilt::DoAnimationEvent ( CCSGOGamePlayerAnimState *state, int event, int data ) {
 	const auto player = state->m_pPlayer;
 
 	if ( !player || !state )
 		return;
 
-	// TODO: recreate all animation events on the client.
+	UpdateActivityModifiers ( state );
+
+	switch ( event ) {
+	case 0:
+	case 7:
+	{
+		if ( !state->m_pWeapon || event || state->m_pWeapon->m_iItemDefinitionIndex ( ) != C4 ) {
+			int v5 = SelectWeightedSequence ( state, ACT_CSGO_FIRE_PRIMARY );
+			SetSequence ( state, 1, v5 );
+		}
+		else {
+			int v4 = SelectWeightedSequence ( state, ACT_CSGO_PLANT_BOMB );
+			SetSequence ( state, 8, v4 );
+			//m_bPlantingBomb = 1;
+		}
+		break;
+	}
+	case 1:
+	{
+		int v6 = SelectWeightedSequence ( state, ACT_CSGO_FIRE_PRIMARY_OPT_1 );
+		SetSequence ( state, 1, v6 );
+		return;
+	}
+	case 2:
+	case 3:
+	{
+		int v7 = SelectWeightedSequence ( state, ACT_CSGO_FIRE_PRIMARY_OPT_2 );
+		SetSequence ( state, 1, v7 );
+		return;
+	}
+	case 4:
+	{
+		if ( state->m_pWeapon && g_cl.m_weapon_type == 5 ) {
+			int v5 = SelectWeightedSequence ( state, ACT_CSGO_FIRE_PRIMARY );
+			SetSequence ( state, 1, v5 );
+		}
+		else {
+			int v9 = SelectWeightedSequence ( state, ACT_CSGO_FIRE_SECONDARY );
+			SetSequence ( state, 1, v9 );
+		}
+		break;
+	}
+	case 5:
+	{
+		int v10 = SelectWeightedSequence ( state, ACT_CSGO_FIRE_SECONDARY_OPT_1 );
+		SetSequence ( state, 1, v10 );
+		break;
+	}
+	case 6:
+	{
+		int v11 = SelectWeightedSequence ( state, ACT_CSGO_OPERATE );
+		SetSequence ( state, 1, v11 );
+		break;
+	}
+	case 8:
+	{
+		m_bJumping = true;
+		int v25 = SelectWeightedSequence ( state, ACT_CSGO_JUMP );
+		SetSequence ( state, 4, v25 );
+		break;
+	}
+	case 9:
+	{
+		if ( !state->m_pWeapon || g_cl.m_weapon_type != 4 || state->m_pWeapon->m_iItemDefinitionIndex ( ) == C4 ) {
+			int v15 = SelectWeightedSequence ( state, ACT_CSGO_RELOAD );
+			SetSequence ( state, 1, v15 );
+		}
+		break;
+	}
+	case 10:
+	{
+		int v16 = SelectWeightedSequence ( state, ACT_CSGO_RELOAD_START );
+		SetSequence ( state, 1, v16 );
+		break;
+	}
+	case 11:
+	{
+		int v17 = SelectWeightedSequence ( state, ACT_CSGO_RELOAD_LOOP );
+		SetSequence ( state, 1, v17 );
+		break;
+	}
+	case 12:
+	{
+		int v18 = SelectWeightedSequence ( state, ACT_CSGO_RELOAD_END );
+		SetSequence ( state, 1, v18 );
+		break;
+	}
+	case 13:
+	{
+		//m_bPlantingBomb = 0;
+		break;
+	}
+	case 14:
+	{
+		if ( !state->m_pWeapon || GetLayerActivity ( state, ANIMATION_LAYER_WEAPON_ACTION ) != ACT_CSGO_DEPLOY ) {
+			int v24 = SelectWeightedSequence ( state, ACT_CSGO_DEPLOY );
+			SetSequence ( state, 1, v24 );
+		}
+		else if ( state->m_pPlayer->m_AnimOverlay( ) [ 1 ].m_cycle >= 0.15f ) {
+			int v24 = SelectWeightedSequence ( state, ACT_CSGO_DEPLOY );
+			SetSequence ( state, 1, v24 );
+		}
+		else {
+			//m_bDeploying = 1;
+		}
+		break;
+	}
+	case 15:
+	{
+		int v12 = SelectWeightedSequence ( state, ACT_CSGO_SILENCER_ATTACH );
+		SetSequence ( state, 1, v12 );
+		break;
+	}
+	case 16:
+	{
+		int v13 = SelectWeightedSequence ( state, ACT_CSGO_SILENCER_DETACH );
+		SetSequence ( state, 1, v13 );
+		break;
+	}
+	case 17:
+	{
+		g_csgo.m_model_cache->BeginLock ( );
+		//decrypts(0)
+		//AddActivityModifier ( XorStr ( "underhand" ) );
+		g_cl.m_activity_modifiers.add_modifier ( "underhand" );
+		//encrypts(0)
+		g_csgo.m_model_cache->EndLock ( );
+		if ( !state->m_pWeapon || event || state->m_pWeapon->m_iItemDefinitionIndex ( ) != C4 ) {
+			int v5 = SelectWeightedSequence ( state, ACT_CSGO_FIRE_PRIMARY );
+			SetSequence ( state, 1, v5 );
+		}
+		else {
+			int v4 = SelectWeightedSequence ( state, ACT_CSGO_PLANT_BOMB );
+			SetSequence ( state, 8, v4 );
+			//m_bPlantingBomb = 1;
+		}
+		break;
+	}
+	case 18:
+	{
+		int v19 = SelectWeightedSequence ( state, ACT_CSGO_CATCH );
+		SetSequence ( state, 1, v19 );
+		break;
+	}
+	default:
+		return;
+	}
 }
 
+#pragma optimize( "", off )
 void rebuilt::SetupVelocity ( CCSGOGamePlayerAnimState *state ) {
 	auto player = state->m_pPlayer;
 
@@ -365,29 +566,35 @@ void rebuilt::SetupVelocity ( CCSGOGamePlayerAnimState *state ) {
 	float flTempYawMax = state->m_flAimYawMax * flAimMatrixWidthRange;
 	float flTempYawMin = state->m_flAimYawMin * flAimMatrixWidthRange;
 
-	if ( flEyeFootDelta > flTempYawMax )
-		state->m_flFootYaw = state->m_flEyeYaw - abs ( flTempYawMax );
-	else if ( flEyeFootDelta < flTempYawMin )
-		state->m_flFootYaw = state->m_flEyeYaw + abs ( flTempYawMin );
+	if ( flEyeFootDelta <= flTempYawMax ) {
+		if ( flTempYawMin > flEyeFootDelta )
+			state->m_flFootYaw = fabs ( flTempYawMin ) + state->m_flEyeYaw;
+	}
+	else {
+		state->m_flFootYaw = state->m_flEyeYaw - fabs ( flTempYawMax );
+	}
+
 
 	state->m_flFootYaw = valve_math::AngleNormalize ( state->m_flFootYaw );
+
+	float &m_flLowerBodyRealignTimer = state->m_flStaticApproachSpeed;
 
 	// pull the lower body direction towards the eye direction, but only when the player is moving
 	if ( state->m_bOnGround ) {
 		if ( state->m_flVelocityLengthXY > 0.1f ) {
 			state->m_flFootYaw = valve_math::ApproachAngle ( state->m_flEyeYaw, state->m_flFootYaw, state->m_flLastUpdateIncrement * ( 30.0f + 20.0f * state->m_flWalkToRunTransition ) );
 
-			// state->m_flLowerBodyRealignTimer = g_csgo.m_globals->curtime + ( CSGO_ANIM_LOWER_REALIGN_DELAY * 0.2f );
-			// player->m_flLowerBodyYawTarget.Set( m_flEyeYaw );
+			 m_flLowerBodyRealignTimer = g_csgo.m_globals->m_curtime + ( CSGO_ANIM_LOWER_REALIGN_DELAY * 0.2f );
+			 player->m_flLowerBodyYawTarget ( ) = state->m_flEyeYaw;
 		}
 		else {
 			state->m_flFootYaw = valve_math::ApproachAngle ( player->m_flLowerBodyYawTarget ( ), state->m_flFootYaw, state->m_flLastUpdateIncrement * CSGO_ANIM_LOWER_CATCHUP_IDLE );
 
-			// if ( g_csgo.m_globals->curtime > m_flLowerBodyRealignTimer && abs( valve_math::AngleDiff( state->m_flFootYaw, state->m_flEyeYaw ) ) > 35.0f )
-			// {
-			// 	m_flLowerBodyRealignTimer = gpGlobals->curtime + CSGO_ANIM_LOWER_REALIGN_DELAY;
-			// 	player->m_flLowerBodyYawTarget.Set( m_flEyeYaw );
-			// }
+			 if ( g_csgo.m_globals->m_curtime > m_flLowerBodyRealignTimer && abs( valve_math::AngleDiff( state->m_flFootYaw, state->m_flEyeYaw ) ) > 35.0f )
+			 {
+			 	m_flLowerBodyRealignTimer = g_csgo.m_globals->m_curtime + CSGO_ANIM_LOWER_REALIGN_DELAY;
+				player->m_flLowerBodyYawTarget ( ) = state->m_flEyeYaw;
+			 }
 		}
 	}
 
@@ -467,7 +674,7 @@ void rebuilt::SetupVelocity ( CCSGOGamePlayerAnimState *state ) {
 		}
 	}
 
-	player->m_flPoseParameter ( ) [ POSE_MOVE_YAW ] = std::clamp ( valve_math::AngleNormalize ( state->m_flMoveYaw ), -180.0f, 180.0f ) / 360.0f + 0.5f;
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_MOVE_YAW ].SetValue ( player, state->m_flMoveYaw );
 
 	float flAimYaw = valve_math::AngleDiff ( state->m_flEyeYaw, state->m_flFootYaw );
 
@@ -476,7 +683,7 @@ void rebuilt::SetupVelocity ( CCSGOGamePlayerAnimState *state ) {
 	else if ( state->m_flAimYawMin != 0 )
 		flAimYaw = ( flAimYaw / state->m_flAimYawMin ) * -60.0f;
 
-	player->m_flPoseParameter ( ) [ POSE_BODY_YAW ] = std::clamp ( valve_math::AngleNormalize ( flAimYaw ), -180.0f, 180.0f ) / 360.0f + 0.5f;
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_BODY_YAW ].SetValue ( player, flAimYaw );
 
 	// we need non-symmetrical arbitrary min/max bounds for vertical aim (pitch) too
 	float flPitch = valve_math::AngleDiff ( state->m_flEyePitch, 0 );
@@ -488,10 +695,12 @@ void rebuilt::SetupVelocity ( CCSGOGamePlayerAnimState *state ) {
 		flPitch = ( flPitch / state->m_flAimPitchMin ) * CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MIN;
 	}
 
-	player->m_flPoseParameter ( ) [ POSE_BODY_PITCH ] = std::clamp ( flPitch, -90.f, 90.f ) / 180.0f + 0.5f;
-	player->m_flPoseParameter ( ) [ POSE_SPEED ] = std::clamp ( state->m_flSpeedAsPortionOfWalkTopSpeed, 0.f, 1.f );
-	player->m_flPoseParameter ( ) [ POSE_STAND ] = std::clamp ( 1.0f - ( state->m_flAnimDuckAmount * state->m_flInAirSmoothValue ), 0.f, 1.f );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_BODY_PITCH ].SetValue ( player, flPitch );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_SPEED ].SetValue ( player, state->m_flSpeedAsPortionOfWalkTopSpeed );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_STAND ].SetValue ( player, 1.0f - ( state->m_flAnimDuckAmount * state->m_flInAirSmoothValue ) );
+
 }
+#pragma optimize( "", on )
 
 #define CSGO_ANIM_WALK_TO_RUN_TRANSITION_SPEED 2.0f
 #define CSGO_ANIM_ONGROUND_FUZZY_APPROACH 8.0f
@@ -524,6 +733,7 @@ void rebuilt::UpdateAnimLayer ( CCSGOGamePlayerAnimState *state, int layer_idx, 
 	}
 }
 
+#pragma optimize( "", off )
 void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 	auto player = state->m_pPlayer;
 
@@ -532,7 +742,7 @@ void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 
 	g_csgo.m_model_cache->BeginLock ( );
 
-	bool &m_bJumping = state->m_bFlashed;
+	m_bJumping = state->m_bFlashed;
 
 	// recreate jumping animation event on the client
 	if ( !( player->m_fFlags ( ) & FL_ONGROUND )
@@ -566,9 +776,9 @@ void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 		state->m_flWalkToRunTransition = std::min< float > ( 0.99f, state->m_flWalkToRunTransition );
 	}
 
-	player->m_flPoseParameter ( ) [ POSE_MOVE_BLEND_WALK ] = ( 1.0f - state->m_flWalkToRunTransition ) * ( 1.0f - state->m_flAnimDuckAmount );
-	player->m_flPoseParameter ( ) [ POSE_MOVE_BLEND_RUN ] = ( state->m_flWalkToRunTransition ) * ( 1.0f - state->m_flAnimDuckAmount );
-	player->m_flPoseParameter ( ) [ POSE_MOVE_BLEND_CROUCH ] = state->m_flAnimDuckAmount;
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_MOVE_BLEND_WALK ].SetValue ( player, ( 1.0f - state->m_flWalkToRunTransition ) * ( 1.0f - state->m_flAnimDuckAmount ) );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_MOVE_BLEND_RUN ].SetValue ( player, ( state->m_flWalkToRunTransition ) * ( 1.0f - state->m_flAnimDuckAmount ) );
+	state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_MOVE_BLEND_CROUCH_WALK ].SetValue ( player, state->m_flAnimDuckAmount );
 
 	char szWeaponMoveSeq [ 64 ];
 	sprintf_s ( szWeaponMoveSeq, "move_%s", state->GetWeaponPrefix ( ) );
@@ -620,7 +830,7 @@ void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 	flMoveWeightWithAirSmooth = std::clamp< float > ( flMoveWeightWithAirSmooth, 0, 1 );
 	UpdateAnimLayer ( state, ANIMATION_LAYER_MOVEMENT_MOVE, nWeaponMoveSeq, flLocalCycleIncrement, flMoveWeightWithAirSmooth, state->m_flPrimaryCycle );
 
-	const uint32_t buttons = *reinterpret_cast< uint32_t * >( reinterpret_cast< uintptr_t >( player ) + 0x31E8 );
+	const auto buttons = player->m_nButtons ( );
 
 	bool moveRight = ( buttons & IN_MOVERIGHT ) != 0;
 	bool moveLeft = ( buttons & IN_MOVELEFT ) != 0;
@@ -641,9 +851,9 @@ void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 	bool bStrafeForward = ( state->m_flSpeedAsPortionOfWalkTopSpeed >= 0.65f && moveForward && !moveBackward && flVelToForwardDot < -0.55f );
 	bool bStrafeBackward = ( state->m_flSpeedAsPortionOfWalkTopSpeed >= 0.65f && moveBackward && !moveForward && flVelToForwardDot > 0.55f );
 
-	*reinterpret_cast< bool * >( reinterpret_cast< uintptr_t >( player ) + 0x39E0 ) = ( bStrafeRight || bStrafeLeft || bStrafeForward || bStrafeBackward );
+	player->m_bStrafing ( ) = ( bStrafeRight || bStrafeLeft || bStrafeForward || bStrafeBackward );
 
-	if ( *reinterpret_cast< bool * >( reinterpret_cast< uintptr_t >( player ) + 0x39E0 ) ) {
+	if ( player->m_bStrafing ( ) ) {
 		if ( !state->m_bStrafeChanging ) {
 			state->m_flDurationStrafing = 0;
 		}
@@ -653,7 +863,7 @@ void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 		state->m_flStrafeChangeWeight = valve_math::Approach ( 1, state->m_flStrafeChangeWeight, state->m_flLastUpdateIncrement * 20 );
 		state->m_flStrafeChangeCycle = valve_math::Approach ( 0, state->m_flStrafeChangeCycle, state->m_flLastUpdateIncrement * 10 );
 
-		player->m_flPoseParameter ( ) [ POSE_STRAFE_YAW ] = std::clamp ( valve_math::AngleNormalize ( state->m_flMoveYaw ), -180.0f, 180.0f ) / 360.0f + 0.5f;
+		state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_STRAFE_DIR ].SetValue ( player, valve_math::AngleNormalize ( state->m_flMoveYaw ) );
 	}
 	else if ( state->m_flStrafeChangeWeight > 0 ) {
 		state->m_flDurationStrafing += state->m_flLastUpdateIncrement;
@@ -746,12 +956,12 @@ void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 
 		float flLadderYaw = valve_math::AngleDiff ( angLadder.y, state->m_flFootYaw );
 
-		player->m_flPoseParameter ( ) [ POSE_LADDER_YAW ] = std::clamp ( valve_math::AngleNormalize ( flLadderYaw ), -180.0f, 180.0f ) / 360.0f + 0.5f;
+		state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_LADDER_YAW ].SetValue ( player, flLadderYaw );
 
 		float flLadderClimbCycle = player->m_AnimOverlay ( ) [ ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ].m_cycle;
 		flLadderClimbCycle += ( state->m_vecPositionCurrent.z - state->m_vecPositionLast.z ) * math::Lerp ( state->m_flLadderSpeed, 0.010f, 0.004f );
 
-		player->m_flPoseParameter ( ) [ POSE_LADDER_SPEED ] = std::clamp ( state->m_flLadderSpeed, 0.0f, 1.0f );
+		state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_LADDER_SPEED ].SetValue ( player, state->m_flLadderSpeed );
 
 		if ( GetLayerActivity ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) == ACT_CSGO_CLIMB_LADDER )
 			SetWeight ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, state->m_flLadderWeight );
@@ -785,7 +995,7 @@ void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 			IncrementLayerCycle ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, false );
 			IncrementLayerCycle ( state, ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, false );
 
-			player->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = 0.f;
+			state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_JUMP_FALL ].SetValue ( player, 0 );
 
 			if ( IsLayerSequenceCompleted ( state, ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) ) {
 				state->m_bLanding = false;
@@ -850,11 +1060,12 @@ void rebuilt::SetupMovement ( CCSGOGamePlayerAnimState *state ) {
 		}
 
 		// blend jump into fall. This is a no-op if we're playing a fall anim.
-		player->m_flPoseParameter ( ) [ POSE_JUMP_FALL ] = std::clamp ( smoothstep_bounds ( 0.72f, 1.52f, state->m_flDurationInAir ), 0.0f, 1.0f );
+		state->m_tPoseParamMappings [ PLAYER_POSE_PARAM_JUMP_FALL ].SetValue ( player, std::clamp < float > ( smoothstep_bounds ( 0.72f, 1.52f, state->m_flDurationInAir ), 0, 1 ) );
 	}
 
 	g_csgo.m_model_cache->EndLock ( );
 }
+#pragma optimize( "", on )
 
 void rebuilt::SetupAliveLoop ( CCSGOGamePlayerAnimState *state ) {
 	// ehhh, this function is entirely inlined so we can't call it and this function is quite useless.
@@ -864,38 +1075,30 @@ void rebuilt::SetupAliveLoop ( CCSGOGamePlayerAnimState *state ) {
 }
 
 void rebuilt::SetupFlashedReaction ( CCSGOGamePlayerAnimState *state ) {
-	static auto setup_flashed_reaction = pattern::find ( g_csgo.m_client_dll, XOR ( "51 8B 41 60 83 B8 ?? ?? ?? ?? ?? 74 3E 8B 90 ?? ?? ?? ?? 81 C2" ) ).as< std::uintptr_t > ( );
-	using setup_flashed_reaction_type = void ( __thiscall * )( CCSGOGamePlayerAnimState * );
-
-	reinterpret_cast< setup_flashed_reaction_type >( setup_flashed_reaction )( state );
+	static auto SetupFlashedReaction = pattern::find ( g_csgo.m_client_dll, XOR ( "51 8B 41 60 83 B8 ?? ?? ?? ?? ?? 74 3E 8B 90 ?? ?? ?? ?? 81 C2" ) ).as< void ( __thiscall * )( CCSGOGamePlayerAnimState * ) > ( );
+	SetupFlashedReaction ( state );
 }
 
 void rebuilt::SetupFlinch ( CCSGOGamePlayerAnimState *state ) {
-	static auto setup_flinch = pattern::find ( g_csgo.m_client_dll, XOR ( "E8 ? ? ? ? 8B CF E8 ? ? ? ? 33 C0 89 44 24" ) ).rel32 ( 0x1 ).as< std::uintptr_t > ( );
-	using setup_flinch_type = void ( __thiscall * )( CCSGOGamePlayerAnimState * );
-
-	reinterpret_cast< setup_flinch_type >( setup_flinch )( state );
+	static auto SetupFlinch = pattern::find ( g_csgo.m_client_dll, XOR ( "E8 ? ? ? ? 8B CF E8 ? ? ? ? 33 C0 89 44 24" ) ).rel32 ( 0x1 ).as< void ( __thiscall * )( CCSGOGamePlayerAnimState * ) > ( );
+	SetupFlinch ( state );
 }
 
+#pragma optimize( "", off )
 void rebuilt::SetupAimMatrix ( CCSGOGamePlayerAnimState *state ) {
-	static auto update_aim_matrix = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 81 EC ? ? ? ? 53 56 57 8B 3D ? ? ? ? 8B" ) ).as< std::uintptr_t > ( );
-	using update_aim_matrix_type = void ( __thiscall * )( CCSGOGamePlayerAnimState * );
-
-	reinterpret_cast< update_aim_matrix_type >( update_aim_matrix )( state );
+	static auto SetupAimMatrix = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 81 EC ? ? ? ? 53 56 57 8B 3D ? ? ? ? 8B" ) ).as < void ( __thiscall * )( CCSGOGamePlayerAnimState * ) > ( );
+	SetupAimMatrix ( state );
 }
+#pragma optimize( "", on )
 
 void rebuilt::SetupWeaponAction ( CCSGOGamePlayerAnimState *state ) {
-	static auto setup_weapon_action = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 81 EC ? ? ? ? 53 56 57 8B 3D ? ? ? ? 8B" ) ).as< std::uintptr_t > ( );
-	using setup_weapon_action_type = void ( __thiscall * )( CCSGOGamePlayerAnimState * );
-
-	reinterpret_cast< setup_weapon_action_type >( setup_weapon_action )( state );
+	static auto SetupWeaponAction = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 81 EC ? ? ? ? 53 56 57 8B 3D ? ? ? ? 8B" ) ).as < void ( __thiscall * )( CCSGOGamePlayerAnimState * ) > ( );
+	SetupWeaponAction ( state );
 }
 
 void rebuilt::SetupLean ( CCSGOGamePlayerAnimState *state ) {
-	static auto setup_lean = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 A1 ? ? ? ? 83 EC 20 F3 0F 10 48 ? 56 57 8B F9" ) ).as < std::uintptr_t > ( );
-	using setup_lean_type = void ( __thiscall * )( CCSGOGamePlayerAnimState * );
-
-	reinterpret_cast< setup_lean_type >( setup_lean )( state );
+	static auto SetupLean = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 A1 ? ? ? ? 83 EC 20 F3 0F 10 48 ? 56 57 8B F9" ) ).as < void ( __thiscall * )( CCSGOGamePlayerAnimState * )> ( );
+	SetupLean ( state );
 }
 
 void rebuilt::SetCycle ( CCSGOGamePlayerAnimState *state, int layer_idx, float cycle ) {
@@ -957,8 +1160,8 @@ void rebuilt::IncrementLayerCycleWeightRateGeneric ( CCSGOGamePlayerAnimState *s
 }
 
 void rebuilt::InvalidatePhysicsRecursive ( void *player, int change_flags ) {
-	static auto CBaseEntity__InvalidatePhysicsRecursive = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 83 EC 0C 53 8B 5D 08 8B C3 56" ) ).as< void ( __thiscall * )( void *, int ) > ( );
-	CBaseEntity__InvalidatePhysicsRecursive ( player, change_flags );
+	static auto CBaseEntity_InvalidatePhysicsRecursive = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 83 EC 0C 53 8B 5D 08 8B C3 56" ) ).as< void ( __thiscall * )( void *, int ) > ( );
+	CBaseEntity_InvalidatePhysicsRecursive( player, change_flags );
 }
 
 void rebuilt::SetWeight ( CCSGOGamePlayerAnimState *state, int layer_idx, float weight ) {
@@ -974,8 +1177,8 @@ void rebuilt::SetWeight ( CCSGOGamePlayerAnimState *state, int layer_idx, float 
 }
 
 float rebuilt::GetLayerIdealWeightFromSequenceCycle ( CCSGOGamePlayerAnimState *state, int layer_idx ) {
-	static auto CCSGOPlayerAnimState__GetLayerIdealWeightFromSeqCycle = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 08 53 56 8B 35 ? ? ? ? 57 8B F9 8B CE 8B 06 FF 90" ) ).as< float ( __thiscall * )( CCSGOGamePlayerAnimState *, int ) > ( );
-	return CCSGOPlayerAnimState__GetLayerIdealWeightFromSeqCycle ( state, layer_idx );
+	static auto CCSGOPlayerAnimState_GetLayerIdealWeightFromSeqCycle = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 08 53 56 8B 35 ? ? ? ? 57 8B F9 8B CE 8B 06 FF 90" ) ).as< float ( __thiscall * )( CCSGOGamePlayerAnimState *, int ) > ( );
+	return CCSGOPlayerAnimState_GetLayerIdealWeightFromSeqCycle( state, layer_idx );
 }
 
 bool rebuilt::IsLayerSequenceCompleted ( CCSGOGamePlayerAnimState *state, int layer_idx ) {
@@ -1007,6 +1210,6 @@ void rebuilt::IncrementLayerCycle ( CCSGOGamePlayerAnimState *state, int layer_i
 }
 
 int rebuilt::GetLayerActivity ( CCSGOGamePlayerAnimState *state, AnimationLayer_t layer_idx ) {
-	static auto CCSGOPlayerAnimState__GetLayerActivity = pattern::find ( g_csgo.m_client_dll, XOR ( "51 53 56 8B 35 ? ? ? ? 57 8B F9 8B CE 8B 06 FF 90 ? ? ? ? 8B 7F 60 83 BF" ) ).as< int ( __thiscall * )( CCSGOGamePlayerAnimState *, int ) > ( );
-	return CCSGOPlayerAnimState__GetLayerActivity ( state, layer_idx );
+	static auto CCSGOPlayerAnimState_GetLayerActivity = pattern::find ( g_csgo.m_client_dll, XOR ( "51 53 56 8B 35 ? ? ? ? 57 8B F9 8B CE 8B 06 FF 90 ? ? ? ? 8B 7F 60 83 BF" ) ).as< int ( __thiscall * )( CCSGOGamePlayerAnimState *, int ) > ( );
+	return CCSGOPlayerAnimState_GetLayerActivity( state, layer_idx );
 }

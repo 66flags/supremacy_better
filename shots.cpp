@@ -301,7 +301,18 @@ void Shots::OnHurt( IGameEvent *evt ) {
 	hit.m_group = group;
 	hit.m_damage = damage;
 
-	//g_cl.print( "hit %x time: %f lat: %f dmg: %f\n", impact->m_shot->m_record, impact->m_shot->m_time, impact->m_shot->m_lat, impact->m_shot->m_damage );
+	auto shot_record = impact->m_shot->m_record;
+
+	if ( shot_record ) {
+		player_info_t info;
+
+		if ( g_csgo.m_engine->GetPlayerInfo ( shot_record->m_player->index ( ), &info ) ) {
+			auto format = tfm::format ( XOR ( "player: %s | hitgroup: %s | tick : %d | dmg : %f | lc : %s | lag: %d\n" ), info.m_name, m_groups [ hit.m_group ], shot_record->m_tick, damage, shot_record->m_broke_lc, shot_record->m_lag );
+			g_cl.print_debug ( format );
+		}
+	}
+
+
 
 	m_hits.push_front( hit );
 

@@ -33,6 +33,7 @@ public:
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_vecMaxs;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_iTeamNum;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_nSequence;
+	XoredNetvar < GET_XOR_KEYUI32, __COUNTER__ > m_bStrafing;
 	XoredNetvar < GET_XOR_KEYUI32, __COUNTER__ > m_hViewModel;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flCycle;
     XoredNetvar< GET_XOR_KEYUI32, __COUNTER__ > m_flC4Blow;
@@ -151,6 +152,7 @@ public:
         INIT_XOREDNETVAR( m_nSequence,                  HASH( "DT_PredictedViewModel" ),   HASH( "m_nSequence" ) );
         INIT_XOREDNETVAR( m_flCycle,                    HASH( "DT_BaseAnimating" ),        HASH( "m_flCycle" ) );
 		INIT_XOREDNETVAR ( m_flAnimTime, HASH ( "DT_BaseEntity" ), HASH ( "m_flAnimTime" ) );
+		INIT_XOREDNETVAR ( m_bStrafing, HASH ( "DT_CSPlayer" ), HASH ( "m_bStrafing" ) );
         INIT_XOREDNETVAR( m_flC4Blow,                   HASH( "DT_PlantedC4" ),            HASH( "m_flC4Blow" ) );
 		INIT_XOREDNETVAR ( m_vecLadderNormal, HASH ( "DT_BasePlayer" ), HASH ( "m_vecLadderNormal" ) );
         INIT_XOREDNETVAR( m_bBombTicking,               HASH( "DT_PlantedC4" ),            HASH( "m_bBombTicking" ) );

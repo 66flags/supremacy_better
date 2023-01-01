@@ -177,7 +177,7 @@ public:
 		math::clamp( m_eye_angles.x, -90.f, 90.f );
 
 		// get lag.
-		m_lag = game::TIME_TO_TICKS( m_sim_time - m_old_sim_time );
+		m_lag = game::TIME_TO_TICKS( m_sim_time - m_old_sim_time ) + 1;
 
 		// compute animtime.
 		m_anim_time = m_old_sim_time + g_csgo.m_globals->m_interval;

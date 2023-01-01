@@ -1232,10 +1232,69 @@ enum PoseParam_t {
 	POSE_DEATH_YAW
 };
 
+enum animstate_pose_param_idx_t {
+	PLAYER_POSE_PARAM_FIRST = 0,
+	PLAYER_POSE_PARAM_LEAN_YAW = PLAYER_POSE_PARAM_FIRST,
+	PLAYER_POSE_PARAM_SPEED,
+	PLAYER_POSE_PARAM_LADDER_SPEED,
+	PLAYER_POSE_PARAM_LADDER_YAW,
+	PLAYER_POSE_PARAM_MOVE_YAW,
+	PLAYER_POSE_PARAM_RUN,
+	PLAYER_POSE_PARAM_BODY_YAW,
+	PLAYER_POSE_PARAM_BODY_PITCH,
+	PLAYER_POSE_PARAM_DEATH_YAW,
+	PLAYER_POSE_PARAM_STAND,
+	PLAYER_POSE_PARAM_JUMP_FALL,
+	PLAYER_POSE_PARAM_AIM_BLEND_STAND_IDLE,
+	PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_IDLE,
+	PLAYER_POSE_PARAM_STRAFE_DIR,
+	PLAYER_POSE_PARAM_AIM_BLEND_STAND_WALK,
+	PLAYER_POSE_PARAM_AIM_BLEND_STAND_RUN,
+	PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_WALK,
+	PLAYER_POSE_PARAM_MOVE_BLEND_WALK,
+	PLAYER_POSE_PARAM_MOVE_BLEND_RUN,
+	PLAYER_POSE_PARAM_MOVE_BLEND_CROUCH_WALK,
+	//PLAYER_POSE_PARAM_STRAFE_CROSS,
+	PLAYER_POSE_PARAM_COUNT,
+};
+
 struct animstate_pose_param_cache_t {
 	bool m_bInitialized;
 	int	m_nIndex;
 	const char *m_szName;
+
+	bool Init ( Player *pPlayer, const char *szPoseParamName ) {
+		g_csgo.m_model_cache->BeginLock ( );
+		m_szName = szPoseParamName;
+		m_nIndex = pPlayer->LookupPoseParameter ( szPoseParamName );
+		if ( m_nIndex != -1 ) {
+			m_bInitialized = true;
+		}
+		g_csgo.m_model_cache->EndLock ( );
+
+		return m_bInitialized;
+	}
+
+	float GetValue ( Player *pPlayer ) {
+		if ( !m_bInitialized ) {
+			Init ( pPlayer, m_szName );
+		}
+		if ( m_bInitialized && pPlayer ) {
+			return pPlayer->GetPoseParameter ( m_nIndex );
+		}
+		return 0;
+	}
+
+	void SetValue ( Player *pPlayer, float flValue ) {
+		if ( !m_bInitialized ) {
+			Init ( pPlayer, m_szName );
+		}
+		if ( m_bInitialized && pPlayer ) {
+			g_csgo.m_model_cache->BeginLock ( );
+			pPlayer->SetPoseParameter ( m_nIndex, flValue );
+			g_csgo.m_model_cache->EndLock ( );
+		}
+	}
 };
 
 enum AnimationLayer_t {
@@ -1389,7 +1448,7 @@ public:
 	int m_nAnimstateModelVersion;
 
 	__forceinline const char *GetWeaponPrefix ( ) {
-		static auto oGetWeaponPrefix = pattern::find ( g_csgo.m_client_dll, XOR ( "53 56 8B F1 57 33 FF 8B 4E 60 8B 01 FF 90 ? ? ? ? 89 46 64 85 C0 74" ) ).as < const char *( __thiscall * ) ( void * ) > ( );
+		static auto oGetWeaponPrefix = pattern::find ( g_csgo.m_client_dll, XOR ( "53 56 8B F1 57 33 FF 8B 4E 60 8B 01 FF 90 ? ? ? ? 89 46 64 85" ) ).as < const char *( __thiscall * ) ( void * ) > ( );
 		return oGetWeaponPrefix ( this );
 	}
 };
@@ -1595,5 +1654,7 @@ namespace rebuilt {
 	void SetupFlashedReaction ( CCSGOGamePlayerAnimState *state );
 	void SetupFlinch ( CCSGOGamePlayerAnimState *state );
 	void SetupAimMatrix ( CCSGOGamePlayerAnimState *state );
+	bool CacheSequences ( CCSGOGamePlayerAnimState *state );
 	void SetupWeaponAction ( CCSGOGamePlayerAnimState *state );
+	void UpdateActivityModifiers ( CCSGOGamePlayerAnimState *state );
 }

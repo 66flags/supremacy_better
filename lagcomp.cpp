@@ -130,77 +130,115 @@ bool LagCompensation::StartPrediction ( AimPlayer *data ) {
 
 	int pred = 0;
 
-	for ( int i = 0; i < lag; i++ ) {
-		const auto time = game::TICKS_TO_TIME ( i + 1 );
-
+	// predict lag.
+	for ( int sim {}; sim < lag; ++sim ) {
 		if ( size > 1 ) {
 			auto previous = data->m_records [ 1 ];
 
 			if ( previous ) {
-				auto delta = static_cast< float >( i + 1 ) / static_cast< float >( record->m_lag );
+				auto delta = static_cast< float >( sim + 1 ) / static_cast< float >( lag );
 
-				record->m_player->m_vecVelocity ( ).x = math::Lerp ( record->m_velocity.x, previous->m_velocity.x, delta );
-				record->m_player->m_vecVelocity ( ).y = math::Lerp ( record->m_velocity.y, previous->m_velocity.y, delta );
-				record->m_player->m_vecVelocity ( ).z = math::Lerp ( record->m_velocity.z, previous->m_velocity.z, delta );
+				//record->m_player->m_vecVelocity ( ).x = math::Lerp ( record->m_velocity.x, previous->m_velocity.x, delta );
+				//record->m_player->m_vecVelocity ( ).y = math::Lerp ( record->m_velocity.y, previous->m_velocity.y, delta );
+				//record->m_player->m_vecVelocity ( ).z = math::Lerp ( record->m_velocity.z, previous->m_velocity.z, delta );
 			}
 		}
 
-		if ( !( record->m_flags & FL_ONGROUND ) )
-			record->m_velocity.z -= g_csgo.sv_gravity->GetFloat ( ) * game::TICKS_TO_TIME ( 1 );
-		else if ( !( record->m_prev_flags & FL_ONGROUND ) )
+		// predict movement direction by adding the direction change per tick to the previous direction.
+		// make sure to normalize it, in case we go over the -180/180 turning point.
+		dir = math::NormalizedAngle ( dir + change );
+
+		// pythagorean theorem
+		// a^2 + b^2 = c^2
+		// we know a and b, we square them and add them together, then root.
+		float hyp = record->m_velocity.length_2d ( );
+
+		// compute the base velocity for our new direction.
+		// since at this point the hypotenuse is known for us and so is the angle.
+		// we can compute the adjacent and opposite sides like so:
+		// cos(x) = a / h -> a = cos(x) * h
+		// sin(x) = o / h -> o = sin(x) * h
+		record->m_velocity.x = std::cos ( math::deg_to_rad ( dir ) ) * hyp;
+		record->m_velocity.y = std::sin ( math::deg_to_rad ( dir ) ) * hyp;
+
+		// we hit the ground, set the upwards impulse and apply CS:GO speed restrictions.
+		if ( record->m_pred_flags & FL_ONGROUND ) {
+			rebuilt::DoAnimationEvent ( ( CCSGOGamePlayerAnimState* )record->m_player->m_PlayerAnimState ( ), 8, 0 );
+
+			if ( !g_csgo.sv_enablebunnyhopping->GetInt ( ) ) {
+
+				// 260 x 1.1 = 286 units/s.
+				float max = data->m_player->m_flMaxspeed ( ) * 1.1f;
+
+				// get current velocity.
+				float speed = record->m_velocity.length ( );
+
+				// reset velocity to 286 units/s.
+				if ( max > 0.f && speed > max )
+					record->m_velocity *= ( max / speed );
+			}
+
+			// assume the player is bunnyhopping here so set the upwards impulse.
 			record->m_velocity.z = g_csgo.sv_jump_impulse->GetFloat ( );
-
-		vec3_t start, end, normal;
-		CGameTrace trace;
-		CTraceFilterSimple filter ( record->m_player );
-
-		start = record->m_origin;
-		end = start + record->m_velocity * game::TICKS_TO_TIME ( 1 );
-
-		Ray ray ( start, end, record->m_player->m_vecMins ( ), record->m_player->m_vecMaxs ( ) );
-		g_csgo.m_engine_trace->TraceRay ( ray, MASK_PLAYERSOLID, &filter, &trace );
-
-		if ( trace.m_fraction != 1.0f ) {
-			for ( auto i = 0; i < 2; ++i ) {
-				record->m_velocity -= trace.m_plane.m_normal * record->m_velocity.dot ( trace.m_plane.m_normal );
-
-				float adjust = record->m_velocity.dot ( trace.m_plane.m_normal );
-
-				if ( adjust < 0.0f )
-					record->m_velocity -= ( trace.m_plane.m_normal * adjust );
-
-				start = trace.m_endpos;
-				end = start + ( record->m_velocity * ( game::TICKS_TO_TIME ( 1 ) * ( 1.0f - trace.m_fraction ) ) );
-
-				ray.Init ( start, end, record->m_player->m_vecMins ( ), record->m_player->m_vecMaxs ( ) );
-				g_csgo.m_engine_trace->TraceRay ( ray, MASK_PLAYERSOLID, &filter, &trace );
-
-				if ( trace.m_fraction == 1.0f )
-					break;
-			}
 		}
 
-		start = end = record->m_origin = trace.m_endpos;
-		end.z -= 2.0f;
+		// we are not on the ground
+		// apply gravity and airaccel.
+		else {
+			// apply one tick of gravity.
+			record->m_velocity.z -= g_csgo.sv_gravity->GetFloat ( ) * g_csgo.m_globals->m_interval;
 
-		ray.Init ( start, end, record->m_player->m_vecMins ( ), record->m_player->m_vecMaxs ( ) );
-		g_csgo.m_engine_trace->TraceRay ( ray, MASK_PLAYERSOLID, &filter, &trace );
+			// compute the ideal strafe angle for this velocity.
+			float speed2d = record->m_velocity.length_2d ( );
+			float ideal = ( speed2d > 0.f ) ? math::rad_to_deg ( std::asin ( 15.f / speed2d ) ) : 90.f;
+			math::clamp ( ideal, 0.f, 90.f );
 
-		record->m_prev_flags = record->m_flags;
+			float smove = 0.f;
+			float abschange = std::abs ( change );
 
-		record->m_flags &= ~FL_ONGROUND;
+			if ( abschange <= ideal || abschange >= 30.f ) {
+				static float mod { 1.f };
 
-		if ( trace.m_fraction != 1.0f && trace.m_plane.m_normal.z > 0.7f )
-			record->m_flags |= FL_ONGROUND;
+				dir += ( ideal * mod );
+				smove = 450.f * mod;
+				mod *= -1.f;
+			}
 
+			else if ( change > 0.f )
+				smove = -450.f;
+
+			else
+				smove = 450.f;
+
+			// apply air accel.
+			AirAccelerate ( record, ang_t { 0.f, dir, 0.f }, 0.f, smove );
+		}
+
+		// predict player.
+		// convert newly computed velocity
+		// to origin and flags.
+		PlayerMove ( record );
+
+		// move time forward by one.
 		record->m_pred_time += g_csgo.m_globals->m_interval;
-		record->m_did_predict = true;
-		pred++;
 
-		if ( i == 0 && state )
+		// increment total amt of predicted ticks.
+		++pred;
+
+		// the server animates every first choked command.
+		// therefore we should do that too.
+		if ( sim == 0 && state ) {
+		/*	const auto backup_simtime = record->m_player->m_flSimulationTime ( );
+			auto predicted_time = record->m_sim_time + game::TICKS_TO_TIME ( lag + 1 );
+
+			record->m_player->m_flSimulationTime ( ) = predicted_time;*/
+
 			PredictAnimations ( state, record );
-	}
 
+			//record->m_player->m_flSimulationTime ( ) = backup_simtime;
+		}
+	}
+	
 	// restore state.
 	if ( state )
 		std::memcpy ( state, &backup, sizeof ( CCSGOPlayerAnimState ) );
@@ -218,6 +256,56 @@ bool LagCompensation::StartPrediction ( AimPlayer *data ) {
 }
 
 void LagCompensation::PlayerMove ( LagRecord *record ) {
+	vec3_t                start, end, normal;
+	CGameTrace            trace;
+	CTraceFilterWorldOnly filter;
+
+	// define trace start.
+	start = record->m_origin;
+
+	// move trace end one tick into the future using predicted velocity.
+	end = start + ( record->m_pred_velocity * g_csgo.m_globals->m_interval );
+
+	// trace.
+	g_csgo.m_engine_trace->TraceRay ( Ray ( start, end, record->m_mins, record->m_maxs ), CONTENTS_SOLID, &filter, &trace );
+
+	// we hit shit
+	// we need to fix hit.
+	if ( trace.m_fraction != 1.f ) {
+
+		// fix sliding on planes.
+		for ( int i {}; i < 2; ++i ) {
+			record->m_velocity -= trace.m_plane.m_normal * record->m_velocity.dot ( trace.m_plane.m_normal );
+
+			float adjust = record->m_velocity.dot ( trace.m_plane.m_normal );
+			if ( adjust < 0.f )
+				record->m_velocity -= ( trace.m_plane.m_normal * adjust );
+
+			start = trace.m_endpos;
+			end = start + ( record->m_velocity * ( g_csgo.m_globals->m_interval * ( 1.f - trace.m_fraction ) ) );
+
+			g_csgo.m_engine_trace->TraceRay ( Ray ( start, end, record->m_mins, record->m_maxs ), CONTENTS_SOLID, &filter, &trace );
+			if ( trace.m_fraction == 1.f )
+				break;
+		}
+	}
+
+	// set new final origin.
+	start = end = record->m_origin = trace.m_endpos;
+
+	// move endpos 2 units down.
+	// this way we can check if we are in/on the ground.
+	end.z -= 2.f;
+
+	// trace.
+	g_csgo.m_engine_trace->TraceRay ( Ray ( start, end, record->m_mins, record->m_maxs ), CONTENTS_SOLID, &filter, &trace );
+
+	// strip onground flag.
+	record->m_flags &= ~FL_ONGROUND;
+
+	// add back onground flag if we are onground.
+	if ( trace.m_fraction != 1.f && trace.m_plane.m_normal.z > 0.7f )
+		record->m_flags |= FL_ONGROUND;
 }
 
 void LagCompensation::AirAccelerate ( LagRecord *record, ang_t angle, float fmove, float smove ) {
@@ -262,7 +350,7 @@ void LagCompensation::AirAccelerate ( LagRecord *record, ang_t angle, float fmov
 		wishspd = 30.f;
 
 	// determine veer amount.
-	currentspeed = record->m_pred_velocity.dot ( wishdir );
+	currentspeed = record->m_velocity.dot ( wishdir );
 
 	// see how much to add.
 	addspeed = wishspd - currentspeed;
@@ -279,7 +367,7 @@ void LagCompensation::AirAccelerate ( LagRecord *record, ang_t angle, float fmov
 		accelspeed = addspeed;
 
 	// add accel.
-	record->m_pred_velocity += ( wishdir * accelspeed );
+	record->m_velocity += ( wishdir * accelspeed );
 }
 
 void LagCompensation::PredictAnimations ( CCSGOPlayerAnimState *state, LagRecord *record ) {

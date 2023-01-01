@@ -759,16 +759,11 @@ void AimPlayer::UpdatePlayer ( AnimationBackup_t backup, LagRecord *record ) {
 
 void AimPlayer::OnNetUpdate ( Player *player ) {
 	bool reset = ( !g_menu.main.aimbot.enable.get ( ) || !player->enemy ( g_cl.m_local ) || player->m_lifeState ( ) == LIFE_DEAD );
-	bool disable = ( !reset && !g_cl.m_local->alive ( ) );
+	bool disable = !reset;
 
 	if ( reset ) {
 		player->m_bClientSideAnimation ( ) = true;
 		m_records.clear ( );
-		return;
-	}
-
-	if ( disable ) {
-		player->m_bClientSideAnimation ( ) = true;
 		return;
 	}
 
@@ -823,7 +818,7 @@ void AimPlayer::OnNetUpdate ( Player *player ) {
 				/* jumped, set velocity to upwards dir  */
 				if ( ( jumped && flags_int == tick ) || twice_in_air ) {
 					player->m_vecVelocity ( ).z = g_csgo.sv_jump_impulse->GetFloat ( );
-					g_cl.print ( "testing\n" );
+					g_cl.print ( XOR ( "player hit ground this tick! [%d]\n" ), tick );
 				}
 			}
 		}
