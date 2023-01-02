@@ -100,6 +100,7 @@ public:
 	bool *m_packet;
 	bool *m_final_packet;
 	bool	 m_old_packet;
+	bool	 m_pressing_move;
 	float	 m_lerp;
 	float    m_latency;
 	int      m_latency_ticks;

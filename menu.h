@@ -783,6 +783,7 @@ public:
 	Keybind  fakewalk;
 	Keybind  autopeek;
 	Checkbox  autostop;
+	Checkbox  faststop;
 	Checkbox autostop_always_on;
 
 public:
@@ -824,6 +825,9 @@ public:
 
 		autostop.setup( XOR( "automatic stop" ), XOR( "autostop" ) );
 		RegisterElement( &autostop, 1 );
+
+		faststop.setup(XOR("fast stop"), XOR("faststop"));
+		RegisterElement(&faststop, 1);
 
 		//autostop.setup( XOR( "automatic stop" ), XOR( "autostop" ) );
 		//autostop.AddShowCallback( callbacks::AUTO_STOP );

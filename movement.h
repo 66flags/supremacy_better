@@ -26,6 +26,7 @@ public:
 	void AutoPeek( );
 	void QuickStop( );
 	void FakeWalk( );
+	void FastStop( );
 };
 
 extern Movement g_movement;

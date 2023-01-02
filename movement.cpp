@@ -129,8 +129,59 @@ void Movement::DirectionalStrafe ( CUserCmd *cmd, const ang_t &old_angs ) {
 
 	if ( angles.y < -180.0f ) angles.y += 360.0f;
 	if ( angles.y > 180.0f ) angles.y -= 360.0f;
-
+	
 	FixMove ( cmd, angles );
+}
+
+void Movement::FastStop() {
+	if (!g_cl.m_pressing_move && g_menu.main.movement.faststop.get() && g_cl.m_speed > 15.f) {
+		if (!g_cl.m_cmd || !g_cl.m_local || !g_cl.m_local->alive())
+			return;
+
+		auto weapon = g_cl.m_local->GetActiveWeapon();
+
+		// don't fake movement while noclipping or on ladders..
+		if (!weapon || !weapon->GetWpnData() || g_cl.m_local->m_MoveType() == MOVETYPE_NOCLIP || g_cl.m_local->m_MoveType() == MOVETYPE_LADDER)
+			return;
+
+		if (!(g_cl.m_local->m_fFlags() & FL_ONGROUND))
+			return;
+
+		if (g_cl.m_cmd->m_buttons & IN_JUMP)
+			return;
+
+		auto move_speed = sqrtf((g_cl.m_cmd->m_forward_move * g_cl.m_cmd->m_forward_move) + (g_cl.m_cmd->m_side_move * g_cl.m_cmd->m_side_move));
+		auto pre_prediction_velocity = g_cl.m_local->m_vecVelocity().length_2d();
+
+		auto v58 = g_csgo.sv_stopspeed->GetFloat();
+		v58 = fmaxf(v58, pre_prediction_velocity);
+		v58 = g_csgo.sv_friction->GetFloat() * v58;
+		auto slow_walked_speed = fmaxf(pre_prediction_velocity - (v58 * g_csgo.m_globals->m_interval), 0.0f);
+
+		if (slow_walked_speed <= 0 || pre_prediction_velocity <= slow_walked_speed) {
+			g_cl.m_cmd->m_forward_move = 0;
+			g_cl.m_cmd->m_side_move = 0;
+			return;
+		}
+
+		ang_t angle;
+		math::VectorAngles(g_cl.m_local->m_vecVelocity(), angle);
+
+		// get our current speed of travel.
+		float speed = g_cl.m_local->m_vecVelocity().length();
+
+		// fix direction by factoring in where we are looking.
+		angle.y = g_cl.m_view_angles.y - angle.y;
+
+		// convert corrected angle back to a direction.
+		vec3_t direction;
+		math::AngleVectors(angle, &direction);
+
+		vec3_t stop = direction * -speed;
+
+		g_cl.m_cmd->m_forward_move = stop.x;
+		g_cl.m_cmd->m_side_move = stop.y;
+	}
 }
 
 void Movement::Strafe( CUserCmd *cmd, const ang_t &old_angs ) {

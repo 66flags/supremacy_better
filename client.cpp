@@ -121,6 +121,9 @@ void Client::StartMove ( CUserCmd *cmd ) {
 	m_tick = cmd->m_tick;
 	m_view_angles = cmd->m_view_angles;
 	m_buttons = cmd->m_buttons;
+	m_pressing_move = (m_buttons & (IN_LEFT) || m_buttons & (IN_FORWARD) || m_buttons & (IN_BACK) ||
+		m_buttons & (IN_RIGHT) || m_buttons & (IN_MOVELEFT) || m_buttons & (IN_MOVERIGHT) ||
+		m_buttons & (IN_JUMP));
 
 	// get local ptr.
 	m_local = g_csgo.m_entlist->GetClientEntity< Player * > ( g_csgo.m_engine->GetLocalPlayer ( ) );
@@ -364,6 +367,7 @@ void Client::DoMove ( ) {
 	// run movement code before input prediction.
 	g_movement.JumpRelated ( );
 	g_movement.Strafe ( g_cl.m_cmd, old_angs );
+	g_movement.FastStop( );
 	g_movement.FakeWalk ( );
 	g_movement.AutoPeek ( );
 
