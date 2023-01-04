@@ -27,6 +27,7 @@ using ulong_t = unsigned long;
 #include <string>
 #include <chrono>
 #include <thread>
+#include <mmsystem.h>
 #include <memory>
 #include <sstream>
 #include <unordered_map>
@@ -49,6 +50,9 @@ using ulong_t = unsigned long;
 #include "xorstr.h"
 #include "pe.h"
 #include "winapir.h"
+#include "primordial.h"
+#include "bell.h"
+#include "cod.h"
 #include "address.h"
 #include "util.h"
 #include "modules.h"
@@ -64,6 +68,7 @@ using ulong_t = unsigned long;
 #include "interfaces.h"
 #include "sdk.h"
 #include "csgo.h"
+#include "wavheader.h"
 #include "penetration.h"
 #include "netvars.h"
 #include "entoffsets.h"

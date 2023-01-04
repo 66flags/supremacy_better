@@ -351,6 +351,18 @@
     <ClInclude Include="bitvec.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="primordial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bell.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cod.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wavheader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="bonesetup.cpp">
@@ -531,6 +543,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ik_context.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="wavheader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,18 +1,18 @@
 #include "includes.h"
 
-Movement g_movement{ };;
+Movement g_movement { };;
 
-void Movement::JumpRelated( ) {
+void Movement::JumpRelated ( ) {
 	if ( g_cl.m_local->m_MoveType ( ) == MOVETYPE_LADDER || g_cl.m_local->m_MoveType ( ) == MOVETYPE_NOCLIP )
 		return;
 
-	if( ( g_cl.m_cmd->m_buttons & IN_JUMP ) && !( g_cl.m_flags & FL_ONGROUND ) ) {
+	if ( ( g_cl.m_cmd->m_buttons & IN_JUMP ) && !( g_cl.m_flags & FL_ONGROUND ) ) {
 		// bhop.
-		if( g_menu.main.movement.bhop.get( ) )
+		if ( g_menu.main.movement.bhop.get ( ) )
 			g_cl.m_cmd->m_buttons &= ~IN_JUMP;
 
 		// duck jump ( crate jump ).
-		if( g_menu.main.movement.airduck.get( ) )
+		if ( g_menu.main.movement.airduck.get ( ) )
 			g_cl.m_cmd->m_buttons |= IN_DUCK;
 	}
 }
@@ -129,53 +129,53 @@ void Movement::DirectionalStrafe ( CUserCmd *cmd, const ang_t &old_angs ) {
 
 	if ( angles.y < -180.0f ) angles.y += 360.0f;
 	if ( angles.y > 180.0f ) angles.y -= 360.0f;
-	
+
 	FixMove ( cmd, angles );
 }
 
-void Movement::FastStop() {
-	if (!g_cl.m_pressing_move && g_menu.main.movement.faststop.get() && g_cl.m_speed > 15.f) {
-		if (!g_cl.m_cmd || !g_cl.m_local || !g_cl.m_local->alive())
-			return;
+void Movement::FastStop ( ) {
+	if ( !g_cl.m_cmd || !g_cl.m_local || !g_cl.m_local->alive ( ) )
+		return;
 
-		auto weapon = g_cl.m_local->GetActiveWeapon();
+	if ( !g_cl.m_pressing_move && g_menu.main.movement.faststop.get ( ) && g_cl.m_speed > 15.f ) {
+		auto weapon = g_cl.m_local->GetActiveWeapon ( );
 
 		// don't fake movement while noclipping or on ladders..
-		if (!weapon || !weapon->GetWpnData() || g_cl.m_local->m_MoveType() == MOVETYPE_NOCLIP || g_cl.m_local->m_MoveType() == MOVETYPE_LADDER)
+		if ( !weapon || !weapon->GetWpnData ( ) || g_cl.m_local->m_MoveType ( ) == MOVETYPE_NOCLIP || g_cl.m_local->m_MoveType ( ) == MOVETYPE_LADDER )
 			return;
 
-		if (!(g_cl.m_local->m_fFlags() & FL_ONGROUND))
+		if ( !( g_cl.m_local->m_fFlags ( ) & FL_ONGROUND ) )
 			return;
 
-		if (g_cl.m_cmd->m_buttons & IN_JUMP)
+		if ( g_cl.m_cmd->m_buttons & IN_JUMP )
 			return;
 
-		auto move_speed = sqrtf((g_cl.m_cmd->m_forward_move * g_cl.m_cmd->m_forward_move) + (g_cl.m_cmd->m_side_move * g_cl.m_cmd->m_side_move));
-		auto pre_prediction_velocity = g_cl.m_local->m_vecVelocity().length_2d();
+		auto move_speed = sqrtf ( ( g_cl.m_cmd->m_forward_move * g_cl.m_cmd->m_forward_move ) + ( g_cl.m_cmd->m_side_move * g_cl.m_cmd->m_side_move ) );
+		auto pre_prediction_velocity = g_cl.m_local->m_vecVelocity ( ).length_2d ( );
 
-		auto v58 = g_csgo.sv_stopspeed->GetFloat();
-		v58 = fmaxf(v58, pre_prediction_velocity);
-		v58 = g_csgo.sv_friction->GetFloat() * v58;
-		auto slow_walked_speed = fmaxf(pre_prediction_velocity - (v58 * g_csgo.m_globals->m_interval), 0.0f);
+		auto v58 = g_csgo.sv_stopspeed->GetFloat ( );
+		v58 = fmaxf ( v58, pre_prediction_velocity );
+		v58 = g_csgo.sv_friction->GetFloat ( ) * v58;
+		auto slow_walked_speed = fmaxf ( pre_prediction_velocity - ( v58 * g_csgo.m_globals->m_interval ), 0.0f );
 
-		if (slow_walked_speed <= 0 || pre_prediction_velocity <= slow_walked_speed) {
+		if ( slow_walked_speed <= 0 || pre_prediction_velocity <= slow_walked_speed ) {
 			g_cl.m_cmd->m_forward_move = 0;
 			g_cl.m_cmd->m_side_move = 0;
 			return;
 		}
 
 		ang_t angle;
-		math::VectorAngles(g_cl.m_local->m_vecVelocity(), angle);
+		math::VectorAngles ( g_cl.m_local->m_vecVelocity ( ), angle );
 
 		// get our current speed of travel.
-		float speed = g_cl.m_local->m_vecVelocity().length();
+		float speed = g_cl.m_local->m_vecVelocity ( ).length ( );
 
 		// fix direction by factoring in where we are looking.
 		angle.y = g_cl.m_view_angles.y - angle.y;
 
 		// convert corrected angle back to a direction.
 		vec3_t direction;
-		math::AngleVectors(angle, &direction);
+		math::AngleVectors ( angle, &direction );
 
 		vec3_t stop = direction * -speed;
 
@@ -184,14 +184,14 @@ void Movement::FastStop() {
 	}
 }
 
-void Movement::Strafe( CUserCmd *cmd, const ang_t &old_angs ) {
+void Movement::Strafe ( CUserCmd *cmd, const ang_t &old_angs ) {
 	// don't strafe while noclipping or on ladders..
-	if( !g_cl.m_local || g_cl.m_local->m_MoveType( ) == MOVETYPE_NOCLIP || g_cl.m_local->m_MoveType( ) == MOVETYPE_LADDER )
+	if ( !g_cl.m_local || g_cl.m_local->m_MoveType ( ) == MOVETYPE_NOCLIP || g_cl.m_local->m_MoveType ( ) == MOVETYPE_LADDER )
 		return;
 
 	// disable strafing while pressing shift.
 	// don't strafe if not holding primary jump key.
-	if( ( g_cl.m_buttons & IN_SPEED ) || !( g_cl.m_buttons & IN_JUMP ) || ( g_cl.m_flags & FL_ONGROUND ) )
+	if ( ( g_cl.m_buttons & IN_SPEED ) || !( g_cl.m_buttons & IN_JUMP ) || ( g_cl.m_flags & FL_ONGROUND ) )
 		return;
 
 	//static cvar_t *cl_sidespeed = interfaces::m_cvar->find_var ( HASH ( "cl_sidespeed" ) );
@@ -213,7 +213,7 @@ void Movement::Strafe( CUserCmd *cmd, const ang_t &old_angs ) {
 	}
 }
 
-void Movement::DoPrespeed( ) {
+void Movement::DoPrespeed ( ) {
 	float   mod, min, max, step, strafe, time, angle;
 	vec3_t  plane;
 
@@ -228,46 +228,46 @@ void Movement::DoPrespeed( ) {
 	strafe = m_ideal * 2.f;
 
 	// clamp ideal strafe circle value to min and max step.
-	math::clamp( strafe, min, max );
+	math::clamp ( strafe, min, max );
 
 	// calculate time.
 	time = 320.f / m_speed;
 
 	// clamp time.
-	math::clamp( time, 0.35f, 1.f );
+	math::clamp ( time, 0.35f, 1.f );
 
 	// init step.
 	step = strafe;
 
-	while( true ) {
+	while ( true ) {
 		// if we will not collide with an object or we wont accelerate from such a big step anymore then stop.
-		if( !WillCollide( time, step ) || max <= step )
+		if ( !WillCollide ( time, step ) || max <= step )
 			break;
 
 		// if we will collide with an object with the current strafe step then increment step to prevent a collision.
 		step += 0.2f;
 	}
 
-	if( step > max ) {
+	if ( step > max ) {
 		// reset step.
 		step = strafe;
 
-		while( true ) {
+		while ( true ) {
 			// if we will not collide with an object or we wont accelerate from such a big step anymore then stop.
-			if( !WillCollide( time, step ) || step <= -min )
+			if ( !WillCollide ( time, step ) || step <= -min )
 				break;
 
 			// if we will collide with an object with the current strafe step decrement step to prevent a collision.
 			step -= 0.2f;
 		}
 
-		if( step < -min ) {
-			if( GetClosestPlane( plane ) ) {
+		if ( step < -min ) {
+			if ( GetClosestPlane ( plane ) ) {
 				// grab the closest object normal
 				// compute the angle of the normal
 				// and push us away from the object.
-				angle = math::rad_to_deg( std::atan2( plane.y, plane.x ) );
-				step = -math::NormalizedAngle( m_circle_yaw - angle ) * 0.1f;
+				angle = math::rad_to_deg ( std::atan2 ( plane.y, plane.x ) );
+				step = -math::NormalizedAngle ( m_circle_yaw - angle ) * 0.1f;
 			}
 		}
 
@@ -279,31 +279,31 @@ void Movement::DoPrespeed( ) {
 		step += 0.2f;
 
 	// add the computed step to the steps of the previous circle iterations.
-	m_circle_yaw = math::NormalizedAngle( m_circle_yaw + step );
+	m_circle_yaw = math::NormalizedAngle ( m_circle_yaw + step );
 
 	// apply data to usercmd.
 	g_cl.m_cmd->m_view_angles.y = m_circle_yaw;
 	g_cl.m_cmd->m_side_move = ( step >= 0.f ) ? -450.f : 450.f;
 }
 
-bool Movement::GetClosestPlane( vec3_t &plane ) {
+bool Movement::GetClosestPlane ( vec3_t &plane ) {
 	CGameTrace            trace;
 	CTraceFilterWorldOnly filter;
-	vec3_t                start{ m_origin };
-	float                 smallest{ 1.f };
-	const float		      dist{ 75.f };
+	vec3_t                start { m_origin };
+	float                 smallest { 1.f };
+	const float		      dist { 75.f };
 
 	// trace around us in a circle
-	for( float step{ }; step <= math::pi_2; step += ( math::pi / 10.f ) ) {
+	for ( float step { }; step <= math::pi_2; step += ( math::pi / 10.f ) ) {
 		// extend endpoint x units.
 		vec3_t end = start;
-		end.x += std::cos( step ) * dist;
-		end.y += std::sin( step ) * dist;
+		end.x += std::cos ( step ) * dist;
+		end.y += std::sin ( step ) * dist;
 
-		g_csgo.m_engine_trace->TraceRay( Ray( start, end, m_mins, m_maxs ), CONTENTS_SOLID, &filter, &trace );
+		g_csgo.m_engine_trace->TraceRay ( Ray ( start, end, m_mins, m_maxs ), CONTENTS_SOLID, &filter, &trace );
 
 		// we found an object closer, then the previouly found object.
-		if( trace.m_fraction < smallest ) {
+		if ( trace.m_fraction < smallest ) {
 			// save the normal of the object.
 			plane = trace.m_plane.m_normal;
 			smallest = trace.m_fraction;
@@ -314,7 +314,7 @@ bool Movement::GetClosestPlane( vec3_t &plane ) {
 	return smallest != 1.f && plane.z < 0.1f;
 }
 
-bool Movement::WillCollide( float time, float change ) {
+bool Movement::WillCollide ( float time, float change ) {
 	struct PredictionData_t {
 		vec3_t start;
 		vec3_t end;
@@ -332,39 +332,39 @@ bool Movement::WillCollide( float time, float change ) {
 	data.ground = g_cl.m_flags & FL_ONGROUND;
 	data.start = m_origin;
 	data.end = m_origin;
-	data.velocity = g_cl.m_local->m_vecVelocity( );
-	data.direction = math::rad_to_deg( std::atan2( data.velocity.y, data.velocity.x ) );
+	data.velocity = g_cl.m_local->m_vecVelocity ( );
+	data.direction = math::rad_to_deg ( std::atan2 ( data.velocity.y, data.velocity.x ) );
 
-	for( data.predicted = 0.f; data.predicted < time; data.predicted += g_csgo.m_globals->m_interval ) {
+	for ( data.predicted = 0.f; data.predicted < time; data.predicted += g_csgo.m_globals->m_interval ) {
 		// predict movement direction by adding the direction change.
 		// make sure to normalize it, in case we go over the -180/180 turning point.
-		data.direction = math::NormalizedAngle( data.direction + change );
+		data.direction = math::NormalizedAngle ( data.direction + change );
 
 		// pythagoras.
-		float hyp = data.velocity.length_2d( );
+		float hyp = data.velocity.length_2d ( );
 
 		// adjust velocity for new direction.
-		data.velocity.x = std::cos( math::deg_to_rad( data.direction ) ) * hyp;
-		data.velocity.y = std::sin( math::deg_to_rad( data.direction ) ) * hyp;
+		data.velocity.x = std::cos ( math::deg_to_rad ( data.direction ) ) * hyp;
+		data.velocity.y = std::sin ( math::deg_to_rad ( data.direction ) ) * hyp;
 
 		// assume we bhop, set upwards impulse.
-		if( data.ground )
-			data.velocity.z = g_csgo.sv_jump_impulse->GetFloat( );
+		if ( data.ground )
+			data.velocity.z = g_csgo.sv_jump_impulse->GetFloat ( );
 
 		else
-			data.velocity.z -= g_csgo.sv_gravity->GetFloat( ) * g_csgo.m_globals->m_interval;
+			data.velocity.z -= g_csgo.sv_gravity->GetFloat ( ) * g_csgo.m_globals->m_interval;
 
 		// we adjusted the velocity for our new direction.
 		// see if we can move in this direction, predict our new origin if we were to travel at this velocity.
 		data.end += ( data.velocity * g_csgo.m_globals->m_interval );
 
 		// trace
-		g_csgo.m_engine_trace->TraceRay( Ray( data.start, data.end, m_mins, m_maxs ), MASK_PLAYERSOLID, &filter, &trace );
+		g_csgo.m_engine_trace->TraceRay ( Ray ( data.start, data.end, m_mins, m_maxs ), MASK_PLAYERSOLID, &filter, &trace );
 
 		// check if we hit any objects.
-		if( trace.m_fraction != 1.f && trace.m_plane.m_normal.z <= 0.9f )
+		if ( trace.m_fraction != 1.f && trace.m_plane.m_normal.z <= 0.9f )
 			return true;
-		if( trace.m_startsolid || trace.m_allsolid )
+		if ( trace.m_startsolid || trace.m_allsolid )
 			return true;
 
 		// adjust start and end point.
@@ -372,10 +372,10 @@ bool Movement::WillCollide( float time, float change ) {
 
 		// move endpoint 2 units down, and re-trace.
 		// do this to check if we are on th floor.
-		g_csgo.m_engine_trace->TraceRay( Ray( data.start, data.end - vec3_t{ 0.f, 0.f, 2.f }, m_mins, m_maxs ), MASK_PLAYERSOLID, &filter, &trace );
+		g_csgo.m_engine_trace->TraceRay ( Ray ( data.start, data.end - vec3_t { 0.f, 0.f, 2.f }, m_mins, m_maxs ), MASK_PLAYERSOLID, &filter, &trace );
 
 		// see if we moved the player into the ground for the next iteration.
-		data.ground = trace.hit( ) && trace.m_plane.m_normal.z > 0.7f;
+		data.ground = trace.hit ( ) && trace.m_plane.m_normal.z > 0.7f;
 	}
 
 	// the entire loop has ran
@@ -426,7 +426,7 @@ LABEL_18:
 	cmd->m_buttons = new_buttons;
 }
 
-void Movement::FixMove( CUserCmd *cmd, const ang_t &wish_angles ) {
+void Movement::FixMove ( CUserCmd *cmd, const ang_t &wish_angles ) {
 	if ( !g_cl.m_local || g_cl.m_local->m_MoveType ( ) == MOVETYPE_LADDER || g_cl.m_local->m_MoveType ( ) == MOVETYPE_NOCLIP )
 		return;
 
@@ -435,19 +435,19 @@ void Movement::FixMove( CUserCmd *cmd, const ang_t &wish_angles ) {
 	ang_t   move_angle;
 
 	// roll nospread fix.
-	if( !( g_cl.m_flags & FL_ONGROUND ) && cmd->m_view_angles.z != 0.f )
+	if ( !( g_cl.m_flags & FL_ONGROUND ) && cmd->m_view_angles.z != 0.f )
 		cmd->m_side_move = 0.f;
 
 	// convert movement to vector.
 	move = { cmd->m_forward_move, cmd->m_side_move, 0.f };
 
 	// get move length and ensure we're using a unit vector ( vector with length of 1 ).
-	len = move.normalize( );
-	if( !len )
+	len = move.normalize ( );
+	if ( !len )
 		return;
 
 	// convert move to an angle.
-	math::VectorAngles( move, move_angle );
+	math::VectorAngles ( move, move_angle );
 
 	// calculate yaw delta.
 	delta = ( cmd->m_view_angles.y - wish_angles.y );
@@ -457,7 +457,7 @@ void Movement::FixMove( CUserCmd *cmd, const ang_t &wish_angles ) {
 
 	// calculate our new move direction.
 	// dir = move_angle_forward * move_length
-	math::AngleVectors( move_angle, &dir );
+	math::AngleVectors ( move_angle, &dir );
 
 	// scale to og movement.
 	dir *= len;
@@ -466,9 +466,9 @@ void Movement::FixMove( CUserCmd *cmd, const ang_t &wish_angles ) {
 	g_cl.m_cmd->m_buttons &= ~( IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT );
 
 	// fix ladder and noclip.
-	if( g_cl.m_local->m_MoveType( ) == MOVETYPE_LADDER ) {
+	if ( g_cl.m_local->m_MoveType ( ) == MOVETYPE_LADDER ) {
 		// invert directon for up and down.
-		if( cmd->m_view_angles.x >= 45.f && wish_angles.x < 45.f && std::abs( delta ) <= 65.f )
+		if ( cmd->m_view_angles.x >= 45.f && wish_angles.x < 45.f && std::abs ( delta ) <= 65.f )
 			dir.x = -dir.x;
 
 		// write to movement.
@@ -476,23 +476,23 @@ void Movement::FixMove( CUserCmd *cmd, const ang_t &wish_angles ) {
 		cmd->m_side_move = dir.y;
 
 		// set new button flags.
-		if( cmd->m_forward_move > 200.f )
+		if ( cmd->m_forward_move > 200.f )
 			cmd->m_buttons |= IN_FORWARD;
 
-		else if( cmd->m_forward_move < -200.f )
+		else if ( cmd->m_forward_move < -200.f )
 			cmd->m_buttons |= IN_BACK;
 
-		if( cmd->m_side_move > 200.f )
+		if ( cmd->m_side_move > 200.f )
 			cmd->m_buttons |= IN_MOVERIGHT;
 
-		else if( cmd->m_side_move < -200.f )
+		else if ( cmd->m_side_move < -200.f )
 			cmd->m_buttons |= IN_MOVELEFT;
 	}
 
 	// we are moving normally.
 	else {
 		// we must do this for pitch angles that are out of bounds.
-		if( cmd->m_view_angles.x < -90.f || cmd->m_view_angles.x > 90.f )
+		if ( cmd->m_view_angles.x < -90.f || cmd->m_view_angles.x > 90.f )
 			dir.x = -dir.x;
 
 		// set move.
@@ -500,29 +500,29 @@ void Movement::FixMove( CUserCmd *cmd, const ang_t &wish_angles ) {
 		cmd->m_side_move = dir.y;
 
 		// set new button flags.
-		if( cmd->m_forward_move > 0.f )
+		if ( cmd->m_forward_move > 0.f )
 			cmd->m_buttons |= IN_FORWARD;
 
-		else if( cmd->m_forward_move < 0.f )
+		else if ( cmd->m_forward_move < 0.f )
 			cmd->m_buttons |= IN_BACK;
 
-		if( cmd->m_side_move > 0.f )
+		if ( cmd->m_side_move > 0.f )
 			cmd->m_buttons |= IN_MOVERIGHT;
 
-		else if( cmd->m_side_move < 0.f )
+		else if ( cmd->m_side_move < 0.f )
 			cmd->m_buttons |= IN_MOVELEFT;
 	}
 }
 
-void Movement::AutoPeek( ) {
+void Movement::AutoPeek ( ) {
 	// set to invert if we press the button.
-	if( g_input.GetKeyState( g_menu.main.movement.autopeek.get( ) ) ) {
-		if( g_cl.m_old_shot )
+	if ( g_input.GetKeyState ( g_menu.main.movement.autopeek.get ( ) ) ) {
+		if ( g_cl.m_old_shot )
 			m_invert = true;
 
-		vec3_t move{ g_cl.m_cmd->m_forward_move, g_cl.m_cmd->m_side_move, 0.f };
+		vec3_t move { g_cl.m_cmd->m_forward_move, g_cl.m_cmd->m_side_move, 0.f };
 
-		if( m_invert ) {
+		if ( m_invert ) {
 			move *= -1.f;
 			g_cl.m_cmd->m_forward_move = move.x;
 			g_cl.m_cmd->m_side_move = move.y;
@@ -537,24 +537,24 @@ void Movement::AutoPeek( ) {
 	//}
 }
 
-void Movement::QuickStop( ) {
+void Movement::QuickStop ( ) {
 	// convert velocity to angular momentum.
 	ang_t angle;
-	math::VectorAngles( g_cl.m_local->m_vecVelocity( ), angle );
+	math::VectorAngles ( g_cl.m_local->m_vecVelocity ( ), angle );
 
 	// get our current speed of travel.
-	float speed = g_cl.m_local->m_vecVelocity( ).length( );
+	float speed = g_cl.m_local->m_vecVelocity ( ).length ( );
 
 	// fix direction by factoring in where we are looking.
 	angle.y = g_cl.m_view_angles.y - angle.y;
 
 	// convert corrected angle back to a direction.
 	vec3_t direction;
-	math::AngleVectors( angle, &direction );
+	math::AngleVectors ( angle, &direction );
 
 	vec3_t stop = direction * -speed;
 
-	if( g_cl.m_speed > 13.f ) {
+	if ( g_cl.m_speed > 13.f ) {
 		g_cl.m_cmd->m_forward_move = stop.x;
 		g_cl.m_cmd->m_side_move = stop.y;
 	}
@@ -564,14 +564,14 @@ void Movement::QuickStop( ) {
 	}
 }
 
-void Movement::FakeWalk( ) {
-	vec3_t velocity{ g_cl.m_local->m_vecVelocity( ) };
-	int    ticks{ }, max{ 16 };
+void Movement::FakeWalk ( ) {
+	vec3_t velocity { g_cl.m_local->m_vecVelocity ( ) };
+	int    ticks { }, max { 16 };
 
-	if( !g_input.GetKeyState( g_menu.main.movement.fakewalk.get( ) ) )
+	if ( !g_input.GetKeyState ( g_menu.main.movement.fakewalk.get ( ) ) )
 		return;
 
-	if( !g_cl.m_local->GetGroundEntity( ) )
+	if ( !g_cl.m_local->GetGroundEntity ( ) )
 		return;
 
 	// user was running previously and abrubtly held the fakewalk key
@@ -581,31 +581,31 @@ void Movement::FakeWalk( ) {
 	//	Movement::QuickStop( );
 	//	return;
 	//}
-	
+
 	// reference:
 	// https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/game/shared/gamemovement.cpp#L1612
 
 	// calculate friction.
-	float friction = g_csgo.sv_friction->GetFloat( ) * g_cl.m_local->m_surfaceFriction( );
+	float friction = g_csgo.sv_friction->GetFloat ( ) * g_cl.m_local->m_surfaceFriction ( );
 
-	for( ; ticks < g_cl.m_max_lag; ++ticks ) {
+	for ( ; ticks < g_cl.m_max_lag; ++ticks ) {
 		// calculate speed.
-		float speed = velocity.length( );
+		float speed = velocity.length ( );
 
 		// if too slow return.
-		if( speed <= 0.1f )
+		if ( speed <= 0.1f )
 			break;
 
 		// bleed off some speed, but if we have less than the bleed, threshold, bleed the threshold amount.
-		float control = std::max( speed, g_csgo.sv_stopspeed->GetFloat( ) );
+		float control = std::max ( speed, g_csgo.sv_stopspeed->GetFloat ( ) );
 
 		// calculate the drop amount.
 		float drop = control * friction * g_csgo.m_globals->m_interval;
 
 		// scale the velocity.
-		float newspeed = std::max( 0.f, speed - drop );
+		float newspeed = std::max ( 0.f, speed - drop );
 
-		if( newspeed != speed ) {
+		if ( newspeed != speed ) {
 			// determine proportion of old speed we are using.
 			newspeed /= speed;
 
@@ -615,7 +615,7 @@ void Movement::FakeWalk( ) {
 	}
 
 	// zero forwardmove and sidemove.
-	if( ticks > ( ( max - 1 ) - g_csgo.m_cl->m_choked_commands ) || !g_csgo.m_cl->m_choked_commands ) {
+	if ( ticks > ( ( max - 1 ) - g_csgo.m_cl->m_choked_commands ) || !g_csgo.m_cl->m_choked_commands ) {
 		g_cl.m_cmd->m_forward_move = g_cl.m_cmd->m_side_move = 0.f;
 	}
 }

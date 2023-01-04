@@ -249,7 +249,26 @@ void Shots::OnHurt( IGameEvent *evt ) {
 		g_visuals.m_hit_start = g_csgo.m_globals->m_curtime;
 		g_visuals.m_hit_end = g_visuals.m_hit_start + g_visuals.m_hit_duration;
 
-		g_csgo.m_sound->EmitAmbientSound( XOR( "buttons/arena_switch_press_02.wav" ), 1.f );
+		unsigned char mem [ 50000 ];
+
+		// 		hitmarker_sound.setup ( XOR ( "hitsound" ), XOR ( "hitsound" ), { XOR ( "off" ), XOR ( "arena switch press" ), XOR ( "primordial" ), XOR ( "bell" ), XOR ( "cod" ), XOR ( "custom" ) } );
+		switch ( g_menu.main.misc.hitmarker_sound.get ( ) ) {
+			case 1: {
+				g_csgo.m_sound->EmitAmbientSound ( XOR ( "buttons/arena_switch_press_02.wav" ), 1.f );
+			} break;
+			case 2: {
+				PlaySound ( ( LPCSTR ) prim_hitmarker_data, NULL, SND_MEMORY | SND_ASYNC );
+			} break;
+			case 3: {
+				PlaySound ( ( LPCSTR ) bell_hitmarker_data, NULL, SND_MEMORY | SND_ASYNC );
+			} break;
+			case 4: {
+				PlaySound ( ( LPCSTR ) cod_hitmarker_data, NULL, SND_MEMORY | SND_ASYNC );
+			} break;
+			case 5: {
+				g_csgo.m_sound->EmitAmbientSound ( g_menu.main.misc.hitsound_name.get_text ( ).c_str ( ), 1.f );
+			} break;
+		}
 	}
 
 	// print this shit.
@@ -307,12 +326,10 @@ void Shots::OnHurt( IGameEvent *evt ) {
 		player_info_t info;
 
 		if ( g_csgo.m_engine->GetPlayerInfo ( shot_record->m_player->index ( ), &info ) ) {
-			auto format = tfm::format ( XOR ( "player: %s | hitgroup: %s | tick : %d | dmg : %f | lc : %s | lag: %d\n" ), info.m_name, m_groups [ hit.m_group ], shot_record->m_tick, damage, shot_record->m_broke_lc, shot_record->m_lag );
+			auto format = tfm::format ( XOR ( "shot player: %s | hitgroup: %s | tick : %d | dmg : %f | lc : %s | lag: %d\n" ), info.m_name, m_groups [ hit.m_group ], shot_record->m_tick, damage, shot_record->m_broke_lc, shot_record->m_lag );
 			g_cl.print_debug ( format );
 		}
 	}
-
-
 
 	m_hits.push_front( hit );
 

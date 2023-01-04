@@ -72,6 +72,7 @@ public:
 	vec3_t m_mins;
 	vec3_t m_maxs;
 	ang_t  m_eye_angles;
+	float  m_freestand_dist;
 	ang_t  m_abs_ang;
 	float  m_body;
 	float  m_duck;
@@ -101,6 +102,9 @@ public:
 	bool   m_shot;
 	float  m_away;
 	float  m_anim_time;
+	bool   m_flick;
+	int	   m_tick_flicked;
+	bool   m_triggered_balence_adjust;
 
 	// other stuff.
 	float  m_interp_time;
@@ -111,7 +115,8 @@ public:
 		m_setup{ false }, 
 		m_broke_lc{ false },
 		m_fake_walk{ false }, 
-		m_shot{ false }, 
+		m_shot{ false },
+		m_flick { false },
 		m_lag{}, 
 		m_bones{} {}
 
@@ -121,6 +126,7 @@ public:
 		m_broke_lc{ false },
 		m_fake_walk{ false },
 		m_shot{ false }, 
+		m_flick { false },
 		m_lag{}, 
 		m_bones{} {
 

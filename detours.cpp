@@ -49,7 +49,7 @@ bool detours::init ( ) {
 	MH_CreateHook ( _teleported, detours::Teleported, ( void ** ) &old::Teleported ); // we dont really need to do this since disabling bone interp clears ik targets already lol
 	MH_CreateHook ( _cl_fireevents, detours::CL_FireEvents, ( void ** ) &old::CL_FireEvents );
 	auto status = MH_CreateHook ( _do_animation_event, detours::DoAnimationEvent, ( void ** ) &old::DoAnimationEvent );
-	//g_cl.print_debug ( XOR ( "DoAnimationEvent: %s\n" ), MH_StatusToString ( status ) );
+	g_cl.print_debug ( XOR ( "DoAnimationEvent: %s\n" ), MH_StatusToString ( status ) );
 	//MH_CreateHook ( _run_simulation, detours::RunSimulation, ( void ** ) &old::RunSimulation );
 
 	// enable all hooks.
@@ -65,7 +65,7 @@ void __fastcall detours::DoAnimationEvent ( void* ecx, void* edx, int animEvent,
 		g_cl.m_events.push_back ( animEvent );
 
 	old::DoAnimationEvent ( ecx, edx, animEvent, data );
-	g_cl.print_debug ( "animevent: %d\n", animEvent );
+	g_cl.print_debug ( "event: %d\n", animEvent );
 }
 
 int __fastcall detours::PacketStart ( void *ecx, void *edx, int incoming_sequence, int outgoing_acknowledged ) {
@@ -200,12 +200,16 @@ void __fastcall detours::UpdateClientSideAnimation ( void *ecx, void *edx ) {
 			old::UpdateClientSideAnimation ( g_cl.m_local, 0 );
 			g_cl.m_local->m_PlayerAnimState ( )->m_player = g_cl.m_local;
 
+			// update animation data for the local player.
+			//g_cl.OnRenderStart ( );
+
 			// this will update the attachments origin.
 			static auto SetupBones_AttachmentHelper = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 EC 48 53 8B 5D 08 89 4D F4 56 57 85 DB 0F 84" ) ).as < void ( __thiscall * ) ( void *, void * ) > ( );
 			SetupBones_AttachmentHelper ( g_cl.m_local, g_cl.m_local->GetModelPtr ( ) );
 
 			// force setupbones rebuild.
 			g_bones.Build ( player, nullptr, g_csgo.m_globals->m_curtime );
+			//rebuilt::InvalidatePhysicsRecursive ( player, 8 );
 		}
 	}
 	else

@@ -28,6 +28,7 @@ void Edit::think( ) {
 		// if we want to exit typing? user presses escape or enter. he is likely done
 		if( g_input.GetKeyPress( VK_RETURN ) || g_input.GetKeyPress( VK_ESCAPE ) ) {
 			m_typing = false;
+			g_input.m_use_str = false;
 
 			if( m_callback )
 				m_callback( );
@@ -38,6 +39,7 @@ void Edit::think( ) {
 		// same applies here.
 		if( m_parent->m_active_element != this || !m_parent->m_open ) {
 			m_typing = false;
+			g_input.m_use_str = false;
 
 			if( m_callback )
 				m_callback( );
@@ -68,7 +70,9 @@ void Edit::click( ) {
 		// area where user has to click.
 		Rect edit = { p.x + EDIT_X_OFFSET, p.y + 15, m_w - EDIT_X_OFFSET, EDIT_BOX_HEIGHT };
 
-		if( g_input.IsCursorInRect( edit ) )
+		if ( g_input.IsCursorInRect ( edit ) ) {
+			g_input.m_use_str = m_use_str;
 			m_typing = true;
+		}
 	}
 }

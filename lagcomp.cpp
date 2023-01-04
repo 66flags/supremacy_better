@@ -228,14 +228,18 @@ bool LagCompensation::StartPrediction ( AimPlayer *data ) {
 		// the server animates every first choked command.
 		// therefore we should do that too.
 		if ( sim == 0 && state ) {
-		/*	const auto backup_simtime = record->m_player->m_flSimulationTime ( );
+			const auto backup_simtime = record->m_player->m_flSimulationTime ( );
+			const auto backup_old_simtime = record->m_player->m_flOldSimulationTime ( );
+
 			auto predicted_time = record->m_sim_time + game::TICKS_TO_TIME ( lag + 1 );
 
-			record->m_player->m_flSimulationTime ( ) = predicted_time;*/
+			record->m_player->m_flSimulationTime ( ) = predicted_time;
+			record->m_player->m_flOldSimulationTime ( ) = backup_simtime - game::TICKS_TO_TIME ( 1 );
 
 			PredictAnimations ( state, record );
 
-			//record->m_player->m_flSimulationTime ( ) = backup_simtime;
+			record->m_player->m_flSimulationTime ( ) = backup_simtime;
+			record->m_player->m_flOldSimulationTime ( ) = backup_old_simtime;
 		}
 	}
 	
@@ -371,6 +375,8 @@ void LagCompensation::AirAccelerate ( LagRecord *record, ang_t angle, float fmov
 }
 
 void LagCompensation::PredictAnimations ( CCSGOPlayerAnimState *state, LagRecord *record ) {
+	auto game_state = ( CCSGOGamePlayerAnimState * ) state;
+	
 	struct AnimBackup_t {
 		float  curtime;
 		float  frametime;
@@ -435,6 +441,7 @@ void LagCompensation::PredictAnimations ( CCSGOPlayerAnimState *state, LagRecord
 		g_resolver.ResolveAngles ( player, record );
 
 	// update animations.
+	game_state->m_flLastUpdateTime = player->m_flSimulationTime ( );
 	rebuilt::UpdateAnimationState ( ( CCSGOGamePlayerAnimState * ) state, record->m_eye_angles.y, record->m_eye_angles.x, false );
 
 	// rerun the pose correction cuz we are re-setupping them.

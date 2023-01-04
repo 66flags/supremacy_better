@@ -102,7 +102,7 @@ LRESULT WINAPI Hooks::WndProc( HWND wnd, uint32_t msg, WPARAM wp, LPARAM lp ) {
 			break;
 
 		default:
-			if( std::isdigit( static_cast< char >( wp ) ) )
+			if( g_input.m_use_str || std::isdigit( static_cast< char >( wp ) ) )
 				g_input.m_buffer += static_cast< char >( wp );
 
 			break;

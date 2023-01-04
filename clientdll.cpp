@@ -67,8 +67,7 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 
 	if ( stage == FRAME_RENDER_START ) {
 		if ( g_cl.m_local && g_cl.m_local->alive ( ) ) {
-			//g_cl.m_local->m_flLowerBodyYawTarget ( ) = g_cl.m_rotation.y;
-			g_cl.OnRenderStart ( );
+			g_cl.RestoreLocalData ( );
 		}
 
 		// draw our custom beams.
@@ -76,6 +75,7 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	}
 
 	if ( stage == FRAME_NET_UPDATE_END ) {
+
 		const auto viewmodel = g_csgo.m_entlist->GetClientEntityFromHandle< ViewModel * > ( g_cl.m_local->m_hViewModel ( ) );
 
 		if ( g_cl.m_local && g_cl.m_local->m_hViewModel ( ) != 0xFFFFFFF ) {
@@ -144,6 +144,9 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 	}
 
 	else if ( stage == FRAME_NET_UPDATE_END ) {
+		// restore non-compressed netvars.
+		g_netdata.apply ( );
+
 		// store layers before our player modifies our data.
 		if ( g_cl.m_local && g_cl.m_local->m_AnimOverlay ( ) ) {
 			memcpy ( g_cl.anim_data.m_last_queued_layers, g_cl.m_local->m_AnimOverlay ( ), sizeof ( C_AnimationLayer ) * 13 );
@@ -158,9 +161,6 @@ void Hooks::FrameStageNotify ( Stage_t stage ) {
 		else if ( !g_cl.m_local->alive ( ) ) {
 			memcpy ( g_cl.anim_data.m_last_queued_layers, g_cl.m_local->m_AnimOverlay ( ), sizeof ( C_AnimationLayer ) * 13 );
 		}
-
-		// restore non-compressed netvars.
-		g_netdata.apply ( );
 
 		// update all players.
 		for ( int i { 1 }; i <= g_csgo.m_globals->m_max_clients; ++i ) {

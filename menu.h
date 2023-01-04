@@ -151,6 +151,10 @@ public:
 	Checkbox enable;
 	Checkbox edge;
 	Dropdown mode;
+	Checkbox      manual_aa;
+	Keybind 	  manual_aa_left;
+	Keybind 	  manual_aa_right;
+	Keybind 	  manual_aa_back;
 
 	Dropdown pitch_stand;
 	Dropdown yaw_stand;
@@ -199,7 +203,6 @@ public:
 	Dropdown      lag_mode;
 	Slider        lag_limit;
 	Checkbox      lag_land;
-
 public:
 	void init( ) {
 		SetTitle( XOR( "anti-aim" ) );
@@ -212,6 +215,11 @@ public:
 
 		mode.setup( "", XOR( "mode" ), { XOR( "stand" ), XOR( "walk" ), XOR( "air" ) }, false );
 		RegisterElement( &mode );
+
+		//Checkbox      manual_aa;
+		//Keybind 	  manual_aa_left;
+		//Keybind 	  manual_aa_right;
+		//Keybind 	  manual_aa_back;
 
 		// stand.
 		pitch_stand.setup( XOR( "pitch" ), XOR( "pitch_stnd" ), { XOR( "off" ), XOR( "down" ), XOR( "up" ), XOR( "random" ), XOR( "ideal" ) } );
@@ -380,6 +388,21 @@ public:
 		body_fake_air.AddShowCallback( callbacks::IsAntiAimModeAir );
 		body_fake_air.AddShowCallback( callbacks::AirHasYaw );
 		RegisterElement( &body_fake_air );
+
+		manual_aa.setup ( XOR ( "manual anti-aim" ), XOR ( "manual_aa" ) );
+		RegisterElement ( &manual_aa );
+
+		manual_aa_left.setup ( XOR ( "left" ), XOR ( "manual_left" ) );
+		RegisterElement ( &manual_aa_left );
+		manual_aa_left.SetToggleCallback ( callbacks::ManualLeft );
+
+		manual_aa_right.setup ( XOR ( "right" ), XOR ( "manual_right" ) );
+		RegisterElement ( &manual_aa_right );
+		manual_aa_right.SetToggleCallback ( callbacks::ManualRight );
+
+		manual_aa_back.setup ( XOR ( "back" ), XOR ( "manual_back" ) );
+		RegisterElement ( &manual_aa_back );
+		manual_aa_back.SetToggleCallback ( callbacks::ManualBack );
 
 		// col2.
 		leg_movement.setup ( "leg movement", XOR ( "leg_movement" ), { XOR ( "off" ), XOR ( "slide" ), XOR ( "never slide" ) } );
@@ -1958,6 +1981,9 @@ public:
 	Checkbox autoaccept;
 	Checkbox unlock;
 	Checkbox hitmarker;
+	Dropdown hitmarker_sound;
+	Slider		  hitsound_vol;
+	Edit     hitsound_name;
 	Checkbox ragdoll_force;
 	Checkbox killfeed;
 	Checkbox ranks;
@@ -2044,6 +2070,12 @@ public:
 
 		hitmarker.setup( XOR( "hitmarker" ), XOR( "hitmarker" ) );
 		RegisterElement( &hitmarker, 1 );
+
+		hitmarker_sound.setup ( XOR ( "hitsound" ), XOR ( "hitsound" ), { XOR ( "off" ), XOR ( "arena switch press" ), XOR ( "primordial" ), XOR ( "bell" ), XOR ( "cod" ) } );
+		RegisterElement ( &hitmarker_sound, 1 );
+
+		//hitsound_name.setup ( XOR ( "sound name" ), XOR ( "hitsound_name" ), 32, true );
+		//RegisterElement ( &hitsound_name, 1 );
 
 		ragdoll_force.setup( XOR( "ragdoll force" ), XOR( "ragdoll_force" ) );
 		RegisterElement( &ragdoll_force, 1 );

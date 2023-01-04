@@ -241,7 +241,11 @@ void rebuilt::UpdateAnimationState ( CCSGOGamePlayerAnimState *state, float eyeY
 	}
 
 	// all the layers get set up here
-	SetupVelocity ( state );			// calculate speed and set up body yaw values
+	//SetupVelocity ( state );			// calculate speed and set up body yaw values
+
+	static auto SetupVelocity = pattern::find ( g_csgo.m_client_dll, XOR ( "55 8B EC 83 E4 F8 83 EC 30 56 57 8B 3D ? ? ? ? 8B F1 8B CF 89 74" ) ).as < void ( __thiscall * ) ( void * ) > ( );
+
+	SetupVelocity ( state );
 	SetupAimMatrix ( state );			// aim matrices are full body, so they not only point the weapon down the eye dir, they can crouch the idle player
 	SetupWeaponAction ( state );		// firing, reloading, silencer-swapping, deploying
 	SetupMovement ( state );			// jumping, climbing, ground locomotion, post-weapon crouch-stand

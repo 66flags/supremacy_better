@@ -735,9 +735,9 @@ void Visuals::OffScreen( Player* player, int alpha ) {
 
 		// render!
 		color = g_menu.main.players.offscreen_color.get( ); // damage_data.m_color;
-		color.a( ) = oof_opacity;
+		Color oof_color = { color.r ( ), color.g ( ), color.b ( ), static_cast < int > ( oof_opacity ) };
 
-		g_csgo.m_surface->DrawSetColor( color );
+		g_csgo.m_surface->DrawSetColor( oof_color );
 		g_csgo.m_surface->DrawTexturedPolygon( 3, verts );
 
 		// g_csgo.m_surface->DrawSetColor( colors::black );
@@ -962,6 +962,20 @@ void Visuals::DrawPlayer( Player* player ) {
 					}
 				}
 			}	
+
+//#ifdef _DEBUG
+			//if ( *it == 6 ) {
+				//AimPlayer *data = &g_aimbot.m_players [ player->index ( ) - 1 ];
+
+				//if ( data && data->m_records.size ( ) >= 1 ) {
+				//	LagRecord *current = data->m_records.front ( ).get ( );
+
+				//	if ( current && current->m_flick ) {
+				//		flags.push_back ( { XOR ( "FLICK" ), { 255, 255, 255, low_alpha } } );
+				//	}
+				//}
+			//}
+//#endif
 		}
 
 		// iterate flags.

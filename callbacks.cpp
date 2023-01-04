@@ -20,6 +20,18 @@ void callbacks::ToggleThirdPerson( ) {
 	g_visuals.m_thirdperson = !g_visuals.m_thirdperson;
 }
 
+void callbacks::ManualLeft ( ) {
+	g_hvh.m_aa_side = 90.f;
+}
+
+void callbacks::ManualRight ( ) {
+	g_hvh.m_aa_side = -90.f;
+}
+
+void callbacks::ManualBack ( ) {
+	g_hvh.m_aa_side = 0.f;
+}
+
 void callbacks::ToggleFakeLatency( ) {
 	g_aimbot.m_fake_latency = !g_aimbot.m_fake_latency;
 }

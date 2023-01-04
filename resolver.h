@@ -27,7 +27,7 @@ public:
 	void MatchShot( AimPlayer* data, LagRecord* record );
 	void SetMode( LagRecord* record );
 
-	void Legacy ( Player *player, AimPlayer *data, LagRecord *record );
+	void AntiFreestand ( Player *player, AimPlayer *data, LagRecord *record );
 
 	void ResolveAngles( Player* player, LagRecord* record );
 	void ResolveWalk( AimPlayer* data, LagRecord* record );

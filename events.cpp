@@ -36,7 +36,7 @@ void events::round_start( IGameEvent* evt ) {
 		auto buy2 = g_menu.main.misc.buy2.GetActiveItems( );
 		auto buy3 = g_menu.main.misc.buy3.GetActiveItems( );
 
-		if ( !buy1.empty ( ) || buy2.empty ( ) || buy3.empty ( ) ) {
+		if ( !buy1.empty ( ) || !buy2.empty ( ) || !buy3.empty ( ) ) {
 			for ( auto it = buy1.begin ( ); it != buy1.end ( ); ++it )
 				g_csgo.m_engine->ExecuteClientCmd ( tfm::format ( XOR ( "buy %s" ), *it ).data ( ) );
 

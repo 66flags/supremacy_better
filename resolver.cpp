@@ -153,11 +153,120 @@ void Resolver::SetMode ( LagRecord *record ) {
 		record->m_mode = Modes::RESOLVE_AIR;
 }
 
-void Resolver::Legacy ( Player *player, AimPlayer *data, LagRecord *record ) {
+void Resolver::AntiFreestand ( Player *player, AimPlayer *data, LagRecord *record ) {
+	constexpr float STEP { 2.f };
+	constexpr float RANGE { 32.f };
+
+	// best target.
+	struct AutoTarget_t { float fov; Player *player; };
+	AutoTarget_t target { 180.f + 1.f, nullptr };
+
+	float away = GetAwayAngle ( record );
+
+	std::vector< AdaptiveAngle > angles { };
+	angles.emplace_back ( away - 180.f );
+	angles.emplace_back ( away + 90.f );
+	angles.emplace_back ( away - 90.f );
+
+	// start the trace at the enemy shoot pos.
+	vec3_t start = g_cl.m_local->GetShootPosition ( );
+	vec3_t player_end = record->m_player->GetShootPosition ( );
+
+	// see if we got any valid result.
+	// if this is false the path was not obstructed with anything.
+	bool valid { false };
+
+	// iterate vector of angles.
+	for ( auto it = angles.begin ( ); it != angles.end ( ); ++it ) {
+		// compute the 'rough' estimation of where our head will be.
+		vec3_t end { player_end.x + std::cos ( math::deg_to_rad ( it->m_yaw ) ) * RANGE,
+			player_end.y + std::sin ( math::deg_to_rad ( it->m_yaw ) ) * RANGE,
+			player_end.z };
+
+		// draw a line for debugging purposes.
+		g_csgo.m_debug_overlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.1f );
+
+		// compute the direction.
+		vec3_t dir = end - start;
+		float len = dir.normalize ( );
+
+		// should never happen.
+		if ( len <= 0.f )
+			continue;
+
+		// step thru the total distance, 4 units per step.
+		for ( float i { 0.f }; i < len; i += STEP ) {
+			// get the current step position.
+			vec3_t point = start + ( dir * i );
+
+			// get the contents at this point.
+			int contents = g_csgo.m_engine_trace->GetPointContents ( point, MASK_SHOT_HULL );
+
+			// contains nothing that can stop a bullet.
+			if ( !( contents & MASK_SHOT_HULL ) )
+				continue;
+
+			float mult = 1.f;
+
+			// over 50% of the total length, prioritize this shit.
+			if ( i > ( len * 0.5f ) )
+				mult = 1.25f;
+
+			// over 90% of the total length, prioritize this shit.
+			if ( i > ( len * 0.75f ) )
+				mult = 1.25f;
+
+			// over 90% of the total length, prioritize this shit.
+			if ( i > ( len * 0.9f ) )
+				mult = 2.f;
+
+			// append 'penetrated distance'.
+			it->m_dist += ( STEP * mult );
+
+			// mark that we found anything.
+			valid = true;
+		}
+	}
+
+	if ( !valid ) {
+		// set angle to backwards.
+		//m_auto = math::NormalizedAngle ( record->m_eye_angles.y - 180.f );
+		return;
+	}
+
+	// put the most distance at the front of the container.
+	std::sort ( angles.begin ( ), angles.end ( ),
+		[ ] ( const AdaptiveAngle &a, const AdaptiveAngle &b ) {
+			return a.m_dist > b.m_dist;
+		} );
+
+	// the best angle should be at the front now.
+	AdaptiveAngle *best = &angles.front ( );
+
+	if ( best->m_dist != record->m_freestand_dist ) {
+		// set yaw to the best result.
+		record->m_eye_angles.y = best->m_yaw;
+		record->m_freestand_dist = best->m_dist;
+	}
 }
 
 void Resolver::ResolveAngles ( Player *player, LagRecord *record ) {
 	AimPlayer *data = &g_aimbot.m_players [ player->index ( ) - 1 ];
+
+	auto game_state = ( CCSGOGamePlayerAnimState * ) player->m_PlayerAnimState ( );
+
+	if ( record ) {
+		for ( int i = 0; i < player->m_iNumOverlays ( ); i++ ) {
+			auto layer = player->m_AnimOverlay ( ) [ i ];
+
+			if ( record->m_triggered_balence_adjust = player->GetSequenceActivity ( layer.m_sequence ) == ACT_CSGO_IDLE_TURN_BALANCEADJUST && record->m_body >= data->m_old_body ) {
+				record->m_flick = ( record->m_anim_time >= ( data->m_body_update ) ) ? true : false;
+
+				//if ( record->valid ( ) )
+				record->m_tick_flicked = game::TIME_TO_TICKS ( record->m_sim_time );
+			}
+		}
+	}
 
 	// mark this record if it contains a shot.
 	MatchShot ( data, record );
@@ -170,6 +279,9 @@ void Resolver::ResolveAngles ( Player *player, LagRecord *record ) {
 	// this should be somehow combined into some iteration that matches with the air angle iteration.
 	if ( g_menu.main.config.mode.get ( ) == 1 )
 		record->m_eye_angles.x = 90.f;
+
+
+	AntiFreestand ( player, data, record );
 
 	// we arrived here we can do the acutal resolve.
 	if ( record->m_mode == Modes::RESOLVE_WALK )
@@ -226,15 +338,19 @@ void Resolver::ResolveStand ( AimPlayer *data, LagRecord *record ) {
 		}
 	}
 
+	//if ( record->m_flick )
+	//	record->m_eye_angles.y = move->m_body;
+
 	// a valid moving context was found
 	if ( data->m_moved ) {
 		float diff = math::NormalizedAngle ( record->m_body - move->m_body );
 		float delta = record->m_anim_time - move->m_anim_time;
 
+		record->m_eye_angles.y = move->m_body;
+
 		// it has not been time for this first update yet.
 		if ( delta < 0.22f ) {
 			// set angles to current LBY.
-			record->m_eye_angles.y = move->m_body;
 
 			// set resolve mode.
 			record->m_mode = Modes::RESOLVE_STOPPED_MOVING;
@@ -453,14 +569,14 @@ void Resolver::AirNS ( AimPlayer *data, LagRecord *record ) {
 void Resolver::ResolvePoses ( Player *player, LagRecord *record ) {
 	AimPlayer *data = &g_aimbot.m_players [ player->index ( ) - 1 ];
 
-	// only do this bs when in air.
-	if ( record->m_mode == Modes::RESOLVE_AIR ) {
-		// ang = pose min + pose val x ( pose range )
+	//// only do this bs when in air.
+	//if ( record->m_mode == Modes::RESOLVE_AIR ) {
+	//	// ang = pose min + pose val x ( pose range )
 
-		// lean_yaw
-		player->m_flPoseParameter ( ) [ 2 ] = g_csgo.RandomInt ( 0, 4 ) * 0.25f;
+	//	// lean_yaw
+	//	player->m_flPoseParameter ( ) [ 2 ] = g_csgo.RandomInt ( 0, 4 ) * 0.25f;
 
-		// body_yaw
-		player->m_flPoseParameter ( ) [ 11 ] = g_csgo.RandomInt ( 1, 3 ) * 0.25f;
-	}
+	//	// body_yaw
+	//	player->m_flPoseParameter ( ) [ 11 ] = g_csgo.RandomInt ( 1, 3 ) * 0.25f;
+	//}
 }

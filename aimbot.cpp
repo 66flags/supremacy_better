@@ -619,33 +619,33 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 
 	record->m_anim_velocity = record->m_velocity;
 
-	if ( record->m_anim_velocity.length_2d ( ) <= 1.0f ) {
-		if ( !game_state->m_flDurationMoving && !game_state->m_vecPositionLast.z ) {
-			float lastUpdateIncrement = game_state->m_flLastUpdateIncrement;
-			if ( lastUpdateIncrement > 0.0 ) {
-				float currentFeetYaw = game_state->m_flFootYawLast;
-				float goalFeetYaw = game_state->m_flFootYaw;
-				float feetDelta = currentFeetYaw - game_state->m_flFootYaw;
-				if ( goalFeetYaw < currentFeetYaw ) {
-					if ( feetDelta >= 180.0 )
-						feetDelta = feetDelta - 360.0;
-				}
-				else if ( feetDelta <= -180.0 ) {
-					feetDelta = feetDelta + 360.0;
-				}
-				if ( ( feetDelta / lastUpdateIncrement ) > 120.0 ) {
-					m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_cycle = 0.0;
-					m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_weight = 0.0;
-					m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_sequence = m_player->GetSequenceActivity ( 979 );
-				}
-			}
-		}
-	}
+	//if ( record->m_anim_velocity.length_2d ( ) <= 1.0f ) {
+	//	if ( !game_state->m_flDurationMoving && !game_state->m_vecPositionLast.z ) {
+	//		float lastUpdateIncrement = game_state->m_flLastUpdateIncrement;
+	//		if ( lastUpdateIncrement > 0.0 ) {
+	//			float currentFeetYaw = game_state->m_flFootYawLast;
+	//			float goalFeetYaw = game_state->m_flFootYaw;
+	//			float feetDelta = currentFeetYaw - game_state->m_flFootYaw;
+	//			if ( goalFeetYaw < currentFeetYaw ) {
+	//				if ( feetDelta >= 180.0 )
+	//					feetDelta = feetDelta - 360.0;
+	//			}
+	//			else if ( feetDelta <= -180.0 ) {
+	//				feetDelta = feetDelta + 360.0;
+	//			}
+	//			if ( ( feetDelta / lastUpdateIncrement ) > 120.0 ) {
+	//				m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_cycle = 0.0;
+	//				m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_weight = 0.0;
+	//				m_player->m_AnimOverlay ( ) [ ANIMATION_LAYER_ADJUST ].m_sequence = m_player->GetSequenceActivity ( 979 );
+	//			}
+	//		}
+	//	}
+	//}
 
 	if ( record->m_lag > 1 && !bot ) {
 		float speed = m_player->m_vecVelocity ( ).length_2d ( );
 
-		if ( record->m_flags & FL_ONGROUND && record->m_layers [ 6 ].m_weight == 0.f && ( speed > 0.1f && speed < 100.f ) || record->m_velocity_detail == DETAIL_PERFECT )
+		if ( record->m_flags & FL_ONGROUND && record->m_layers [ 6 ].m_weight == 0.f && ( speed > 0.1f && speed < 100.f ) && record->m_velocity_detail == DETAIL_CONSTANT )
 			record->m_fake_walk = true;
 
 		if ( record->m_fake_walk )
@@ -655,10 +655,34 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 			LagRecord *previous = m_records [ 1 ].get ( );
 
 			if ( previous && !previous->dormant ( ) ) {
-				float time = record->m_sim_time - previous->m_sim_time;
 
+				//// set previous flags.
+				//m_player->m_fFlags ( ) = previous->m_flags;
+
+				//// strip the on ground flag.
+				//m_player->m_fFlags ( ) &= ~FL_ONGROUND;
+
+				//// been onground for 2 consecutive ticks? fuck yeah.
+				//if ( record->m_flags & FL_ONGROUND && previous->m_flags & FL_ONGROUND )
+				//	m_player->m_fFlags ( ) |= FL_ONGROUND;
+
+				////if( record->m_layers[ 4 ].m_weight != 0.f && previous->m_layers[ 4 ].m_weight == 0.f && record->m_layers[ 5 ].m_weight != 0.f )
+				////	m_player->m_fFlags( ) |= FL_ONGROUND;
+
+				//// fix jump_fall.
+				//if ( record->m_layers [ 4 ].m_weight != 1.f && previous->m_layers [ 4 ].m_weight == 1.f && record->m_layers [ 5 ].m_weight != 0.f )
+				//	m_player->m_fFlags ( ) |= FL_ONGROUND;
+
+				//if ( record->m_flags & FL_ONGROUND && !( previous->m_flags & FL_ONGROUND ) )
+				//	m_player->m_fFlags ( ) &= ~FL_ONGROUND;
+
+				float time = record->m_sim_time - previous->m_sim_time;
+				float duck = record->m_duck - previous->m_duck;
 				const auto crouch_amount = m_player->m_flDuckAmount ( );
 				const auto crouch_speed = std::max ( 1.5f, m_player->m_flDuckSpeed ( ) );
+				float change = ( duck / time ) * g_csgo.m_globals->m_interval;
+
+				m_player->m_flDuckAmount ( ) = previous->m_duck + change;
 
 				if ( !record->m_fake_walk ) {
 					vec3_t velo = record->m_velocity - previous->m_velocity;
@@ -676,7 +700,6 @@ void AimPlayer::UpdateAnimations ( LagRecord *record ) {
 	m_player->m_iEFlags ( ) &= ~0x1000;
 	m_player->m_angEyeAngles ( ) = record->m_eye_angles;
 	m_player->m_flLowerBodyYawTarget ( ) = record->m_body;
-	game_state->m_flLastUpdateTime = m_player->m_flSimulationTime ( );
 
 	UpdatePlayer ( backup, record );
 
@@ -723,10 +746,7 @@ void AimPlayer::UpdatePlayer ( AnimationBackup_t backup, LagRecord *record ) {
 		g_resolver.ResolveAngles ( m_player, record );
 
 	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent = true;
-
-	if ( state->m_frame == g_csgo.m_globals->m_frame )
-		state->m_frame -= 1;
-
+	game_state->m_flLastUpdateTime = m_player->m_flSimulationTime ( );
 	rebuilt::UpdateAnimationState ( ( CCSGOGamePlayerAnimState* )state, record->m_eye_angles.y, record->m_eye_angles.x, false );
 	m_player->m_bClientSideAnimation ( ) = g_cl.m_update_ent = false;
 
@@ -745,6 +765,7 @@ void AimPlayer::UpdatePlayer ( AnimationBackup_t backup, LagRecord *record ) {
 	m_player->m_vecMaxs ( ) = backup.m_maxs;
 	m_player->m_iEFlags ( ) = backup.m_eflags;
 	m_player->m_flLowerBodyYawTarget ( ) = backup.m_body;
+	//m_player->SetAbsAngles ( record->m_abs_ang );
 	m_player->SetAbsOrigin ( backup.m_origin );
 	m_player->SetAnimLayers ( backup.m_layers );
 
@@ -1552,6 +1573,9 @@ void Aimbot::apply ( ) {
 	bool attack, attack2;
 	attack = ( g_cl.m_cmd->m_buttons & IN_ATTACK );
 	attack2 = ( g_cl.m_weapon_id == REVOLVER && g_cl.m_cmd->m_buttons & IN_ATTACK2 );
+
+	if ( m_record && m_record->m_flick && !m_record->m_broke_lc )
+		g_cl.m_cmd->m_tick = m_record->m_tick_flicked;
 
 	if ( attack || attack2 ) {
 		*g_cl.m_packet = false;

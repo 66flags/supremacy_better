@@ -45,6 +45,7 @@ public:
 	float  m_random_angle;
 	float  m_direction;
 	float  m_auto;
+	float  m_aa_side;
 	float  m_auto_dist;
 	float  m_auto_last;
 	float  m_view;
